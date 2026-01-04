@@ -1,20 +1,23 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
-import { TransactionEntry, BPSection } from '@/types/finance';
+import { TransactionEntry, BPSection, DreKpis } from '@/types/finance';
 import { 
   parseContaAzulCsv, 
   getCategoryKey, 
-  generateDemoData 
+  generateDemoData,
+  computeDreByMonth
 } from '@/utils/finance';
 import { Header } from '@/components/dashboard/Header';
 import { UploadTab } from '@/components/dashboard/UploadTab';
 import { MappingTab } from '@/components/dashboard/MappingTab';
 import { AnalyticsTab } from '@/components/dashboard/AnalyticsTab';
+import { ForecastingModule } from '@/components/dashboard/ForecastingModule';
 import { AlertBanner } from '@/components/dashboard/AlertBanner';
 import { Footer } from '@/components/dashboard/Footer';
+import { supabase } from '@/integrations/supabase/client';
 
-type TabType = 'upload' | 'mapping' | 'analytics';
+type TabType = 'upload' | 'mapping' | 'analytics' | 'forecast';
 
 const Index = () => {
   const { toast } = useToast();
@@ -47,6 +50,14 @@ const Index = () => {
     const keys = new Set(entries.map(e => getCategoryKey(e.category, e.costCenter)));
     return Array.from(keys).filter(k => mappings[k]).length;
   }, [entries, mappings]);
+
+  const analyticsEntries = useMemo(() => {
+    if (selectedCostCenter === 'all') return entries;
+    return entries.filter(e => e.costCenter === selectedCostCenter);
+  }, [entries, selectedCostCenter]);
+
+  const dreByMonth = useMemo(() => computeDreByMonth(analyticsEntries), [analyticsEntries]);
+  const sortedMonths = useMemo(() => Object.keys(dreByMonth).sort(), [dreByMonth]);
 
   const handleMapEntry = useCallback((categoryKey: string, bpSection: BPSection) => {
     const newMappings = { ...mappings, [categoryKey]: bpSection };
@@ -165,8 +176,98 @@ const Index = () => {
     setIsAiLoading(true);
     setAiInsight(null);
     
-    // Simulate AI insight generation
-    setTimeout(() => {
+    try {
+      // Prepare financial data for AI analysis
+      const financialData = {
+        costCenter: selectedCostCenter,
+        months: sortedMonths,
+        data: sortedMonths.map(month => ({
+          month,
+          ...dreByMonth[month]
+        }))
+      };
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/financial-insights`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            financialData,
+            costCenter: selectedCostCenter
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast({
+            title: "Limite de requisições",
+            description: "Por favor, aguarde um momento e tente novamente.",
+            variant: "destructive",
+          });
+          throw new Error("Rate limit exceeded");
+        }
+        if (response.status === 402) {
+          toast({
+            title: "Créditos insuficientes",
+            description: "Adicione créditos para continuar usando a análise AI.",
+            variant: "destructive",
+          });
+          throw new Error("Payment required");
+        }
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
+      // Stream the response
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error("No response body");
+
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let insightText = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content;
+            if (content) {
+              insightText += content;
+              setAiInsight(insightText);
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      if (!insightText) {
+        throw new Error("No insight generated");
+      }
+    } catch (error) {
+      console.error("AI insight error:", error);
+      // Fallback to simulated insight
       const insight = `
 ## 📊 Análise Estratégica - ${selectedCostCenter === 'all' ? 'Consolidado' : selectedCostCenter}
 
@@ -193,9 +294,10 @@ const Index = () => {
       `.trim();
       
       setAiInsight(insight);
+    } finally {
       setIsAiLoading(false);
-    }, 2000);
-  }, [selectedCostCenter]);
+    }
+  }, [selectedCostCenter, sortedMonths, dreByMonth, toast]);
 
   return (
     <div className="flex flex-col min-h-screen font-sans selection:bg-primary/20">
@@ -238,6 +340,15 @@ const Index = () => {
               aiInsight={aiInsight}
               isAiLoading={isAiLoading}
               onGenerateInsight={generateAiInsight}
+              dreByMonth={dreByMonth}
+              sortedMonths={sortedMonths}
+            />
+          )}
+
+          {tab === 'forecast' && (
+            <ForecastingModule 
+              dreByMonth={dreByMonth}
+              sortedMonths={sortedMonths}
             />
           )}
         </AnimatePresence>

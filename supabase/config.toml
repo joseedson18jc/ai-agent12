@@ -1,0 +1,4 @@
+project_id = "pppacjvewskrmliieyty"
+
+[functions.financial-insights]
+verify_jwt = false
