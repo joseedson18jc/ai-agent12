@@ -1,7 +1,8 @@
-import { Zap, Activity, Upload, Settings2, LayoutDashboard } from 'lucide-react';
+import { Zap, Activity, Upload, Settings2, LayoutDashboard, TrendingUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from './ThemeToggle';
 
-type TabType = 'upload' | 'mapping' | 'analytics';
+type TabType = 'upload' | 'mapping' | 'analytics' | 'forecast';
 
 interface HeaderProps {
   tab: TabType;
@@ -15,6 +16,7 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
     { id: 'upload' as const, icon: Upload, label: 'Importar', disabled: false },
     { id: 'mapping' as const, icon: Settings2, label: 'Mapeamento', disabled: !hasEntries },
     { id: 'analytics' as const, icon: LayoutDashboard, label: 'Dashboard', disabled: !hasMappings },
+    { id: 'forecast' as const, icon: TrendingUp, label: 'Projeção', disabled: !hasMappings },
   ];
 
   return (
@@ -42,18 +44,19 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
               size="sm"
               onClick={() => !t.disabled && setTab(t.id)}
               disabled={t.disabled}
-              className={`px-6 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5 ${
+              className={`px-5 py-2.5 rounded-xl text-[10px] font-bold flex items-center gap-2 ${
                 tab === t.id 
                   ? 'bg-card text-primary shadow-lg' 
                   : 'text-muted-foreground hover:text-foreground'
               }`}
             >
-              <t.icon size={15} /> {t.label.toUpperCase()}
+              <t.icon size={14} /> {t.label.toUpperCase()}
             </Button>
           ))}
         </nav>
 
-        <div className="flex items-center gap-5">
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
               Workspace

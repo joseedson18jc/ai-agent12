@@ -3,16 +3,21 @@ import { motion } from 'framer-motion';
 
 interface ChartDataPoint {
   month: string;
-  'Receita Líquida': number;
-  'EBITDA': number;
-  'Lucro Líquido': number;
+  [key: string]: number | string | null;
 }
 
 interface SimpleChartProps {
   data: ChartDataPoint[];
+  metrics?: { key: string; color: string; dashed?: boolean }[];
 }
 
-export const SimpleChart = ({ data }: SimpleChartProps) => {
+const DEFAULT_METRICS = [
+  { key: 'Receita Líquida', color: 'hsl(var(--chart-1))' },
+  { key: 'EBITDA', color: 'hsl(var(--chart-3))' },
+  { key: 'Lucro Líquido', color: 'hsl(var(--primary))' },
+];
+
+export const SimpleChart = ({ data, metrics = DEFAULT_METRICS }: SimpleChartProps) => {
   if (!data || data.length === 0) return (
     <div className="flex flex-col items-center justify-center h-full text-muted-foreground space-y-4">
       <div className="p-4 bg-muted rounded-full">
@@ -26,20 +31,31 @@ export const SimpleChart = ({ data }: SimpleChartProps) => {
   const chartHeight = 400;
   const padding = 60;
   
-  const allValues = data.flatMap(d => [
-    Math.abs(d['Receita Líquida']), 
-    Math.abs(d['EBITDA']), 
-    Math.abs(d['Lucro Líquido'])
-  ]);
+  const allValues = data.flatMap(d => 
+    metrics.map(m => {
+      const val = d[m.key];
+      return typeof val === 'number' ? Math.abs(val) : 0;
+    })
+  );
 
   const maxVal = Math.max(...allValues) || 1;
-  const minVal = Math.min(0, ...data.flatMap(d => [d['Receita Líquida'], d['EBITDA'], d['Lucro Líquido']]));
-  const range = maxVal - minVal;
+  const minVal = Math.min(0, ...data.flatMap(d => 
+    metrics.map(m => {
+      const val = d[m.key];
+      return typeof val === 'number' ? val : 0;
+    })
+  ));
+  const range = maxVal - minVal || 1;
   const scale = (chartHeight - padding * 2) / range;
   const baseline = chartHeight - padding - (Math.abs(minVal) * scale);
 
   const getY = (value: number) => baseline - (value * scale);
   const getX = (index: number) => padding + (index * ((chartWidth - padding * 2) / Math.max(1, data.length - 1)));
+
+  const getValue = (d: ChartDataPoint, key: string): number => {
+    const val = d[key];
+    return typeof val === 'number' ? val : 0;
+  };
 
   return (
     <div className="w-full h-full p-4">
@@ -62,48 +78,33 @@ export const SimpleChart = ({ data }: SimpleChartProps) => {
         {/* Metric Lines */}
         {data.length > 1 && (
           <>
-            {/* Area */}
+            {/* Area for first metric */}
             <motion.path
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              d={`M ${getX(0)} ${baseline} ${data.map((d, i) => `L ${getX(i)} ${getY(d['Receita Líquida'])}`).join(' ')} L ${getX(data.length - 1)} ${baseline} Z`}
+              d={`M ${getX(0)} ${baseline} ${data.map((d, i) => `L ${getX(i)} ${getY(getValue(d, metrics[0].key))}`).join(' ')} L ${getX(data.length - 1)} ${baseline} Z`}
               fill="url(#grad-revenue)"
             />
             
-            {/* Lines */}
-            <motion.polyline
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1.5, ease: "easeInOut" }}
-              points={data.map((d, i) => `${getX(i)},${getY(d['Receita Líquida'])}`).join(' ')}
-              fill="none"
-              stroke="hsl(var(--chart-1))"
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <motion.polyline
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1.5, ease: "easeInOut", delay: 0.2 }}
-              points={data.map((d, i) => `${getX(i)},${getY(d['EBITDA'])}`).join(' ')}
-              fill="none"
-              stroke="hsl(var(--chart-3))"
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <motion.polyline
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1.5, ease: "easeInOut", delay: 0.4 }}
-              points={data.map((d, i) => `${getX(i)},${getY(d['Lucro Líquido'])}`).join(' ')}
-              fill="none"
-              stroke="hsl(var(--primary))"
-              strokeWidth="4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
+            {/* Lines for each metric */}
+            {metrics.map((metric, mi) => {
+              const validPoints = data.map((d, i) => ({ x: getX(i), y: getY(getValue(d, metric.key)), valid: getValue(d, metric.key) !== 0 || d[metric.key] !== null }));
+              return (
+                <motion.polyline
+                  key={metric.key}
+                  initial={{ pathLength: 0 }}
+                  animate={{ pathLength: 1 }}
+                  transition={{ duration: 1.5, ease: "easeInOut", delay: mi * 0.2 }}
+                  points={validPoints.filter(p => p.valid).map(p => `${p.x},${p.y}`).join(' ')}
+                  fill="none"
+                  stroke={metric.color}
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeDasharray={metric.dashed ? "8 4" : undefined}
+                />
+              );
+            })}
           </>
         )}
 
@@ -112,9 +113,21 @@ export const SimpleChart = ({ data }: SimpleChartProps) => {
           const x = getX(i);
           return (
             <g key={i}>
-              <circle cx={x} cy={getY(d['Receita Líquida'])} r="5" fill="hsl(var(--chart-1))" stroke="hsl(var(--card))" strokeWidth="2" />
-              <circle cx={x} cy={getY(d['EBITDA'])} r="5" fill="hsl(var(--chart-3))" stroke="hsl(var(--card))" strokeWidth="2" />
-              <circle cx={x} cy={getY(d['Lucro Líquido'])} r="5" fill="hsl(var(--primary))" stroke="hsl(var(--card))" strokeWidth="2" />
+              {metrics.map((metric) => {
+                const val = getValue(d, metric.key);
+                if (val === 0 && d[metric.key] === null) return null;
+                return (
+                  <circle 
+                    key={metric.key}
+                    cx={x} 
+                    cy={getY(val)} 
+                    r="5" 
+                    fill={metric.color} 
+                    stroke="hsl(var(--card))" 
+                    strokeWidth="2" 
+                  />
+                );
+              })}
               <text x={x} y={chartHeight - 10} textAnchor="middle" fontSize="11" fontWeight="700" fill="hsl(var(--muted-foreground))" className="font-sans tracking-tight">
                 {d.month}
               </text>

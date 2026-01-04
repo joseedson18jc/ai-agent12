@@ -16,9 +16,10 @@ import {
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TransactionEntry, MonthlyDre } from '@/types/finance';
+import { TransactionEntry, DreKpis } from '@/types/finance';
 import { computeDreByMonth, formatCurrency } from '@/utils/finance';
 import { SimpleChart } from './SimpleChart';
+import { PdfExport } from './PdfExport';
 
 interface AnalyticsTabProps {
   entries: TransactionEntry[];
@@ -28,6 +29,8 @@ interface AnalyticsTabProps {
   aiInsight: string | null;
   isAiLoading: boolean;
   onGenerateInsight: () => void;
+  dreByMonth?: Record<string, DreKpis>;
+  sortedMonths?: string[];
 }
 
 export const AnalyticsTab = ({
@@ -37,16 +40,21 @@ export const AnalyticsTab = ({
   onCostCenterChange,
   aiInsight,
   isAiLoading,
-  onGenerateInsight
+  onGenerateInsight,
+  dreByMonth: propDreByMonth,
+  sortedMonths: propSortedMonths
 }: AnalyticsTabProps) => {
   const analyticsEntries = useMemo(() => {
     if (selectedCostCenter === 'all') return entries;
     return entries.filter(e => e.costCenter === selectedCostCenter);
   }, [entries, selectedCostCenter]);
 
-  const dreByMonth = useMemo(() => computeDreByMonth(analyticsEntries), [analyticsEntries]);
-  const sortedMonths = useMemo(() => Object.keys(dreByMonth).sort(), [dreByMonth]);
+  const computedDreByMonth = useMemo(() => computeDreByMonth(analyticsEntries), [analyticsEntries]);
+  const computedSortedMonths = useMemo(() => Object.keys(computedDreByMonth).sort(), [computedDreByMonth]);
   
+  const dreByMonth = propDreByMonth ?? computedDreByMonth;
+  const sortedMonths = propSortedMonths ?? computedSortedMonths;
+
   const chartData = useMemo(() => 
     sortedMonths.map(month => ({
       month: month.split('-').reverse().join('/'),
@@ -120,25 +128,33 @@ export const AnalyticsTab = ({
           </p>
         </div>
 
-        <div className="glass-card flex items-center gap-4 p-3 rounded-[2rem] border border-border/50 shadow-2xl">
-          <div className="flex items-center gap-3 pl-4 pr-2 border-r border-border">
-            <Filter size={16} className="text-primary" />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
-              Filtrar por Centro:
-            </span>
-          </div>
-          <div className="relative group">
-            <select 
-              value={selectedCostCenter}
-              onChange={(e) => onCostCenterChange(e.target.value)}
-              className="bg-transparent border-none text-[11px] font-bold text-foreground outline-none pr-10 cursor-pointer uppercase tracking-[0.15em] hover:text-primary transition-colors"
-            >
-              <option value="all">TODOS OS CENTROS (CONSOLIDADO)</option>
-              {uniqueCostCenters.map(cc => (
-                <option key={cc} value={cc}>{cc.toUpperCase()}</option>
-              ))}
-            </select>
-            <ChevronRight size={14} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 text-muted-foreground pointer-events-none" />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <PdfExport 
+            dreByMonth={dreByMonth}
+            sortedMonths={sortedMonths}
+            aiInsight={aiInsight}
+            selectedCostCenter={selectedCostCenter}
+          />
+          <div className="glass-card flex items-center gap-4 p-3 rounded-[2rem] border border-border/50 shadow-2xl">
+            <div className="flex items-center gap-3 pl-4 pr-2 border-r border-border">
+              <Filter size={16} className="text-primary" />
+              <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
+                Filtrar por Centro:
+              </span>
+            </div>
+            <div className="relative group">
+              <select 
+                value={selectedCostCenter}
+                onChange={(e) => onCostCenterChange(e.target.value)}
+                className="bg-transparent border-none text-[11px] font-bold text-foreground outline-none pr-10 cursor-pointer uppercase tracking-[0.15em] hover:text-primary transition-colors"
+              >
+                <option value="all">TODOS OS CENTROS (CONSOLIDADO)</option>
+                {uniqueCostCenters.map(cc => (
+                  <option key={cc} value={cc}>{cc.toUpperCase()}</option>
+                ))}
+              </select>
+              <ChevronRight size={14} className="absolute right-2 top-1/2 -translate-y-1/2 rotate-90 text-muted-foreground pointer-events-none" />
+            </div>
           </div>
         </div>
       </div>
@@ -220,7 +236,7 @@ export const AnalyticsTab = ({
                 Análise Estratégica AI
               </h3>
               <p className="text-muted font-medium leading-relaxed">
-                Utilize inteligência artificial para gerar diagnósticos executivos e planos de ação personalizados.
+                Utilize inteligência artificial Gemini para gerar diagnósticos executivos e planos de ação personalizados.
               </p>
               <Button
                 onClick={onGenerateInsight}
@@ -250,7 +266,7 @@ export const AnalyticsTab = ({
                 <div className="h-full flex flex-col items-center justify-center text-muted space-y-4">
                   <Layers size={48} className="opacity-30" />
                   <p className="text-sm font-medium text-center">
-                    Clique em "Gerar Insights" para receber uma análise estratégica personalizada
+                    Clique em "Gerar Insights" para receber uma análise estratégica personalizada com IA
                   </p>
                 </div>
               )}
