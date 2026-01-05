@@ -11,7 +11,8 @@ import {
   BrainCircuit,
   Loader2,
   Lightbulb,
-  Layers
+  Layers,
+  Sparkles
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +22,8 @@ import { computeDreByMonth, formatCurrency } from '@/utils/finance';
 import { SimpleChart } from './SimpleChart';
 import { PdfExport } from './PdfExport';
 
+export type AIProvider = 'lovable' | 'openai' | 'anthropic' | 'xai';
+
 interface AnalyticsTabProps {
   entries: TransactionEntry[];
   selectedCostCenter: string;
@@ -28,10 +31,19 @@ interface AnalyticsTabProps {
   onCostCenterChange: (value: string) => void;
   aiInsight: string | null;
   isAiLoading: boolean;
-  onGenerateInsight: () => void;
+  onGenerateInsight: (provider: AIProvider) => void;
   dreByMonth?: Record<string, DreKpis>;
   sortedMonths?: string[];
+  selectedProvider?: AIProvider;
+  onProviderChange?: (provider: AIProvider) => void;
 }
+
+const AI_PROVIDERS: { id: AIProvider; label: string; description: string }[] = [
+  { id: 'lovable', label: 'Gemini', description: 'Google Gemini 2.5 Flash' },
+  { id: 'openai', label: 'GPT-5', description: 'OpenAI GPT-5' },
+  { id: 'anthropic', label: 'Claude', description: 'Anthropic Claude Sonnet 4.5' },
+  { id: 'xai', label: 'Grok', description: 'xAI Grok 4' },
+];
 
 export const AnalyticsTab = ({
   entries,
@@ -42,7 +54,9 @@ export const AnalyticsTab = ({
   isAiLoading,
   onGenerateInsight,
   dreByMonth: propDreByMonth,
-  sortedMonths: propSortedMonths
+  sortedMonths: propSortedMonths,
+  selectedProvider = 'lovable',
+  onProviderChange
 }: AnalyticsTabProps) => {
   const analyticsEntries = useMemo(() => {
     if (selectedCostCenter === 'all') return entries;
@@ -236,21 +250,46 @@ export const AnalyticsTab = ({
                 Análise Estratégica AI
               </h3>
               <p className="text-muted font-medium leading-relaxed">
-                Utilize inteligência artificial Gemini para gerar diagnósticos executivos e planos de ação personalizados.
+                Escolha seu modelo de IA preferido para análises estratégicas personalizadas.
               </p>
+              
+              {/* AI Provider Selector */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-bold text-muted uppercase tracking-widest">
+                  Modelo de IA
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  {AI_PROVIDERS.map((provider) => (
+                    <button
+                      key={provider.id}
+                      onClick={() => onProviderChange?.(provider.id)}
+                      disabled={isAiLoading}
+                      className={`px-4 py-3 rounded-xl text-left transition-all ${
+                        selectedProvider === provider.id
+                          ? 'bg-primary text-primary-foreground shadow-lg'
+                          : 'bg-background/20 text-background hover:bg-background/30'
+                      } ${isAiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <span className="block text-xs font-bold">{provider.label}</span>
+                      <span className="block text-[9px] opacity-70">{provider.description}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <Button
-                onClick={onGenerateInsight}
+                onClick={() => onGenerateInsight(selectedProvider)}
                 disabled={isAiLoading}
-                className="px-8 py-4 h-auto bg-primary text-primary-foreground rounded-2xl font-bold text-[11px] tracking-[0.2em] hover:bg-primary/90 transition-all shadow-xl flex items-center gap-3"
+                className="w-full px-8 py-4 h-auto bg-primary text-primary-foreground rounded-2xl font-bold text-[11px] tracking-[0.2em] hover:bg-primary/90 transition-all shadow-xl flex items-center justify-center gap-3"
               >
                 {isAiLoading ? (
                   <>
                     <Loader2 size={16} className="animate-spin" />
-                    ANALISANDO...
+                    ANALISANDO COM {AI_PROVIDERS.find(p => p.id === selectedProvider)?.label.toUpperCase()}...
                   </>
                 ) : (
                   <>
-                    <Lightbulb size={16} />
+                    <Sparkles size={16} />
                     GERAR INSIGHTS
                   </>
                 )}
