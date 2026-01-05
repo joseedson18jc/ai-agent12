@@ -42,7 +42,7 @@ Gere uma análise estratégica executiva completa.`;
         if (!OPENAI_API_KEY) {
           throw new Error("OPEN_AI_API_KEY is not configured");
         }
-        console.log('Calling OpenAI GPT-5...');
+        console.log('Calling OpenAI GPT-4o...');
         
         response = await fetch("https://api.openai.com/v1/chat/completions", {
           method: "POST",
@@ -51,13 +51,13 @@ Gere uma análise estratégica executiva completa.`;
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "gpt-5-2025-08-07",
+            model: "gpt-4o",
             messages: [
               { role: "system", content: systemPrompt },
               { role: "user", content: userPrompt },
             ],
             stream: true,
-            max_completion_tokens: 2000,
+            max_tokens: 2000,
           }),
         });
         break;
@@ -68,7 +68,7 @@ Gere uma análise estratégica executiva completa.`;
         if (!ANTHROPIC_API_KEY) {
           throw new Error("ANTHROPIC_API_KEY is not configured");
         }
-        console.log('Calling Anthropic Claude Sonnet 4.5...');
+        console.log('Calling Anthropic Claude Sonnet 4...');
         
         response = await fetch("https://api.anthropic.com/v1/messages", {
           method: "POST",
@@ -78,7 +78,7 @@ Gere uma análise estratégica executiva completa.`;
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: "claude-sonnet-4-5-20250514",
+            model: "claude-sonnet-4-20250514",
             max_tokens: 2000,
             system: systemPrompt,
             messages: [
