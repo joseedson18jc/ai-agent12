@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { 
   LayoutDashboard, 
   Filter, 
@@ -12,7 +12,9 @@ import {
   Loader2,
   Lightbulb,
   Layers,
-  Sparkles
+  Sparkles,
+  LayoutGrid,
+  Zap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,6 +23,7 @@ import { TransactionEntry, DreKpis } from '@/types/finance';
 import { computeDreByMonth, formatCurrency } from '@/utils/finance';
 import { SimpleChart } from './SimpleChart';
 import { PdfExport } from './PdfExport';
+import { AIComparisonMode } from './AIComparisonMode';
 
 export type AIProvider = 'lovable' | 'openai' | 'anthropic' | 'xai';
 
@@ -40,9 +43,9 @@ interface AnalyticsTabProps {
 
 const AI_PROVIDERS: { id: AIProvider; label: string; description: string }[] = [
   { id: 'lovable', label: 'Gemini', description: 'Google Gemini 2.5 Flash' },
-  { id: 'openai', label: 'GPT-5', description: 'OpenAI GPT-5' },
-  { id: 'anthropic', label: 'Claude', description: 'Anthropic Claude Sonnet 4.5' },
-  { id: 'xai', label: 'Grok', description: 'xAI Grok 4' },
+  { id: 'openai', label: 'GPT-4o', description: 'OpenAI GPT-4o' },
+  { id: 'anthropic', label: 'Claude', description: 'Anthropic Claude Sonnet 4' },
+  { id: 'xai', label: 'Grok', description: 'xAI Grok 3' },
 ];
 
 export const AnalyticsTab = ({
@@ -58,6 +61,8 @@ export const AnalyticsTab = ({
   selectedProvider = 'lovable',
   onProviderChange
 }: AnalyticsTabProps) => {
+  const [isComparisonMode, setIsComparisonMode] = useState(false);
+  
   const analyticsEntries = useMemo(() => {
     if (selectedCostCenter === 'all') return entries;
     return entries.filter(e => e.costCenter === selectedCostCenter);
@@ -238,7 +243,34 @@ export const AnalyticsTab = ({
         </CardContent>
       </Card>
 
+      {/* Mode Toggle */}
+      <div className="flex items-center justify-center gap-4">
+        <Button
+          variant={!isComparisonMode ? "default" : "outline"}
+          onClick={() => setIsComparisonMode(false)}
+          className="rounded-full px-6"
+        >
+          <Zap size={16} className="mr-2" />
+          Modo Único
+        </Button>
+        <Button
+          variant={isComparisonMode ? "default" : "outline"}
+          onClick={() => setIsComparisonMode(true)}
+          className="rounded-full px-6"
+        >
+          <LayoutGrid size={16} className="mr-2" />
+          Modo Comparação
+        </Button>
+      </div>
+
       {/* AI INSIGHTS SECTION */}
+      {isComparisonMode ? (
+        <AIComparisonMode
+          dreByMonth={dreByMonth}
+          sortedMonths={sortedMonths}
+          selectedCostCenter={selectedCostCenter}
+        />
+      ) : (
       <Card className="bg-gradient-to-br from-foreground to-secondary rounded-[3rem] text-background border-0 shadow-2xl overflow-hidden">
         <CardContent className="p-10 md:p-14">
           <div className="flex flex-col lg:flex-row gap-10">
@@ -313,6 +345,7 @@ export const AnalyticsTab = ({
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* DRE TABLE */}
       <Card className="glass-card rounded-[3rem] border border-border/50 shadow-2xl overflow-hidden">
