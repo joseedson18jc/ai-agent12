@@ -11,7 +11,7 @@ import {
 import { Header } from '@/components/dashboard/Header';
 import { UploadTab } from '@/components/dashboard/UploadTab';
 import { MappingTab } from '@/components/dashboard/MappingTab';
-import { AnalyticsTab } from '@/components/dashboard/AnalyticsTab';
+import { AnalyticsTab, AIProvider } from '@/components/dashboard/AnalyticsTab';
 import { ForecastingModule } from '@/components/dashboard/ForecastingModule';
 import { AlertBanner } from '@/components/dashboard/AlertBanner';
 import { Footer } from '@/components/dashboard/Footer';
@@ -30,6 +30,7 @@ const Index = () => {
   const [isParsing, setIsParsing] = useState(false);
   const [isAutoMapping, setIsAutoMapping] = useState(false);
   const [selectedCostCenter, setSelectedCostCenter] = useState<string>('all');
+  const [selectedProvider, setSelectedProvider] = useState<AIProvider>('lovable');
 
   useEffect(() => {
     if (alert) {
@@ -172,9 +173,16 @@ const Index = () => {
     setAiInsight(null);
   }, []);
 
-  const generateAiInsight = useCallback(async () => {
+  const generateAiInsight = useCallback(async (provider: AIProvider = selectedProvider) => {
     setIsAiLoading(true);
     setAiInsight(null);
+    
+    const providerNames: Record<AIProvider, string> = {
+      lovable: 'Gemini',
+      openai: 'GPT-5',
+      anthropic: 'Claude Sonnet 4.5',
+      xai: 'Grok 4'
+    };
     
     try {
       // Prepare financial data for AI analysis
@@ -187,6 +195,8 @@ const Index = () => {
         }))
       };
 
+      console.log(`Generating insights with ${providerNames[provider]}...`);
+
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/financial-insights`,
         {
@@ -197,7 +207,8 @@ const Index = () => {
           },
           body: JSON.stringify({
             financialData,
-            costCenter: selectedCostCenter
+            costCenter: selectedCostCenter,
+            provider
           }),
         }
       );
@@ -297,7 +308,13 @@ const Index = () => {
     } finally {
       setIsAiLoading(false);
     }
-  }, [selectedCostCenter, sortedMonths, dreByMonth, toast]);
+  }, [selectedCostCenter, sortedMonths, dreByMonth, toast, selectedProvider]);
+
+  const handleProviderChange = useCallback((provider: AIProvider) => {
+    setSelectedProvider(provider);
+    // Clear existing insight when provider changes
+    setAiInsight(null);
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen font-sans selection:bg-primary/20">
@@ -342,6 +359,8 @@ const Index = () => {
               onGenerateInsight={generateAiInsight}
               dreByMonth={dreByMonth}
               sortedMonths={sortedMonths}
+              selectedProvider={selectedProvider}
+              onProviderChange={handleProviderChange}
             />
           )}
 
