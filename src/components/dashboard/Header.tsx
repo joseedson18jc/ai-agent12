@@ -1,6 +1,15 @@
-import { Zap, Activity, Upload, Settings2, LayoutDashboard, TrendingUp } from 'lucide-react';
+import { Zap, Activity, Upload, Settings2, LayoutDashboard, TrendingUp, LogOut, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
+import { useAuth } from '@/contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 type TabType = 'upload' | 'mapping' | 'analytics' | 'forecast';
 
@@ -12,12 +21,20 @@ interface HeaderProps {
 }
 
 export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) => {
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
+  
   const tabs = [
     { id: 'upload' as const, icon: Upload, label: 'Importar', disabled: false },
     { id: 'mapping' as const, icon: Settings2, label: 'Mapeamento', disabled: !hasEntries },
     { id: 'analytics' as const, icon: LayoutDashboard, label: 'Dashboard', disabled: !hasMappings },
     { id: 'forecast' as const, icon: TrendingUp, label: 'Projeção', disabled: !hasMappings },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/auth');
+  };
 
   return (
     <header className="glass-card sticky top-0 z-50 border-b border-border/50 backdrop-blur-2xl">
@@ -57,15 +74,47 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
 
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          <div className="hidden sm:flex flex-col items-end">
-            <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
-              Workspace
-            </span>
-            <span className="text-xs font-bold text-foreground">PRO LEVEL</span>
-          </div>
-          <div className="w-10 h-10 rounded-full bg-muted border border-border flex items-center justify-center text-muted-foreground hover:text-primary transition-colors cursor-pointer">
-            <Activity size={18} />
-          </div>
+          
+          {user ? (
+            <>
+              <div className="hidden sm:flex flex-col items-end">
+                <span className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">
+                  Logado como
+                </span>
+                <span className="text-xs font-bold text-foreground truncate max-w-[120px]">
+                  {user.email?.split('@')[0]}
+                </span>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="w-10 h-10 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center text-primary hover:bg-primary/20 transition-colors cursor-pointer">
+                    <User size={18} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <div className="px-2 py-1.5">
+                    <p className="text-xs font-medium text-foreground truncate">{user.email}</p>
+                    <p className="text-[10px] text-muted-foreground">Conta ativa</p>
+                  </div>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut} className="text-destructive cursor-pointer">
+                    <LogOut size={14} className="mr-2" />
+                    Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => navigate('/auth')}
+              className="rounded-xl px-4"
+            >
+              <User size={14} className="mr-2" />
+              Entrar
+            </Button>
+          )}
         </div>
       </div>
     </header>
