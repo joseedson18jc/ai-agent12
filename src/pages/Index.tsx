@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { TransactionEntry, BPSection, DreKpis } from '@/types/finance';
 import { 
   parseContaAzulCsv, 
@@ -15,12 +17,13 @@ import { AnalyticsTab, AIProvider } from '@/components/dashboard/AnalyticsTab';
 import { ForecastingModule } from '@/components/dashboard/ForecastingModule';
 import { AlertBanner } from '@/components/dashboard/AlertBanner';
 import { Footer } from '@/components/dashboard/Footer';
-import { supabase } from '@/integrations/supabase/client';
 
 type TabType = 'upload' | 'mapping' | 'analytics' | 'forecast';
 
 const Index = () => {
   const { toast } = useToast();
+  const { session, loading: authLoading } = useAuth();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<TabType>('upload');
   const [entries, setEntries] = useState<TransactionEntry[]>([]);
   const [mappings, setMappings] = useState<Record<string, BPSection>>({});
@@ -174,14 +177,25 @@ const Index = () => {
   }, []);
 
   const generateAiInsight = useCallback(async (provider: AIProvider = selectedProvider) => {
+    // Check if user is authenticated
+    if (!session?.access_token) {
+      toast({
+        title: "Autenticação necessária",
+        description: "Faça login para usar as análises de IA.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
     setIsAiLoading(true);
     setAiInsight(null);
     
     const providerNames: Record<AIProvider, string> = {
       lovable: 'Gemini',
-      openai: 'GPT-5',
-      anthropic: 'Claude Sonnet 4.5',
-      xai: 'Grok 4'
+      openai: 'GPT-4o',
+      anthropic: 'Claude Sonnet 4',
+      xai: 'Grok 3'
     };
     
     try {
@@ -203,7 +217,7 @@ const Index = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+            'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             financialData,
@@ -214,6 +228,15 @@ const Index = () => {
       );
 
       if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            title: "Sessão expirada",
+            description: "Por favor, faça login novamente.",
+            variant: "destructive",
+          });
+          navigate('/auth');
+          throw new Error("Unauthorized");
+        }
         if (response.status === 429) {
           toast({
             title: "Limite de requisições",

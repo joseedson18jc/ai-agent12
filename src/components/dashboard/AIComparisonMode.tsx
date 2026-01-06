@@ -1,4 +1,5 @@
 import { useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   BrainCircuit, 
   Loader2, 
@@ -10,8 +11,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { DreKpis } from '@/types/finance';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 export type AIProvider = 'lovable' | 'openai' | 'anthropic' | 'xai';
 
@@ -33,6 +35,9 @@ export const AIComparisonMode = ({
   sortedMonths,
   selectedCostCenter
 }: AIComparisonModeProps) => {
+  const { session } = useAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   const [selectedProviders, setSelectedProviders] = useState<AIProvider[]>(['lovable', 'openai']);
   const [results, setResults] = useState<Record<AIProvider, string>>({} as Record<AIProvider, string>);
   const [loadingProviders, setLoadingProviders] = useState<AIProvider[]>([]);
@@ -50,6 +55,17 @@ export const AIComparisonMode = ({
 
   const generateComparison = useCallback(async () => {
     if (selectedProviders.length === 0) return;
+    
+    // Check if user is authenticated
+    if (!session?.access_token) {
+      toast({
+        title: "Autenticação necessária",
+        description: "Faça login para usar as análises de IA.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
     
     setIsComparing(true);
     setResults({} as Record<AIProvider, string>);
@@ -73,7 +89,7 @@ export const AIComparisonMode = ({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+              'Authorization': `Bearer ${session.access_token}`,
             },
             body: JSON.stringify({
               financialData,
@@ -84,6 +100,9 @@ export const AIComparisonMode = ({
         );
 
         if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error("Autenticação necessária");
+          }
           throw new Error(`HTTP error: ${response.status}`);
         }
 
@@ -141,7 +160,7 @@ export const AIComparisonMode = ({
 
     await Promise.all(promises);
     setIsComparing(false);
-  }, [selectedProviders, dreByMonth, sortedMonths, selectedCostCenter]);
+  }, [selectedProviders, dreByMonth, sortedMonths, selectedCostCenter, session, toast, navigate]);
 
   const hasResults = Object.keys(results).length > 0;
 
