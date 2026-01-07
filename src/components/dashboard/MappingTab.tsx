@@ -1,19 +1,24 @@
-import { useState } from 'react';
-import { Settings2, Wand2, Loader2, ChevronRight, ArrowRight, Save, FolderOpen, Pencil, Check, X, Trash2 } from 'lucide-react';
+import { useState, useMemo } from 'react';
+import { Settings2, Wand2, Loader2, ChevronRight, ArrowRight, Save, FolderOpen, Pencil, Check, X, Trash2, Filter, ListChecks } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { TransactionEntry, BPSection, BP_SECTIONS } from '@/types/finance';
 import { getCategoryKey, formatCurrency } from '@/utils/finance';
 import { MappingTemplate } from '@/hooks/useMappingTemplates';
+
+type FilterType = 'all' | 'unmapped' | 'mapped';
 
 interface MappingTabProps {
   entries: TransactionEntry[];
   mappings: Record<string, BPSection>;
   isAutoMapping: boolean;
   onMapEntry: (categoryKey: string, bpSection: BPSection) => void;
+  onBulkMap?: (categoryKeys: string[], bpSection: BPSection) => void;
   onAutoMap: () => void;
   onFinish: () => void;
   templates?: MappingTemplate[];
@@ -26,7 +31,8 @@ export const MappingTab = ({
   entries, 
   mappings, 
   isAutoMapping, 
-  onMapEntry, 
+  onMapEntry,
+  onBulkMap,
   onAutoMap,
   onFinish,
   templates = [],
@@ -36,9 +42,13 @@ export const MappingTab = ({
 }: MappingTabProps) => {
   const [showSaveDialog, setShowSaveDialog] = useState(false);
   const [showLoadDialog, setShowLoadDialog] = useState(false);
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templateDescription, setTemplateDescription] = useState('');
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  const [filter, setFilter] = useState<FilterType>('all');
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [bulkSection, setBulkSection] = useState<BPSection | ''>('');
 
   const getUniqueCategoryKeys = () => {
     const keys = new Set<string>();
@@ -53,9 +63,28 @@ export const MappingTab = ({
     return unique;
   };
 
-  const uniqueEntries = getUniqueCategoryKeys();
+  const allUniqueEntries = getUniqueCategoryKeys();
+  
+  // Filter entries based on filter type
+  const uniqueEntries = useMemo(() => {
+    return allUniqueEntries.filter(entry => {
+      const key = getCategoryKey(entry.category, entry.costCenter);
+      const isMapped = !!mappings[key];
+      
+      switch (filter) {
+        case 'unmapped':
+          return !isMapped;
+        case 'mapped':
+          return isMapped;
+        default:
+          return true;
+      }
+    });
+  }, [allUniqueEntries, mappings, filter]);
+
   const totalUniqueKeys = new Set(entries.map(e => getCategoryKey(e.category, e.costCenter))).size;
   const mappedCount = Array.from(new Set(entries.map(e => getCategoryKey(e.category, e.costCenter)))).filter(k => mappings[k]).length;
+  const unmappedCount = totalUniqueKeys - mappedCount;
   const mappingProgress = Math.round((mappedCount / totalUniqueKeys) * 100);
 
   const handleSaveTemplate = () => {
@@ -72,6 +101,42 @@ export const MappingTab = ({
     return total < 0 || entry.type === 'payable';
   };
 
+  const toggleSelection = (key: string) => {
+    const newSelected = new Set(selectedKeys);
+    if (newSelected.has(key)) {
+      newSelected.delete(key);
+    } else {
+      newSelected.add(key);
+    }
+    setSelectedKeys(newSelected);
+  };
+
+  const selectAllVisible = () => {
+    const visibleKeys = uniqueEntries.map(e => getCategoryKey(e.category, e.costCenter));
+    setSelectedKeys(new Set(visibleKeys));
+  };
+
+  const clearSelection = () => {
+    setSelectedKeys(new Set());
+  };
+
+  const handleBulkMap = () => {
+    if (selectedKeys.size === 0 || !bulkSection) return;
+    
+    if (onBulkMap) {
+      onBulkMap(Array.from(selectedKeys), bulkSection);
+    } else {
+      // Fallback: map one by one
+      selectedKeys.forEach(key => {
+        onMapEntry(key, bulkSection);
+      });
+    }
+    
+    setSelectedKeys(new Set());
+    setBulkSection('');
+    setShowBulkDialog(false);
+  };
+
   return (
     <motion.div 
       key="mapping"
@@ -82,7 +147,7 @@ export const MappingTab = ({
     >
       <Card className="glass-card rounded-[3rem] p-10 md:p-14 border border-border/50 shadow-2xl">
         <CardContent className="p-0">
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10 mb-16">
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-10 mb-10">
             <div className="space-y-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-muted text-muted-foreground rounded-full text-[10px] font-bold uppercase tracking-widest border border-border">
                 <Settings2 size={12} /> Account Mapping
@@ -149,6 +214,67 @@ export const MappingTab = ({
             </div>
           </div>
 
+          {/* Filter and Bulk Actions Bar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 p-4 bg-muted/50 rounded-2xl border border-border/50">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <Filter size={16} className="text-muted-foreground" />
+                <Select value={filter} onValueChange={(v) => setFilter(v as FilterType)}>
+                  <SelectTrigger className="w-[180px] rounded-xl text-sm">
+                    <SelectValue placeholder="Filtrar categorias" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas ({totalUniqueKeys})</SelectItem>
+                    <SelectItem value="unmapped">
+                      <span className="text-destructive">Não mapeadas ({unmappedCount})</span>
+                    </SelectItem>
+                    <SelectItem value="mapped">
+                      <span className="text-chart-3">Mapeadas ({mappedCount})</span>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="text-sm text-muted-foreground">
+                Exibindo <strong className="text-foreground">{uniqueEntries.length}</strong> de {totalUniqueKeys}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {selectedKeys.size > 0 ? (
+                <>
+                  <span className="text-sm text-muted-foreground">
+                    <strong className="text-primary">{selectedKeys.size}</strong> selecionadas
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={clearSelection}
+                    className="rounded-xl text-[10px]"
+                  >
+                    Limpar
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => setShowBulkDialog(true)}
+                    className="rounded-xl text-[10px] bg-primary"
+                  >
+                    <ListChecks size={14} className="mr-1" /> MAPEAR EM LOTE
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectAllVisible}
+                  className="rounded-xl text-[10px]"
+                >
+                  Selecionar todas visíveis
+                </Button>
+              )}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {uniqueEntries.map((entry) => {
               const key = getCategoryKey(entry.category, entry.costCenter);
@@ -156,17 +282,29 @@ export const MappingTab = ({
               const isMapped = !!mappings[key];
               const isEditing = editingKey === key;
               const isNegative = isNegativeEntry(entry, total);
+              const isSelected = selectedKeys.has(key);
               
               return (
                 <motion.div 
                   key={key} 
                   layout
                   className={`p-7 rounded-[2.5rem] border transition-all duration-300 relative group ${
-                    isMapped 
-                      ? 'border-primary/20 bg-primary/5' 
-                      : 'border-border bg-muted/30 hover:bg-card hover:shadow-2xl'
+                    isSelected
+                      ? 'border-primary bg-primary/10 ring-2 ring-primary/30'
+                      : isMapped 
+                        ? 'border-primary/20 bg-primary/5' 
+                        : 'border-border bg-muted/30 hover:bg-card hover:shadow-2xl'
                   }`}
                 >
+                  {/* Selection checkbox */}
+                  <div className="absolute top-4 left-4">
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => toggleSelection(key)}
+                      className="border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                  </div>
+
                   {/* Edit indicator */}
                   {isMapped && !isEditing && (
                     <button
@@ -200,7 +338,7 @@ export const MappingTab = ({
                     </div>
                   )}
 
-                  <div className="mb-8 min-h-[4rem] flex flex-col justify-center">
+                  <div className="mb-8 min-h-[4rem] flex flex-col justify-center pl-8">
                     <h4 className="font-bold text-foreground text-sm truncate leading-tight mb-2 uppercase tracking-tight">
                       {entry.category}
                     </h4>
@@ -287,6 +425,54 @@ export const MappingTab = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Mapping Dialog */}
+      <Dialog open={showBulkDialog} onOpenChange={setShowBulkDialog}>
+        <DialogContent className="rounded-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl font-bold">Mapear em Lote</DialogTitle>
+            <DialogDescription>
+              Aplique a mesma seção DRE para {selectedKeys.size} categorias selecionadas.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-muted-foreground uppercase tracking-wider">
+                Seção DRE
+              </label>
+              <Select value={bulkSection} onValueChange={(v) => setBulkSection(v as BPSection)}>
+                <SelectTrigger className="rounded-xl">
+                  <SelectValue placeholder="Selecione a seção..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {BP_SECTIONS.map(s => (
+                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="p-4 bg-muted rounded-xl">
+              <p className="text-sm font-bold text-foreground mb-2">Categorias selecionadas:</p>
+              <div className="max-h-40 overflow-y-auto space-y-1">
+                {Array.from(selectedKeys).slice(0, 10).map(key => (
+                  <p key={key} className="text-xs text-muted-foreground truncate">• {key.split('|')[0]}</p>
+                ))}
+                {selectedKeys.size > 10 && (
+                  <p className="text-xs text-muted-foreground">... e mais {selectedKeys.size - 10}</p>
+                )}
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowBulkDialog(false)} className="rounded-xl">
+              Cancelar
+            </Button>
+            <Button onClick={handleBulkMap} disabled={!bulkSection} className="rounded-xl">
+              <ListChecks size={16} className="mr-2" /> Aplicar em {selectedKeys.size} categorias
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Save Template Dialog */}
       <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>

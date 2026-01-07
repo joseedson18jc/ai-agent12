@@ -80,6 +80,25 @@ const Index = () => {
     }));
   }, [mappings]);
 
+  const handleBulkMap = useCallback((categoryKeys: string[], bpSection: BPSection) => {
+    const newMappings = { ...mappings };
+    categoryKeys.forEach(key => {
+      newMappings[key] = bpSection;
+    });
+    setMappings(newMappings);
+    setEntries(prev => prev.map(e => {
+      const eKey = getCategoryKey(e.category, e.costCenter);
+      if (categoryKeys.includes(eKey)) {
+        return { ...e, bpSection };
+      }
+      return e;
+    }));
+    toast({
+      title: "✅ Mapeamento em lote",
+      description: `${categoryKeys.length} categorias mapeadas com sucesso.`
+    });
+  }, [mappings, toast]);
+
   const handleCsvUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -566,6 +585,7 @@ const Index = () => {
               mappings={mappings}
               isAutoMapping={isAutoMapping}
               onMapEntry={handleMapEntry}
+              onBulkMap={handleBulkMap}
               onAutoMap={autoMapWithAi}
               onFinish={() => {
                 // Save mappings to history before finishing

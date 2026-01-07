@@ -32,7 +32,35 @@ export function parseContaAzulCsv(content: string): TransactionEntry[] {
   if (firstLine.includes(';')) delimiter = ';';
   else if (firstLine.includes('\t')) delimiter = '\t';
   
-  const header = firstLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
+  // Parse header handling quoted values
+  const parseRow = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"' && !inQuotes) {
+        inQuotes = true;
+      } else if (char === '"' && inQuotes) {
+        if (line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = false;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+  
+  const header = parseRow(firstLine).map(h => h.replace(/^["']|["']$/g, ''));
 
   // Flexible column matching with partial/fuzzy matching
   const findIdx = (candidates: string[]) => {
@@ -49,27 +77,40 @@ export function parseContaAzulCsv(content: string): TransactionEntry[] {
     return -1;
   };
 
-  // Extended list of possible column names for each field
+  // Extended list of possible column names for each field - now includes Conta Azul specific columns
   const idxTipo = findIdx([
+    'tipo da operacao', 'tipo da operação', 'tipo operacao', 'tipo operação',
     'tipo', 'type', 'movimento', 'natureza', 'operacao', 'operação', 
     'lancamento', 'lançamento', 'transacao', 'transação', 'debito/credito', 
     'débito/crédito', 'd/c', 'entrada/saida', 'entrada/saída'
   ]);
+  
+  // Priority: "Categoria 1" column from Conta Azul, then fallback to description columns
   const idxCategoria = findIdx([
-    'categoria', 'category', 'descricao', 'descrição', 'historico', 'histórico',
+    'categoria 1', 'categoria1', 'categoria',
+    'descricao', 'descrição', 'historico', 'histórico',
     'conta', 'plano de contas', 'classificacao', 'classificação', 'nome',
-    'item', 'rubrica', 'natureza financeira'
+    'item', 'rubrica', 'natureza financeira', 'category'
   ]);
+  
+  // Priority: "Centro de Custo 1" column from Conta Azul
   const idxCentro = findIdx([
-    'centro de custo', 'cost center', 'centro', 'departamento', 'setor',
+    'centro de custo 1', 'centro de custo1', 'centro de custo',
+    'cost center', 'centro', 'departamento', 'setor',
     'unidade', 'filial', 'projeto', 'area', 'área'
   ]);
+  
+  // Look for "Valor (R$)" first (Conta Azul format), then others
   const idxValor = findIdx([
+    'valor (r$)', 'valor(r$)', 'valor r$',
     'valor', 'value', 'amount', 'total', 'montante', 'quantia', 
     'valor total', 'valor liquido', 'valor líquido', 'valor bruto',
     'preco', 'preço', 'custo', 'receita', 'despesa'
   ]);
+  
+  // Look for "Data movimento" first (Conta Azul format)
   const idxDataComp = findIdx([
+    'data movimento', 'data movimentacao', 'data movimentação',
     'data competência', 'data competencia', 'competência', 'competencia', 
     'data', 'vencimento', 'date', 'data vencimento', 'data pagamento',
     'data emissao', 'data emissão', 'data lancamento', 'data lançamento',
@@ -105,19 +146,19 @@ export function parseContaAzulCsv(content: string): TransactionEntry[] {
 
   const result: TransactionEntry[] = [];
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, ''));
+    const cols = parseRow(lines[i]);
     if (cols.length < 3) continue;
     
     const tipoRaw = (cols[idxTipo] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
     
-    // Flexible type detection
+    // Flexible type detection - Conta Azul uses "Crédito" for income and "Débito" for expenses
     const isPayable = 
       tipoRaw.includes('pagar') || 
       tipoRaw.includes('payable') || 
       tipoRaw.includes('despesa') || 
       tipoRaw.includes('saida') || 
       tipoRaw.includes('debito') ||
-      tipoRaw.includes('d') && tipoRaw.length <= 2 ||
+      (tipoRaw.includes('d') && tipoRaw.length <= 2) ||
       tipoRaw === 'p' ||
       tipoRaw === 's';
     
@@ -128,15 +169,33 @@ export function parseContaAzulCsv(content: string): TransactionEntry[] {
     if (!category) continue;
 
     let amount = parseDecimal(cols[idxValor] || '');
-    if (type === 'payable' && amount > 0) amount = -amount;
     
+    // If amount is already negative, it's an expense (Saída)
+    // If positive, determine by type
     if (amount === 0) continue;
 
-    const competenceDate = cols[idxDataComp]?.trim() || new Date().toISOString().split('T')[0];
+    // Parse date - handle DD/MM/YYYY format common in Brazilian systems
+    let competenceDate = cols[idxDataComp]?.trim() || '';
+    if (competenceDate.includes('/')) {
+      const parts = competenceDate.split('/');
+      if (parts.length === 3) {
+        const day = parts[0].padStart(2, '0');
+        const month = parts[1].padStart(2, '0');
+        let year = parts[2];
+        if (year.length === 2) year = '20' + year;
+        competenceDate = `${year}-${month}-${day}`;
+      }
+    }
+    if (!competenceDate || competenceDate.length < 8) {
+      competenceDate = new Date().toISOString().split('T')[0];
+    }
+
+    // Determine final type based on amount sign - negative is always 'payable' (saída)
+    const finalType: 'payable' | 'receivable' = amount < 0 ? 'payable' : type;
 
     result.push({
       id: i,
-      type,
+      type: finalType,
       category,
       costCenter,
       amount,
