@@ -11,7 +11,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type TabType = 'upload' | 'mapping' | 'analytics' | 'forecast';
+type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast';
 
 interface HeaderProps {
   tab: TabType;

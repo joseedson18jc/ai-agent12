@@ -17,8 +17,9 @@ import { AnalyticsTab, AIProvider } from '@/components/dashboard/AnalyticsTab';
 import { ForecastingModule } from '@/components/dashboard/ForecastingModule';
 import { AlertBanner } from '@/components/dashboard/AlertBanner';
 import { Footer } from '@/components/dashboard/Footer';
+import { CsvPreview } from '@/components/dashboard/CsvPreview';
 
-type TabType = 'upload' | 'mapping' | 'analytics' | 'forecast';
+type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast';
 
 const Index = () => {
   const { toast } = useToast();
@@ -32,6 +33,7 @@ const Index = () => {
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
   const [isAutoMapping, setIsAutoMapping] = useState(false);
+  const [isAiParsed, setIsAiParsed] = useState(false);
   const [selectedCostCenter, setSelectedCostCenter] = useState<string>('all');
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>('lovable');
 
@@ -89,12 +91,13 @@ const Index = () => {
           setEntries(parsed);
           setMappings({});
           setSelectedCostCenter('all');
-          setAlert({ type: 'success', msg: `Mapeamento concluído: ${parsed.length} transações identificadas.` });
+          setIsAiParsed(false);
+          setAlert({ type: 'success', msg: `${parsed.length} transações identificadas. Revise antes de continuar.` });
           toast({
             title: "Upload concluído",
-            description: `${parsed.length} transações foram importadas com sucesso.`
+            description: `${parsed.length} transações prontas para revisão.`
           });
-          setTab('mapping');
+          setTab('preview');
           setIsParsing(false);
           return;
         } catch (parseError: any) {
@@ -140,12 +143,13 @@ const Index = () => {
             setEntries(parsed);
             setMappings({});
             setSelectedCostCenter('all');
-            setAlert({ type: 'success', msg: `IA processou ${parsed.length} transações com sucesso!` });
+            setIsAiParsed(true);
+            setAlert({ type: 'success', msg: `IA processou ${parsed.length} transações. Revise antes de continuar.` });
             toast({
               title: "✨ Processado com IA",
-              description: `${parsed.length} transações foram normalizadas e importadas.`
+              description: `${parsed.length} transações normalizadas e prontas para revisão.`
             });
-            setTab('mapping');
+            setTab('preview');
           } catch (aiError: any) {
             console.error('AI parsing also failed:', aiError);
             setAlert({ 
@@ -167,6 +171,17 @@ const Index = () => {
     };
     reader.readAsText(file);
   }, [toast]);
+
+  const handlePreviewConfirm = useCallback(() => {
+    setTab('mapping');
+  }, []);
+
+  const handlePreviewCancel = useCallback(() => {
+    setEntries([]);
+    setMappings({});
+    setIsAiParsed(false);
+    setTab('upload');
+  }, []);
 
   const loadDemo = useCallback(() => {
     setIsParsing(true);
@@ -421,6 +436,15 @@ const Index = () => {
               isParsing={isParsing}
               onCsvUpload={handleCsvUpload}
               onLoadDemo={loadDemo}
+            />
+          )}
+
+          {tab === 'preview' && (
+            <CsvPreview
+              entries={entries}
+              isAiParsed={isAiParsed}
+              onConfirm={handlePreviewConfirm}
+              onCancel={handlePreviewCancel}
             />
           )}
           
