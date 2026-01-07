@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { TransactionEntry, BPSection } from '@/types/finance';
 import { formatCurrency } from '@/utils/finance';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 type IssueFilter = 'all' | 'errors' | 'warnings' | 'issues';
@@ -37,6 +37,11 @@ interface FieldIssue {
   field: 'type' | 'category' | 'costCenter' | 'amount' | 'date';
   severity: 'error' | 'warning';
   message: string;
+}
+
+interface AIConfidence {
+  categoryConfidence?: number;
+  costCenterConfidence?: number;
 }
 
 const validateEntries = (entries: TransactionEntry[]): { 
@@ -179,6 +184,33 @@ export const CsvPreview = ({
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
   const [issueFilter, setIssueFilter] = useState<IssueFilter>('all');
   const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [aiConfidence, setAiConfidence] = useState<Map<number, AIConfidence>>(new Map());
+  const editInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcuts for editing
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (editingIdx !== null) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          saveEdit();
+        } else if (e.key === 'Escape') {
+          e.preventDefault();
+          cancelEdit();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [editingIdx, editForm]);
+
+  // Focus first input when editing starts
+  useEffect(() => {
+    if (editingIdx !== null && editInputRef.current) {
+      editInputRef.current.focus();
+    }
+  }, [editingIdx]);
 
   const { issues, entryIssues, fieldIssues } = useMemo(() => validateEntries(entries), [entries]);
   const hasErrors = issues.some(i => i.type === 'error');
@@ -197,6 +229,20 @@ export const CsvPreview = ({
     const issues = fieldIssues.get(idx) || [];
     const fieldIssue = issues.find(i => i.field === field);
     return fieldIssue?.message || '';
+  };
+
+  // Get confidence color and badge for AI-inferred fields
+  const getConfidenceInfo = (idx: number, field: 'category' | 'costCenter') => {
+    const conf = aiConfidence.get(idx);
+    if (!conf) return null;
+    
+    const value = field === 'category' ? conf.categoryConfidence : conf.costCenterConfidence;
+    if (value === undefined) return null;
+    
+    if (value >= 90) return { color: 'bg-green-500', label: 'Alta', textColor: 'text-green-600' };
+    if (value >= 70) return { color: 'bg-blue-500', label: 'Média', textColor: 'text-blue-600' };
+    if (value >= 50) return { color: 'bg-yellow-500', label: 'Baixa', textColor: 'text-yellow-600' };
+    return { color: 'bg-red-500', label: 'Incerta', textColor: 'text-red-600' };
   };
 
   // Filter entries based on issue filter
@@ -378,15 +424,22 @@ export const CsvPreview = ({
 
       const { suggestions } = await response.json();
       
-      // Apply suggestions to entries
+      // Apply suggestions to entries and store confidence
       const updatedEntries = [...entries];
       let filledCount = 0;
+      const newConfidence = new Map<number, AIConfidence>();
       
-      suggestions.forEach((s: { idx: number; category: string; costCenter: string }) => {
+      suggestions.forEach((s: { idx: number; category: string; costCenter: string; categoryConfidence?: number; costCenterConfidence?: number }) => {
         if (updatedEntries[s.idx]) {
           const entry = updatedEntries[s.idx];
           const needsCategory = !entry.category || entry.category.trim() === '';
           const needsCostCenter = !entry.costCenter || entry.costCenter.trim() === '';
+          
+          // Store confidence values
+          newConfidence.set(s.idx, {
+            categoryConfidence: needsCategory ? s.categoryConfidence : undefined,
+            costCenterConfidence: needsCostCenter ? s.costCenterConfidence : undefined
+          });
           
           if (needsCategory && s.category) {
             updatedEntries[s.idx] = { ...updatedEntries[s.idx], category: s.category };
@@ -398,6 +451,7 @@ export const CsvPreview = ({
         }
       });
       
+      setAiConfidence(prev => new Map([...prev, ...newConfidence]));
       onEntriesChange(updatedEntries);
       
       toast({
@@ -720,6 +774,7 @@ export const CsvPreview = ({
                         </TableCell>
                         <TableCell>
                           <Input
+                            ref={editInputRef}
                             value={editForm.category}
                             onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
                             className="h-8 text-sm"
@@ -798,7 +853,16 @@ export const CsvPreview = ({
                       >
                         <div className="flex items-center gap-1">
                           {!entry.category && <AlertCircle className="h-3 w-3 text-destructive flex-shrink-0" />}
-                          {entry.category || '(vazio)'}
+                          <span className="truncate">{entry.category || '(vazio)'}</span>
+                          {getConfidenceInfo(idx, 'category') && (
+                            <span 
+                              className={`flex-shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold ${getConfidenceInfo(idx, 'category')!.textColor} bg-current/10`}
+                              title={`Confiança IA: ${aiConfidence.get(idx)?.categoryConfidence}%`}
+                            >
+                              <Sparkles className="h-2.5 w-2.5" />
+                              {aiConfidence.get(idx)?.categoryConfidence}%
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell 
@@ -807,7 +871,16 @@ export const CsvPreview = ({
                       >
                         <div className="flex items-center gap-1">
                           {!entry.costCenter && <AlertTriangle className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
-                          {entry.costCenter || '(vazio)'}
+                          <span className="truncate">{entry.costCenter || '(vazio)'}</span>
+                          {getConfidenceInfo(idx, 'costCenter') && (
+                            <span 
+                              className={`flex-shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold ${getConfidenceInfo(idx, 'costCenter')!.textColor} bg-current/10`}
+                              title={`Confiança IA: ${aiConfidence.get(idx)?.costCenterConfidence}%`}
+                            >
+                              <Sparkles className="h-2.5 w-2.5" />
+                              {aiConfidence.get(idx)?.costCenterConfidence}%
+                            </span>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell 

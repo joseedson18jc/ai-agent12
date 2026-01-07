@@ -74,15 +74,22 @@ REGRAS DE INFERÊNCIA:
 ${existingCategoriesContext}
 
 FORMATO DE RESPOSTA:
-Retorne APENAS um JSON array com as sugestões:
+Retorne APENAS um JSON array com as sugestões, incluindo confiança de 0 a 100:
 [
-  { "idx": 1, "category": "Categoria Sugerida", "costCenter": "Centro de Custo" },
-  { "idx": 2, "category": "Outra Categoria", "costCenter": "Outro Centro" }
+  { "idx": 1, "category": "Categoria Sugerida", "costCenter": "Centro de Custo", "categoryConfidence": 85, "costCenterConfidence": 70 },
+  { "idx": 2, "category": "Outra Categoria", "costCenter": "Outro Centro", "categoryConfidence": 60, "costCenterConfidence": 50 }
 ]
+
+NÍVEIS DE CONFIANÇA:
+- 90-100: Padrão muito claro (valor de salário no dia 5, aluguel no dia 1)
+- 70-89: Padrão provável (valor recorrente, descrição sugestiva)
+- 50-69: Inferência baseada em tipo e valor
+- 0-49: Categoria genérica (usar "Outros" + tipo)
 
 Se não conseguir inferir com confiança, use:
 - Categoria: "Outros" + tipo (ex: "Outras Receitas", "Outras Despesas")
 - Centro de Custo: "Geral"
+- Confiança baixa (30-50)
 
 Retorne APENAS o JSON, sem explicações.`;
 
