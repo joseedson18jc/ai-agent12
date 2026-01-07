@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useImportHistory } from '@/hooks/useImportHistory';
+import { useMappingTemplates } from '@/hooks/useMappingTemplates';
 import { TransactionEntry, BPSection, DreKpis } from '@/types/finance';
 import { 
   parseContaAzulCsv, 
@@ -27,6 +28,7 @@ const Index = () => {
   const { session, loading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { saveToHistory, findSimilarImport, updateMappings } = useImportHistory();
+  const { templates, saveTemplate, deleteTemplate } = useMappingTemplates();
   const [tab, setTab] = useState<TabType>('upload');
   const [entries, setEntries] = useState<TransactionEntry[]>([]);
   const [mappings, setMappings] = useState<Record<string, BPSection>>({});
@@ -571,6 +573,45 @@ const Index = () => {
                   updateMappings(currentHistoryId, mappings);
                 }
                 setTab('analytics');
+              }}
+              templates={templates}
+              onSaveTemplate={(name, description) => {
+                saveTemplate(name, mappings, description);
+                toast({
+                  title: "✅ Template salvo",
+                  description: `Template "${name}" criado com ${Object.keys(mappings).length} mapeamentos.`
+                });
+              }}
+              onApplyTemplate={(template) => {
+                // Apply template mappings to current entries
+                const newMappings = { ...mappings };
+                Object.entries(template.mappings).forEach(([key, section]) => {
+                  // Check if this key exists in current entries
+                  const entryExists = entries.some(e => getCategoryKey(e.category, e.costCenter) === key);
+                  if (entryExists) {
+                    newMappings[key] = section;
+                  }
+                });
+                setMappings(newMappings);
+                setEntries(prev => prev.map(e => {
+                  const key = getCategoryKey(e.category, e.costCenter);
+                  if (newMappings[key]) {
+                    return { ...e, bpSection: newMappings[key] };
+                  }
+                  return e;
+                }));
+                const appliedCount = Object.keys(newMappings).length;
+                toast({
+                  title: "📋 Template aplicado",
+                  description: `${appliedCount} mapeamentos do template "${template.name}".`
+                });
+              }}
+              onDeleteTemplate={(id) => {
+                deleteTemplate(id);
+                toast({
+                  title: "Template excluído",
+                  description: "Template removido com sucesso."
+                });
               }}
             />
           )}
