@@ -263,32 +263,66 @@ const Index = () => {
     if (entries.length === 0) return;
     setIsAutoMapping(true);
     
-    // Simulate AI mapping since we don't have an API key
-    setTimeout(() => {
-      const newMappings: Record<string, BPSection> = {};
+    try {
+      // Get unique categories with their metadata
+      const uniqueCategories: Map<string, { category: string; costCenter: string | null; type: string; totalAmount: number }> = new Map();
       
       entries.forEach(entry => {
         const key = getCategoryKey(entry.category, entry.costCenter);
-        const cat = entry.category.toLowerCase();
-        
-        let bpSection: BPSection = 'other';
-        if (cat.includes('venda') || cat.includes('receita') || cat.includes('consultoria')) {
-          bpSection = 'revenue';
-        } else if (cat.includes('icms') || cat.includes('pis') || cat.includes('cofins') || cat.includes('iss')) {
-          bpSection = 'deductions';
-        } else if (cat.includes('matéria') || cat.includes('materia') || cat.includes('insumo') || cat.includes('cpv')) {
-          bpSection = 'cogs';
-        } else if (cat.includes('aluguel') || cat.includes('salário') || cat.includes('salario') || cat.includes('admin')) {
-          bpSection = 'administrative';
-        } else if (cat.includes('depreciação') || cat.includes('depreciacao')) {
-          bpSection = 'depreciation';
-        } else if (cat.includes('juros') || cat.includes('financeiro') || cat.includes('empréstimo')) {
-          bpSection = 'financial';
-        } else if (cat.includes('ir') || cat.includes('imposto') || cat.includes('csll')) {
-          bpSection = 'income_tax';
+        if (!uniqueCategories.has(key)) {
+          uniqueCategories.set(key, {
+            category: entry.category,
+            costCenter: entry.costCenter,
+            type: entry.type,
+            totalAmount: entry.amount
+          });
+        } else {
+          const existing = uniqueCategories.get(key)!;
+          existing.totalAmount += entry.amount;
         }
-        
-        newMappings[key] = bpSection;
+      });
+      
+      const categoriesPayload = Array.from(uniqueCategories.entries()).map(([key, data]) => ({
+        key,
+        ...data
+      }));
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auto-map-categories`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ categories: categoriesPayload }),
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast({
+            title: "Limite de requisições",
+            description: "Por favor, aguarde um momento e tente novamente.",
+            variant: "destructive",
+          });
+          throw new Error("Rate limit exceeded");
+        }
+        if (response.status === 402) {
+          toast({
+            title: "Créditos insuficientes",
+            description: "Adicione créditos para continuar usando a IA.",
+            variant: "destructive",
+          });
+          throw new Error("Payment required");
+        }
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
+      const { mappings: aiMappings } = await response.json();
+      
+      const newMappings: Record<string, BPSection> = {};
+      aiMappings.forEach((m: { key: string; section: BPSection }) => {
+        newMappings[m.key] = m.section;
       });
       
       setMappings(prev => ({ ...prev, ...newMappings }));
@@ -300,13 +334,23 @@ const Index = () => {
         return e;
       }));
       
-      setAlert({ type: 'success', msg: 'Classificação inteligente aplicada com sucesso.' });
+      setAlert({ type: 'success', msg: 'Classificação inteligente com Gemini Pro aplicada.' });
       toast({
-        title: "Auto-mapeamento concluído",
-        description: "Categorias foram classificadas automaticamente."
+        title: "✨ Auto-mapeamento concluído",
+        description: `${Object.keys(newMappings).length} categorias classificadas com IA.`
       });
+    } catch (error) {
+      console.error("Auto-map error:", error);
+      if (!(error instanceof Error) || !error.message.includes("Rate limit") && !error.message.includes("Payment required")) {
+        toast({
+          title: "Erro no auto-mapeamento",
+          description: "Não foi possível classificar automaticamente. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    } finally {
       setIsAutoMapping(false);
-    }, 1500);
+    }
   }, [entries, toast]);
 
   const handleCostCenterChange = useCallback((value: string) => {
