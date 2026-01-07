@@ -72,31 +72,95 @@ const Index = () => {
     }));
   }, [mappings]);
 
-  const handleCsvUpload = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCsvUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     
     setIsParsing(true);
     const reader = new FileReader();
-    reader.onload = (event) => {
+    
+    reader.onload = async (event) => {
       try {
         const content = event.target?.result as string;
-        const parsed = parseContaAzulCsv(content);
-        setEntries(parsed);
-        setMappings({});
-        setSelectedCostCenter('all');
-        setAlert({ type: 'success', msg: `Mapeamento concluído: ${parsed.length} transações identificadas.` });
-        toast({
-          title: "Upload concluído",
-          description: `${parsed.length} transações foram importadas com sucesso.`
-        });
-        setTab('mapping');
+        
+        // First try normal parsing
+        try {
+          const parsed = parseContaAzulCsv(content);
+          setEntries(parsed);
+          setMappings({});
+          setSelectedCostCenter('all');
+          setAlert({ type: 'success', msg: `Mapeamento concluído: ${parsed.length} transações identificadas.` });
+          toast({
+            title: "Upload concluído",
+            description: `${parsed.length} transações foram importadas com sucesso.`
+          });
+          setTab('mapping');
+          setIsParsing(false);
+          return;
+        } catch (parseError: any) {
+          console.log('Standard parsing failed, trying AI parser:', parseError.message);
+          
+          // Show toast that we're using AI
+          toast({
+            title: "Usando IA para interpretar CSV",
+            description: "Formato não reconhecido. Analisando com inteligência artificial..."
+          });
+          
+          // Try AI parsing
+          try {
+            const response = await fetch(
+              `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-csv`,
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ csvContent: content }),
+              }
+            );
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.error || `HTTP error: ${response.status}`);
+            }
+
+            const { normalizedCsv } = await response.json();
+            
+            if (!normalizedCsv) {
+              throw new Error('AI não conseguiu processar o arquivo');
+            }
+
+            // Parse the normalized CSV
+            const parsed = parseContaAzulCsv(normalizedCsv);
+            
+            if (parsed.length === 0) {
+              throw new Error('Nenhuma transação válida encontrada após processamento AI');
+            }
+
+            setEntries(parsed);
+            setMappings({});
+            setSelectedCostCenter('all');
+            setAlert({ type: 'success', msg: `IA processou ${parsed.length} transações com sucesso!` });
+            toast({
+              title: "✨ Processado com IA",
+              description: `${parsed.length} transações foram normalizadas e importadas.`
+            });
+            setTab('mapping');
+          } catch (aiError: any) {
+            console.error('AI parsing also failed:', aiError);
+            setAlert({ 
+              type: 'error', 
+              msg: `Erro de análise: ${parseError.message}` 
+            });
+          }
+        }
       } catch (err: any) {
-        setAlert({ type: 'error', msg: `Erro de análise: ${err.message}` });
+        setAlert({ type: 'error', msg: `Erro crítico: ${err.message}` });
       } finally {
         setIsParsing(false);
       }
     };
+    
     reader.onerror = () => {
       setAlert({ type: 'error', msg: 'Falha crítica ao ler o arquivo selecionado.' });
       setIsParsing(false);

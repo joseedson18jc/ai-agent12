@@ -61,7 +61,7 @@ export const UploadTab = ({ isParsing, onCsvUpload, onLoadDemo }: UploadTabProps
                       Arraste seu arquivo CSV
                     </p>
                     <p className="text-xs text-muted-foreground mt-2.5 font-bold uppercase tracking-widest opacity-60">
-                      Exportação Conta Azul Suportada
+                      Qualquer formato • IA corrige automaticamente
                     </p>
                   </motion.div>
                 )}
@@ -74,10 +74,10 @@ export const UploadTab = ({ isParsing, onCsvUpload, onLoadDemo }: UploadTabProps
               </div>
               <div className="relative z-10">
                 <h4 className="font-bold text-sm uppercase tracking-widest mb-1 text-primary">
-                  Algoritmo de Precisão
+                  Parsing Inteligente com IA
                 </h4>
                 <p className="text-xs text-muted leading-relaxed font-medium">
-                  Nossa IA detecta automaticamente delimitadores e converte moedas internacionais para o padrão BRL.
+                  Nossa IA analisa qualquer formato CSV e converte automaticamente para o padrão do sistema.
                 </p>
               </div>
               <div className="absolute right-0 bottom-0 opacity-5 group-hover:scale-125 transition-transform duration-1000">

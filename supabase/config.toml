@@ -2,3 +2,6 @@ project_id = "pppacjvewskrmliieyty"
 
 [functions.financial-insights]
 verify_jwt = false
+
+[functions.parse-csv]
+verify_jwt = false
