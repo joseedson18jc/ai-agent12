@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { BPSection } from '@/types/finance';
 
 export interface ImportHistoryEntry {
   id: string;
@@ -6,6 +7,7 @@ export interface ImportHistoryEntry {
   columnHeaders: string[];
   timestamp: number;
   entryCount: number;
+  savedMappings?: Record<string, BPSection>;
 }
 
 const STORAGE_KEY = 'csv_import_history';
@@ -39,8 +41,14 @@ export const useImportHistory = () => {
       
       let updated: ImportHistoryEntry[];
       if (existing) {
-        // Update existing entry
-        updated = prev.map(h => h.id === existing.id ? { ...newEntry, id: existing.id } : h);
+        // Update existing entry, preserve mappings if new ones not provided
+        const mergedMappings = entry.savedMappings 
+          ? { ...existing.savedMappings, ...entry.savedMappings }
+          : existing.savedMappings;
+        updated = prev.map(h => h.id === existing.id 
+          ? { ...newEntry, id: existing.id, savedMappings: mergedMappings } 
+          : h
+        );
       } else {
         // Add new entry, limit to MAX_HISTORY
         updated = [newEntry, ...prev].slice(0, MAX_HISTORY);
@@ -51,6 +59,18 @@ export const useImportHistory = () => {
     });
 
     return newEntry;
+  }, []);
+
+  const updateMappings = useCallback((historyId: string, mappings: Record<string, BPSection>) => {
+    setHistory(prev => {
+      const updated = prev.map(h => 
+        h.id === historyId 
+          ? { ...h, savedMappings: { ...h.savedMappings, ...mappings }, timestamp: Date.now() }
+          : h
+      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
   }, []);
 
   const findSimilarImport = useCallback((columnHeaders: string[]): ImportHistoryEntry | null => {
@@ -90,6 +110,7 @@ export const useImportHistory = () => {
   return {
     history,
     saveToHistory,
+    updateMappings,
     findSimilarImport,
     clearHistory,
     deleteEntry,

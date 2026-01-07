@@ -26,7 +26,7 @@ const Index = () => {
   const { toast } = useToast();
   const { session, loading: authLoading } = useAuth();
   const navigate = useNavigate();
-  const { saveToHistory } = useImportHistory();
+  const { saveToHistory, findSimilarImport, updateMappings } = useImportHistory();
   const [tab, setTab] = useState<TabType>('upload');
   const [entries, setEntries] = useState<TransactionEntry[]>([]);
   const [mappings, setMappings] = useState<Record<string, BPSection>>({});
@@ -39,7 +39,8 @@ const Index = () => {
   const [selectedCostCenter, setSelectedCostCenter] = useState<string>('all');
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>('lovable');
   const [currentFilename, setCurrentFilename] = useState<string>('');
-
+  const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
+  const [pendingSavedMappings, setPendingSavedMappings] = useState<Record<string, BPSection> | null>(null);
   useEffect(() => {
     if (alert) {
       const timer = setTimeout(() => setAlert(null), 5000);
@@ -83,6 +84,8 @@ const Index = () => {
     
     setIsParsing(true);
     setCurrentFilename(file.name);
+    setPendingSavedMappings(null);
+    setCurrentHistoryId(null);
     const reader = new FileReader();
     
     reader.onload = async (event) => {
@@ -91,27 +94,45 @@ const Index = () => {
         const firstLine = content.split(/\r?\n/)[0] || '';
         const columnHeaders = firstLine.split(/[,;]/).map(h => h.trim().replace(/"/g, ''));
         
-        // First try normal parsing
-        try {
-          const parsed = parseContaAzulCsv(content);
+        // Check for similar import with saved mappings
+        const similarImport = findSimilarImport(columnHeaders);
+        
+        const processParsedData = (parsed: TransactionEntry[], isAi: boolean) => {
           setEntries(parsed);
           setMappings({});
           setSelectedCostCenter('all');
-          setIsAiParsed(false);
+          setIsAiParsed(isAi);
           
-          // Save to history
-          saveToHistory({
+          // Save to history and store the history ID
+          const historyEntry = saveToHistory({
             filename: file.name,
             columnHeaders,
             entryCount: parsed.length
           });
+          setCurrentHistoryId(historyEntry.id);
           
+          // Check if we have saved mappings to offer
+          if (similarImport?.savedMappings && Object.keys(similarImport.savedMappings).length > 0) {
+            setPendingSavedMappings(similarImport.savedMappings);
+            toast({
+              title: "📋 Mapeamento anterior encontrado",
+              description: `Formato similar ao arquivo "${similarImport.filename}". Deseja aplicar os mapeamentos salvos?`,
+              duration: 8000,
+            });
+          }
+          
+          setTab('preview');
+        };
+        
+        // First try normal parsing
+        try {
+          const parsed = parseContaAzulCsv(content);
+          processParsedData(parsed, false);
           setAlert({ type: 'success', msg: `${parsed.length} transações identificadas. Revise antes de continuar.` });
           toast({
             title: "Upload concluído",
             description: `${parsed.length} transações prontas para revisão.`
           });
-          setTab('preview');
           setIsParsing(false);
           return;
         } catch (parseError: any) {
@@ -154,24 +175,12 @@ const Index = () => {
               throw new Error('Nenhuma transação válida encontrada após processamento AI');
             }
 
-            setEntries(parsed);
-            setMappings({});
-            setSelectedCostCenter('all');
-            setIsAiParsed(true);
-            
-            // Save to history
-            saveToHistory({
-              filename: file.name,
-              columnHeaders,
-              entryCount: parsed.length
-            });
-            
+            processParsedData(parsed, true);
             setAlert({ type: 'success', msg: `IA processou ${parsed.length} transações. Revise antes de continuar.` });
             toast({
               title: "✨ Processado com IA",
               description: `${parsed.length} transações normalizadas e prontas para revisão.`
             });
-            setTab('preview');
           } catch (aiError: any) {
             console.error('AI parsing also failed:', aiError);
             setAlert({ 
@@ -192,7 +201,31 @@ const Index = () => {
       setIsParsing(false);
     };
     reader.readAsText(file);
-  }, [toast]);
+  }, [toast, findSimilarImport, saveToHistory]);
+
+  const handleApplySavedMappings = useCallback(() => {
+    if (!pendingSavedMappings) return;
+    
+    setMappings(pendingSavedMappings);
+    setEntries(prev => prev.map(e => {
+      const key = getCategoryKey(e.category, e.costCenter);
+      if (pendingSavedMappings[key]) {
+        return { ...e, bpSection: pendingSavedMappings[key] };
+      }
+      return e;
+    }));
+    
+    const appliedCount = Object.keys(pendingSavedMappings).length;
+    toast({
+      title: "✅ Mapeamentos aplicados",
+      description: `${appliedCount} categorias foram mapeadas automaticamente.`
+    });
+    setPendingSavedMappings(null);
+  }, [pendingSavedMappings, toast]);
+
+  const handleDismissSavedMappings = useCallback(() => {
+    setPendingSavedMappings(null);
+  }, []);
 
   const handlePreviewConfirm = useCallback(() => {
     setTab('mapping');
@@ -474,6 +507,9 @@ const Index = () => {
               onConfirm={handlePreviewConfirm}
               onCancel={handlePreviewCancel}
               onEntriesChange={handleEntriesChange}
+              pendingSavedMappings={pendingSavedMappings}
+              onApplySavedMappings={handleApplySavedMappings}
+              onDismissSavedMappings={handleDismissSavedMappings}
             />
           )}
           
@@ -485,7 +521,13 @@ const Index = () => {
               isAutoMapping={isAutoMapping}
               onMapEntry={handleMapEntry}
               onAutoMap={autoMapWithAi}
-              onFinish={() => setTab('analytics')}
+              onFinish={() => {
+                // Save mappings to history before finishing
+                if (currentHistoryId && Object.keys(mappings).length > 0) {
+                  updateMappings(currentHistoryId, mappings);
+                }
+                setTab('analytics');
+              }}
             />
           )}
           
