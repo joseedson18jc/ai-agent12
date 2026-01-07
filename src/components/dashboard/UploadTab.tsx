@@ -1,4 +1,4 @@
-import { Upload, Loader2, Database, Sparkles, LayoutDashboard, BarChart3, CheckCircle2, ChevronRight } from 'lucide-react';
+import { Upload, Loader2, Database, Sparkles, LayoutDashboard, BarChart3, CheckCircle2, ChevronRight, Download, FileSpreadsheet } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,28 @@ interface UploadTabProps {
   onCsvUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onLoadDemo: () => void;
 }
+
+const SAMPLE_CSV_CONTENT = `Tipo,Categoria,Centro de Custo,Valor,Data
+Receita,Vendas de Produtos,Comercial,15000.00,2024-01-15
+Receita,Prestação de Serviços,Comercial,8500.50,2024-01-20
+Despesa,Salários,RH,12000.00,2024-01-31
+Despesa,Aluguel,Administrativo,3500.00,2024-01-05
+Despesa,Marketing Digital,Marketing,2800.00,2024-01-10
+Receita,Consultoria,Comercial,5000.00,2024-02-01
+Despesa,Energia Elétrica,Administrativo,850.00,2024-02-05
+Despesa,Internet e Telefone,TI,450.00,2024-02-10`;
+
+const downloadSampleCsv = () => {
+  const blob = new Blob([SAMPLE_CSV_CONTENT], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'modelo_dre.csv';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 export const UploadTab = ({ isParsing, onCsvUpload, onLoadDemo }: UploadTabProps) => {
   return (
@@ -63,6 +85,14 @@ export const UploadTab = ({ isParsing, onCsvUpload, onLoadDemo }: UploadTabProps
                     <p className="text-xs text-muted-foreground mt-2.5 font-bold uppercase tracking-widest opacity-60">
                       Qualquer formato • IA corrige automaticamente
                     </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); downloadSampleCsv(); }}
+                      className="mt-4 text-primary hover:text-primary/80 gap-2"
+                    >
+                      <Download size={14} /> Baixar modelo CSV
+                    </Button>
                   </motion.div>
                 )}
               </AnimatePresence>
