@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, Square, History, RefreshCw } from 'lucide-react';
+import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, History, RefreshCw, Filter, Loader2, Wand2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -12,6 +12,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { TransactionEntry, BPSection } from '@/types/finance';
 import { formatCurrency } from '@/utils/finance';
 import { useMemo, useState, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
+
+type IssueFilter = 'all' | 'errors' | 'warnings' | 'issues';
 
 interface ValidationIssue {
   type: 'error' | 'warning';
@@ -164,6 +167,7 @@ export const CsvPreview = ({
   onApplySavedMappings,
   onDismissSavedMappings
 }: CsvPreviewProps) => {
+  const { toast } = useToast();
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{
     type: 'receivable' | 'payable';
@@ -173,6 +177,8 @@ export const CsvPreview = ({
     date: string;
   } | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
+  const [issueFilter, setIssueFilter] = useState<IssueFilter>('all');
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
 
   const { issues, entryIssues, fieldIssues } = useMemo(() => validateEntries(entries), [entries]);
   const hasErrors = issues.some(i => i.type === 'error');
@@ -193,6 +199,33 @@ export const CsvPreview = ({
     return fieldIssue?.message || '';
   };
 
+  // Filter entries based on issue filter
+  const filteredEntries = useMemo(() => {
+    const base = entries.slice(0, 50);
+    if (issueFilter === 'all') return base;
+    
+    return base.filter((_, idx) => {
+      const issues = fieldIssues.get(idx) || [];
+      if (issueFilter === 'errors') return issues.some(i => i.severity === 'error');
+      if (issueFilter === 'warnings') return issues.some(i => i.severity === 'warning');
+      if (issueFilter === 'issues') return issues.length > 0;
+      return true;
+    });
+  }, [entries, issueFilter, fieldIssues]);
+
+  // Count issues for filter badges
+  const issueCounts = useMemo(() => {
+    const base = entries.slice(0, 50);
+    let errors = 0;
+    let warnings = 0;
+    base.forEach((_, idx) => {
+      const issues = fieldIssues.get(idx) || [];
+      if (issues.some(i => i.severity === 'error')) errors++;
+      if (issues.some(i => i.severity === 'warning')) warnings++;
+    });
+    return { errors, warnings, total: errors + warnings };
+  }, [entries, fieldIssues]);
+
   const receivableCount = entries.filter(e => e.type === 'receivable').length;
   const payableCount = entries.filter(e => e.type === 'payable').length;
   const totalReceivable = entries.filter(e => e.type === 'receivable').reduce((sum, e) => sum + e.amount, 0);
@@ -205,7 +238,7 @@ export const CsvPreview = ({
       }
     : null;
 
-  const previewEntries = entries.slice(0, 50);
+  const previewEntries = filteredEntries;
 
   const toggleRowSelection = useCallback((idx: number) => {
     setSelectedRows(prev => {
@@ -220,12 +253,14 @@ export const CsvPreview = ({
   }, []);
 
   const toggleSelectAll = useCallback(() => {
-    if (selectedRows.size === previewEntries.length) {
+    if (selectedRows.size === previewEntries.length && previewEntries.length > 0) {
       setSelectedRows(new Set());
     } else {
-      setSelectedRows(new Set(previewEntries.map((_, idx) => idx)));
+      // Get original indices for filtered entries
+      const originalIndices = previewEntries.map((e) => entries.findIndex(orig => orig.id === e.id || (orig.category === e.category && orig.amount === e.amount && orig.competenceDate === e.competenceDate)));
+      setSelectedRows(new Set(originalIndices.filter(i => i !== -1)));
     }
-  }, [selectedRows.size, previewEntries.length]);
+  }, [selectedRows.size, previewEntries, entries]);
 
   const deleteSelectedRows = useCallback(() => {
     if (!onEntriesChange || selectedRows.size === 0) return;
@@ -270,6 +305,118 @@ export const CsvPreview = ({
     setEditingIdx(null);
     setEditForm(null);
   }, [editingIdx, editForm, entries, onEntriesChange]);
+
+  // AI Auto-fill for missing categories and cost centers
+  const autoFillWithAi = useCallback(async () => {
+    if (!onEntriesChange) return;
+    
+    // Find entries with missing category or cost center
+    const entriesToFill = entries.map((e, idx) => ({
+      idx,
+      entry: e,
+      needsCategory: !e.category || e.category.trim() === '',
+      needsCostCenter: !e.costCenter || e.costCenter.trim() === ''
+    })).filter(e => e.needsCategory || e.needsCostCenter);
+
+    if (entriesToFill.length === 0) {
+      toast({
+        title: "Nenhum campo vazio",
+        description: "Todos os registros já possuem categoria e centro de custo."
+      });
+      return;
+    }
+
+    setIsAutoFilling(true);
+    
+    try {
+      // Get existing categories for context
+      const existingCategories = [...new Set(entries.filter(e => e.category).map(e => e.category))];
+      
+      // Prepare entries for AI
+      const entriesPayload = entriesToFill.slice(0, 50).map(({ idx, entry }) => ({
+        idx,
+        type: entry.type,
+        category: entry.category || '',
+        costCenter: entry.costCenter || '',
+        amount: entry.amount,
+        date: entry.competenceDate
+      }));
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auto-fill-entries`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ 
+            entries: entriesPayload,
+            existingCategories 
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        if (response.status === 429) {
+          toast({
+            title: "Limite de requisições",
+            description: "Por favor, aguarde um momento e tente novamente.",
+            variant: "destructive",
+          });
+          throw new Error("Rate limit exceeded");
+        }
+        if (response.status === 402) {
+          toast({
+            title: "Créditos insuficientes",
+            description: "Adicione créditos para continuar usando a IA.",
+            variant: "destructive",
+          });
+          throw new Error("Payment required");
+        }
+        throw new Error(`HTTP error: ${response.status}`);
+      }
+
+      const { suggestions } = await response.json();
+      
+      // Apply suggestions to entries
+      const updatedEntries = [...entries];
+      let filledCount = 0;
+      
+      suggestions.forEach((s: { idx: number; category: string; costCenter: string }) => {
+        if (updatedEntries[s.idx]) {
+          const entry = updatedEntries[s.idx];
+          const needsCategory = !entry.category || entry.category.trim() === '';
+          const needsCostCenter = !entry.costCenter || entry.costCenter.trim() === '';
+          
+          if (needsCategory && s.category) {
+            updatedEntries[s.idx] = { ...updatedEntries[s.idx], category: s.category };
+            filledCount++;
+          }
+          if (needsCostCenter && s.costCenter) {
+            updatedEntries[s.idx] = { ...updatedEntries[s.idx], costCenter: s.costCenter };
+          }
+        }
+      });
+      
+      onEntriesChange(updatedEntries);
+      
+      toast({
+        title: "✨ Preenchimento automático concluído",
+        description: `${filledCount} campos foram preenchidos com sugestões da IA.`
+      });
+    } catch (error) {
+      console.error("Auto-fill error:", error);
+      if (!(error instanceof Error) || (!error.message.includes("Rate limit") && !error.message.includes("Payment required"))) {
+        toast({
+          title: "Erro no preenchimento automático",
+          description: "Não foi possível inferir os dados. Tente novamente.",
+          variant: "destructive",
+        });
+      }
+    } finally {
+      setIsAutoFilling(false);
+    }
+  }, [entries, onEntriesChange, toast]);
 
   const deleteEntry = useCallback((idx: number) => {
     if (!onEntriesChange) return;
@@ -467,12 +614,58 @@ export const CsvPreview = ({
       {/* Data Preview Table */}
       <Card className="rounded-3xl border-border/50 overflow-hidden">
         <CardHeader className="bg-muted/30 px-6 py-4">
-          <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
-            <span>Dados ({previewEntries.length} de {entries.length} transações)</span>
-            {onEntriesChange && (
-              <span className="text-xs font-normal normal-case">Clique no lápis para editar</span>
-            )}
-          </CardTitle>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              Dados ({previewEntries.length} de {entries.length} transações)
+              {issueFilter !== 'all' && (
+                <Badge variant="outline" className="ml-2 text-xs">Filtrado</Badge>
+              )}
+            </CardTitle>
+            <div className="flex items-center gap-3">
+              {/* Issue Filter */}
+              <div className="flex items-center gap-2">
+                <Filter size={14} className="text-muted-foreground" />
+                <Select value={issueFilter} onValueChange={(v) => setIssueFilter(v as IssueFilter)}>
+                  <SelectTrigger className="h-8 w-[160px] text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as linhas</SelectItem>
+                    <SelectItem value="issues">
+                      Com problemas ({issueCounts.total})
+                    </SelectItem>
+                    <SelectItem value="errors">
+                      Apenas erros ({issueCounts.errors})
+                    </SelectItem>
+                    <SelectItem value="warnings">
+                      Apenas avisos ({issueCounts.warnings})
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* AI Auto-fill button */}
+              {onEntriesChange && issueCounts.total > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={autoFillWithAi}
+                  disabled={isAutoFilling}
+                  className="gap-2 rounded-xl bg-primary/5 border-primary/30 text-primary hover:bg-primary/10"
+                >
+                  {isAutoFilling ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Inferindo...
+                    </>
+                  ) : (
+                    <>
+                      <Wand2 size={14} /> Preencher com IA
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
         </CardHeader>
         <CardContent className="p-0">
           <ScrollArea className="h-[400px]">
@@ -497,7 +690,12 @@ export const CsvPreview = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {previewEntries.map((entry, idx) => {
+                {previewEntries.map((entry) => {
+                  // Get original index from full entries array
+                  const originalIdx = entries.findIndex(e => 
+                    e.id === entry.id || (e.category === entry.category && e.amount === entry.amount && e.competenceDate === entry.competenceDate)
+                  );
+                  const idx = originalIdx !== -1 ? originalIdx : 0;
                   const rowIssues = entryIssues.get(idx) || [];
                   const hasRowIssue = rowIssues.length > 0;
                   const isEditing = editingIdx === idx;
