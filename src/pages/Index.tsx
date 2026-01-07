@@ -454,11 +454,12 @@ const Index = () => {
       />
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-12">
-        <AnimatePresence mode="wait">
-          <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
-          
+        <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
+        
+        <AnimatePresence mode="wait" initial={false}>
           {tab === 'upload' && (
             <UploadTab 
+              key="upload"
               isParsing={isParsing}
               onCsvUpload={handleCsvUpload}
               onLoadDemo={loadDemo}
@@ -467,6 +468,7 @@ const Index = () => {
 
           {tab === 'preview' && (
             <CsvPreview
+              key="preview"
               entries={entries}
               isAiParsed={isAiParsed}
               onConfirm={handlePreviewConfirm}
@@ -477,6 +479,7 @@ const Index = () => {
           
           {tab === 'mapping' && (
             <MappingTab
+              key="mapping"
               entries={entries}
               mappings={mappings}
               isAutoMapping={isAutoMapping}
@@ -488,6 +491,7 @@ const Index = () => {
           
           {tab === 'analytics' && (
             <AnalyticsTab
+              key="analytics"
               entries={entries}
               selectedCostCenter={selectedCostCenter}
               uniqueCostCenters={uniqueCostCenters}
@@ -504,6 +508,7 @@ const Index = () => {
 
           {tab === 'forecast' && (
             <ForecastingModule 
+              key="forecast"
               dreByMonth={dreByMonth}
               sortedMonths={sortedMonths}
             />
@@ -511,7 +516,7 @@ const Index = () => {
         </AnimatePresence>
       </main>
 
-      <Footer />
+      <Footer key="footer" />
     </div>
   );
 };
