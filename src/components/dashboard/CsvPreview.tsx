@@ -30,14 +30,34 @@ interface CsvPreviewProps {
   onDismissSavedMappings?: () => void;
 }
 
-const validateEntries = (entries: TransactionEntry[]): { issues: ValidationIssue[], entryIssues: Map<number, string[]> } => {
+interface FieldIssue {
+  field: 'type' | 'category' | 'costCenter' | 'amount' | 'date';
+  severity: 'error' | 'warning';
+  message: string;
+}
+
+const validateEntries = (entries: TransactionEntry[]): { 
+  issues: ValidationIssue[], 
+  entryIssues: Map<number, string[]>,
+  fieldIssues: Map<number, FieldIssue[]>
+} => {
   const issues: ValidationIssue[] = [];
   const entryIssues = new Map<number, string[]>();
+  const fieldIssues = new Map<number, FieldIssue[]>();
+
+  const addFieldIssue = (idx: number, issue: FieldIssue) => {
+    const existing = fieldIssues.get(idx) || [];
+    existing.push(issue);
+    fieldIssues.set(idx, existing);
+  };
 
   const invalidDates = entries.filter((e, idx) => {
     const date = new Date(e.competenceDate);
     const invalid = isNaN(date.getTime());
-    if (invalid) entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Data inválida']);
+    if (invalid) {
+      entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Data inválida']);
+      addFieldIssue(idx, { field: 'date', severity: 'error', message: 'Data inválida' });
+    }
     return invalid;
   });
   if (invalidDates.length > 0) {
@@ -46,16 +66,34 @@ const validateEntries = (entries: TransactionEntry[]): { issues: ValidationIssue
 
   const emptyCategories = entries.filter((e, idx) => {
     const empty = !e.category || e.category.trim() === '';
-    if (empty) entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Categoria vazia']);
+    if (empty) {
+      entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Categoria vazia']);
+      addFieldIssue(idx, { field: 'category', severity: 'error', message: 'Categoria vazia' });
+    }
     return empty;
   });
   if (emptyCategories.length > 0) {
     issues.push({ type: 'error', message: 'Categorias vazias', count: emptyCategories.length });
   }
 
+  // Check for empty cost centers (warning, not error)
+  const emptyCostCenters = entries.filter((e, idx) => {
+    const empty = !e.costCenter || e.costCenter.trim() === '';
+    if (empty) {
+      addFieldIssue(idx, { field: 'costCenter', severity: 'warning', message: 'Centro de custo vazio' });
+    }
+    return empty;
+  });
+  if (emptyCostCenters.length > 0) {
+    issues.push({ type: 'warning', message: 'Centros de custo vazios', count: emptyCostCenters.length });
+  }
+
   const zeroValues = entries.filter((e, idx) => {
     const isZero = e.amount === 0;
-    if (isZero) entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Valor zero']);
+    if (isZero) {
+      entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Valor zero']);
+      addFieldIssue(idx, { field: 'amount', severity: 'warning', message: 'Valor zero' });
+    }
     return isZero;
   });
   if (zeroValues.length > 0) {
@@ -64,7 +102,10 @@ const validateEntries = (entries: TransactionEntry[]): { issues: ValidationIssue
 
   const largeValues = entries.filter((e, idx) => {
     const isLarge = Math.abs(e.amount) > 1000000;
-    if (isLarge) entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Valor atípico']);
+    if (isLarge) {
+      entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Valor atípico']);
+      addFieldIssue(idx, { field: 'amount', severity: 'warning', message: 'Valor atípico (>R$1M)' });
+    }
     return isLarge;
   });
   if (largeValues.length > 0) {
@@ -74,14 +115,17 @@ const validateEntries = (entries: TransactionEntry[]): { issues: ValidationIssue
   const futureDates = entries.filter((e, idx) => {
     const date = new Date(e.competenceDate);
     const isFuture = date > new Date();
-    if (isFuture) entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Data futura']);
+    if (isFuture) {
+      entryIssues.set(idx, [...(entryIssues.get(idx) || []), 'Data futura']);
+      addFieldIssue(idx, { field: 'date', severity: 'warning', message: 'Data no futuro' });
+    }
     return isFuture;
   });
   if (futureDates.length > 0) {
     issues.push({ type: 'warning', message: 'Datas futuras', count: futureDates.length });
   }
 
-  return { issues, entryIssues };
+  return { issues, entryIssues, fieldIssues };
 };
 
 const exportToCsv = (entries: TransactionEntry[]) => {
@@ -130,9 +174,24 @@ export const CsvPreview = ({
   } | null>(null);
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
 
-  const { issues, entryIssues } = useMemo(() => validateEntries(entries), [entries]);
+  const { issues, entryIssues, fieldIssues } = useMemo(() => validateEntries(entries), [entries]);
   const hasErrors = issues.some(i => i.type === 'error');
   const hasWarnings = issues.some(i => i.type === 'warning');
+
+  // Helper to get field-specific styling
+  const getFieldClass = (idx: number, field: FieldIssue['field']) => {
+    const issues = fieldIssues.get(idx) || [];
+    const fieldIssue = issues.find(i => i.field === field);
+    if (!fieldIssue) return '';
+    if (fieldIssue.severity === 'error') return 'ring-2 ring-destructive/50 bg-destructive/10';
+    return 'ring-2 ring-yellow-500/50 bg-yellow-500/10';
+  };
+
+  const getFieldTooltip = (idx: number, field: FieldIssue['field']) => {
+    const issues = fieldIssues.get(idx) || [];
+    const fieldIssue = issues.find(i => i.field === field);
+    return fieldIssue?.message || '';
+  };
 
   const receivableCount = entries.filter(e => e.type === 'receivable').length;
   const payableCount = entries.filter(e => e.type === 'payable').length;
@@ -527,28 +586,49 @@ export const CsvPreview = ({
                         <Badge 
                           variant="outline" 
                           className={`text-[10px] font-bold uppercase ${
-                            entry.type === 'receivable' 
-                              ? 'bg-green-500/10 text-green-600 border-green-500/30' 
-                              : 'bg-red-500/10 text-red-600 border-red-500/30'
+                            entry.amount < 0 || entry.type === 'payable'
+                              ? 'bg-red-500/10 text-red-600 border-red-500/30' 
+                              : 'bg-green-500/10 text-green-600 border-green-500/30'
                           }`}
                         >
-                          {entry.type === 'receivable' ? 'Receita' : 'Despesa'}
+                          {entry.amount < 0 || entry.type === 'payable' ? 'Saída' : 'Entrada'}
                         </Badge>
                       </TableCell>
-                      <TableCell className={`font-medium text-sm max-w-[200px] truncate ${!entry.category ? 'text-destructive italic' : ''}`} title={entry.category || 'Categoria vazia'}>
-                        {entry.category || '(vazio)'}
+                      <TableCell 
+                        className={`font-medium text-sm max-w-[200px] truncate rounded-md px-2 py-1 ${getFieldClass(idx, 'category')} ${!entry.category ? 'text-destructive italic' : ''}`} 
+                        title={getFieldTooltip(idx, 'category') || entry.category || 'Categoria vazia'}
+                      >
+                        <div className="flex items-center gap-1">
+                          {!entry.category && <AlertCircle className="h-3 w-3 text-destructive flex-shrink-0" />}
+                          {entry.category || '(vazio)'}
+                        </div>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {entry.costCenter || '-'}
+                      <TableCell 
+                        className={`text-sm rounded-md px-2 py-1 ${getFieldClass(idx, 'costCenter')} ${!entry.costCenter ? 'text-muted-foreground/50 italic' : 'text-muted-foreground'}`}
+                        title={getFieldTooltip(idx, 'costCenter') || entry.costCenter || 'Centro de custo vazio'}
+                      >
+                        <div className="flex items-center gap-1">
+                          {!entry.costCenter && <AlertTriangle className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
+                          {entry.costCenter || '(vazio)'}
+                        </div>
                       </TableCell>
-                      <TableCell className={`text-right font-bold ${entry.amount === 0 ? 'text-yellow-600' : entry.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <TableCell 
+                        className={`text-right font-bold rounded-md px-2 py-1 ${getFieldClass(idx, 'amount')} ${entry.amount === 0 ? 'text-yellow-600' : entry.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}
+                        title={getFieldTooltip(idx, 'amount')}
+                      >
                         {formatCurrency(entry.amount)}
                       </TableCell>
-                      <TableCell className={`text-sm ${isNaN(new Date(entry.competenceDate).getTime()) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
-                        {isNaN(new Date(entry.competenceDate).getTime()) 
-                          ? 'Inválida' 
-                          : new Date(entry.competenceDate).toLocaleDateString('pt-BR')
-                        }
+                      <TableCell 
+                        className={`text-sm rounded-md px-2 py-1 ${getFieldClass(idx, 'date')} ${isNaN(new Date(entry.competenceDate).getTime()) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}
+                        title={getFieldTooltip(idx, 'date')}
+                      >
+                        <div className="flex items-center gap-1">
+                          {isNaN(new Date(entry.competenceDate).getTime()) && <AlertCircle className="h-3 w-3 text-destructive flex-shrink-0" />}
+                          {isNaN(new Date(entry.competenceDate).getTime()) 
+                            ? 'Inválida' 
+                            : new Date(entry.competenceDate).toLocaleDateString('pt-BR')
+                          }
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1 items-center">
