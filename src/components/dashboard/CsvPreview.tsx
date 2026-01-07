@@ -341,13 +341,13 @@ export const CsvPreview = ({
     return { color: 'bg-red-500', label: 'Incerta', textColor: 'text-red-600' };
   };
 
-  // Filter entries based on issue filter
+  // Filter entries based on issue filter - keep track of original indices
   const filteredEntries = useMemo(() => {
     const base = entries.slice(0, 50);
-    if (issueFilter === 'all') return base;
+    if (issueFilter === 'all') return base.map((entry, idx) => ({ entry, originalIdx: idx }));
     
-    return base.filter((_, idx) => {
-      const issues = fieldIssues.get(idx) || [];
+    return base.map((entry, idx) => ({ entry, originalIdx: idx })).filter(({ originalIdx }) => {
+      const issues = fieldIssues.get(originalIdx) || [];
       if (issueFilter === 'errors') return issues.some(i => i.severity === 'error');
       if (issueFilter === 'warnings') return issues.some(i => i.severity === 'warning');
       if (issueFilter === 'issues') return issues.length > 0;
@@ -398,11 +398,11 @@ export const CsvPreview = ({
     if (selectedRows.size === previewEntries.length && previewEntries.length > 0) {
       setSelectedRows(new Set());
     } else {
-      // Get original indices for filtered entries
-      const originalIndices = previewEntries.map((e) => entries.findIndex(orig => orig.id === e.id || (orig.category === e.category && orig.amount === e.amount && orig.competenceDate === e.competenceDate)));
-      setSelectedRows(new Set(originalIndices.filter(i => i !== -1)));
+      // Get original indices for filtered entries - already tracked
+      const originalIndices = previewEntries.map(({ originalIdx }) => originalIdx);
+      setSelectedRows(new Set(originalIndices));
     }
-  }, [selectedRows.size, previewEntries, entries]);
+  }, [selectedRows.size, previewEntries]);
 
   const deleteSelectedRows = useCallback(() => {
     if (!handleEntriesChange || selectedRows.size === 0) return;
@@ -474,14 +474,15 @@ export const CsvPreview = ({
       // Get existing categories for context
       const existingCategories = [...new Set(entries.filter(e => e.category).map(e => e.category))];
       
-      // Prepare entries for AI
+      // Prepare entries for AI - include description for better inference
       const entriesPayload = entriesToFill.slice(0, 50).map(({ idx, entry }) => ({
         idx,
         type: entry.type,
         category: entry.category || '',
         costCenter: entry.costCenter || '',
         amount: entry.amount,
-        date: entry.competenceDate
+        date: entry.competenceDate,
+        description: entry.description || ''
       }));
 
       const response = await fetch(
@@ -908,12 +909,8 @@ export const CsvPreview = ({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {previewEntries.map((entry) => {
-                  // Get original index from full entries array
-                  const originalIdx = entries.findIndex(e => 
-                    e.id === entry.id || (e.category === entry.category && e.amount === entry.amount && e.competenceDate === entry.competenceDate)
-                  );
-                  const idx = originalIdx !== -1 ? originalIdx : 0;
+                {previewEntries.map(({ entry, originalIdx }) => {
+                  const idx = originalIdx;
                   const rowIssues = entryIssues.get(idx) || [];
                   const hasRowIssue = rowIssues.length > 0;
                   const isEditing = editingIdx === idx;
