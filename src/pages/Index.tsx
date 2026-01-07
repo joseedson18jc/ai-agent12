@@ -183,6 +183,10 @@ const Index = () => {
     setTab('upload');
   }, []);
 
+  const handleEntriesChange = useCallback((updatedEntries: TransactionEntry[]) => {
+    setEntries(updatedEntries);
+  }, []);
+
   const loadDemo = useCallback(() => {
     setIsParsing(true);
     setTimeout(() => {
@@ -445,6 +449,7 @@ const Index = () => {
               isAiParsed={isAiParsed}
               onConfirm={handlePreviewConfirm}
               onCancel={handlePreviewCancel}
+              onEntriesChange={handleEntriesChange}
             />
           )}
           

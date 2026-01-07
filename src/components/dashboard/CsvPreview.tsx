@@ -1,14 +1,16 @@
 import { motion } from 'framer-motion';
-import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle } from 'lucide-react';
+import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TransactionEntry } from '@/types/finance';
 import { formatCurrency } from '@/utils/finance';
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 
 interface ValidationIssue {
   type: 'error' | 'warning';
@@ -21,6 +23,7 @@ interface CsvPreviewProps {
   isAiParsed: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  onEntriesChange?: (entries: TransactionEntry[]) => void;
 }
 
 const validateEntries = (entries: TransactionEntry[]): { issues: ValidationIssue[], entryIssues: Map<number, string[]> } => {
@@ -77,7 +80,42 @@ const validateEntries = (entries: TransactionEntry[]): { issues: ValidationIssue
   return { issues, entryIssues };
 };
 
-export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPreviewProps) => {
+const exportToCsv = (entries: TransactionEntry[]) => {
+  const headers = ['Tipo', 'Categoria', 'Centro de Custo', 'Valor', 'Data'];
+  const rows = entries.map(e => [
+    e.type === 'receivable' ? 'Receita' : 'Despesa',
+    e.category,
+    e.costCenter || '',
+    e.amount.toFixed(2),
+    e.competenceDate
+  ]);
+  
+  const csvContent = [
+    headers.join(','),
+    ...rows.map(r => r.map(cell => `"${cell}"`).join(','))
+  ].join('\n');
+  
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `dados_validados_${new Date().toISOString().split('T')[0]}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntriesChange }: CsvPreviewProps) => {
+  const [editingIdx, setEditingIdx] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<{
+    type: 'receivable' | 'payable';
+    category: string;
+    costCenter: string;
+    amount: string;
+    date: string;
+  } | null>(null);
+
   const { issues, entryIssues } = useMemo(() => validateEntries(entries), [entries]);
   const hasErrors = issues.some(i => i.type === 'error');
   const hasWarnings = issues.some(i => i.type === 'warning');
@@ -94,8 +132,50 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
       }
     : null;
 
-  // Show first 20 entries for preview
-  const previewEntries = entries.slice(0, 20);
+  const previewEntries = entries.slice(0, 50);
+
+  const startEdit = useCallback((idx: number, entry: TransactionEntry) => {
+    setEditingIdx(idx);
+    setEditForm({
+      type: entry.type,
+      category: entry.category,
+      costCenter: entry.costCenter || '',
+      amount: Math.abs(entry.amount).toString(),
+      date: entry.competenceDate
+    });
+  }, []);
+
+  const cancelEdit = useCallback(() => {
+    setEditingIdx(null);
+    setEditForm(null);
+  }, []);
+
+  const saveEdit = useCallback(() => {
+    if (editingIdx === null || !editForm || !onEntriesChange) return;
+    
+    const parsedAmount = parseFloat(editForm.amount) || 0;
+    const signedAmount = editForm.type === 'payable' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
+    
+    const updatedEntries = [...entries];
+    updatedEntries[editingIdx] = {
+      ...updatedEntries[editingIdx],
+      type: editForm.type,
+      category: editForm.category.trim(),
+      costCenter: editForm.costCenter.trim() || undefined,
+      amount: signedAmount,
+      competenceDate: editForm.date
+    };
+    
+    onEntriesChange(updatedEntries);
+    setEditingIdx(null);
+    setEditForm(null);
+  }, [editingIdx, editForm, entries, onEntriesChange]);
+
+  const deleteEntry = useCallback((idx: number) => {
+    if (!onEntriesChange) return;
+    const updatedEntries = entries.filter((_, i) => i !== idx);
+    onEntriesChange(updatedEntries);
+  }, [entries, onEntriesChange]);
 
   return (
     <motion.div
@@ -105,7 +185,7 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
       className="space-y-8"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
             <FileCheck className="w-7 h-7 text-primary" />
@@ -115,15 +195,25 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
               Prévia dos Dados Importados
             </h2>
             <p className="text-muted-foreground text-sm mt-1">
-              Revise os dados antes de continuar para o mapeamento
+              Revise e corrija os dados antes de continuar
             </p>
           </div>
         </div>
-        {isAiParsed && (
-          <Badge variant="secondary" className="gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary border-primary/20">
-            <Sparkles size={14} /> Processado com IA
-          </Badge>
-        )}
+        <div className="flex items-center gap-3">
+          {isAiParsed && (
+            <Badge variant="secondary" className="gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary border-primary/20">
+              <Sparkles size={14} /> Processado com IA
+            </Badge>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => exportToCsv(entries)}
+            className="gap-2 rounded-xl"
+          >
+            <Download size={14} /> Exportar CSV
+          </Button>
+        </div>
       </div>
 
       {/* Stats Summary */}
@@ -177,7 +267,7 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
           <CardContent className="p-5">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 bg-secondary/20 rounded-xl flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-secondary" />
+                <Calendar className="w-5 h-5 text-secondary-foreground" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Período</p>
@@ -200,7 +290,7 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
             <Alert key={`err-${idx}`} variant="destructive" className="rounded-xl border-destructive/50 bg-destructive/10">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="font-medium">
-                {issue.count} {issue.count === 1 ? 'registro com' : 'registros com'} {issue.message.toLowerCase()}
+                {issue.count} {issue.count === 1 ? 'registro com' : 'registros com'} {issue.message.toLowerCase()} — clique no ícone de lápis para corrigir
               </AlertDescription>
             </Alert>
           ))}
@@ -219,7 +309,10 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
       <Card className="rounded-3xl border-border/50 overflow-hidden">
         <CardHeader className="bg-muted/30 px-6 py-4">
           <CardTitle className="text-sm font-bold uppercase tracking-widest text-muted-foreground flex items-center justify-between">
-            <span>Amostra dos Dados ({previewEntries.length} de {entries.length} transações)</span>
+            <span>Dados ({previewEntries.length} de {entries.length} transações)</span>
+            {onEntriesChange && (
+              <span className="text-xs font-normal normal-case">Clique no lápis para editar</span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
@@ -227,18 +320,85 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/20">
-                  <TableHead className="font-bold text-xs uppercase tracking-wide">Tipo</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wide w-[100px]">Tipo</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wide">Categoria</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wide">Centro de Custo</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wide text-right">Valor</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wide">Data</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wide w-10"></TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wide text-right w-[120px]">Valor</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wide w-[120px]">Data</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wide w-[80px]">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {previewEntries.map((entry, idx) => {
                   const rowIssues = entryIssues.get(idx) || [];
                   const hasRowIssue = rowIssues.length > 0;
+                  const isEditing = editingIdx === idx;
+
+                  if (isEditing && editForm) {
+                    return (
+                      <TableRow key={entry.id || idx} className="bg-primary/5">
+                        <TableCell>
+                          <Select
+                            value={editForm.type}
+                            onValueChange={(v) => setEditForm({ ...editForm, type: v as 'receivable' | 'payable' })}
+                          >
+                            <SelectTrigger className="h-8 text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="receivable">Receita</SelectItem>
+                              <SelectItem value="payable">Despesa</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={editForm.category}
+                            onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}
+                            className="h-8 text-sm"
+                            placeholder="Categoria"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            value={editForm.costCenter}
+                            onChange={(e) => setEditForm({ ...editForm, costCenter: e.target.value })}
+                            className="h-8 text-sm"
+                            placeholder="Centro de Custo"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="number"
+                            step="0.01"
+                            value={editForm.amount}
+                            onChange={(e) => setEditForm({ ...editForm, amount: e.target.value })}
+                            className="h-8 text-sm text-right"
+                            placeholder="0.00"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Input
+                            type="date"
+                            value={editForm.date}
+                            onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                            className="h-8 text-sm"
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={saveEdit}>
+                              <Check className="h-4 w-4 text-green-600" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={cancelEdit}>
+                              <XCircle className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  }
+
                   return (
                     <TableRow 
                       key={entry.id || idx} 
@@ -253,7 +413,7 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
                               : 'bg-red-500/10 text-red-600 border-red-500/30'
                           }`}
                         >
-                          {entry.type === 'receivable' ? 'Receber' : 'Pagar'}
+                          {entry.type === 'receivable' ? 'Receita' : 'Despesa'}
                         </Badge>
                       </TableCell>
                       <TableCell className={`font-medium text-sm max-w-[200px] truncate ${!entry.category ? 'text-destructive italic' : ''}`} title={entry.category || 'Categoria vazia'}>
@@ -267,19 +427,31 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
                       </TableCell>
                       <TableCell className={`text-sm ${isNaN(new Date(entry.competenceDate).getTime()) ? 'text-destructive font-medium' : 'text-muted-foreground'}`}>
                         {isNaN(new Date(entry.competenceDate).getTime()) 
-                          ? 'Data inválida' 
+                          ? 'Inválida' 
                           : new Date(entry.competenceDate).toLocaleDateString('pt-BR')
                         }
                       </TableCell>
                       <TableCell>
-                        {hasRowIssue && (
-                          <div className="relative group">
-                            <AlertTriangle className="h-4 w-4 text-yellow-500" />
-                            <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block bg-popover text-popover-foreground text-xs p-2 rounded-lg shadow-lg border whitespace-nowrap">
-                              {rowIssues.join(', ')}
+                        <div className="flex gap-1 items-center">
+                          {onEntriesChange && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => startEdit(idx, entry)}>
+                                <Pencil className="h-3.5 w-3.5 text-muted-foreground hover:text-foreground" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteEntry(idx)}>
+                                <X className="h-3.5 w-3.5 text-muted-foreground hover:text-destructive" />
+                              </Button>
+                            </>
+                          )}
+                          {hasRowIssue && (
+                            <div className="relative group ml-1">
+                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                              <div className="absolute right-0 top-full mt-1 z-50 hidden group-hover:block bg-popover text-popover-foreground text-xs p-2 rounded-lg shadow-lg border whitespace-nowrap">
+                                {rowIssues.join(', ')}
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -287,10 +459,10 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel }: CsvPrev
               </TableBody>
             </Table>
           </ScrollArea>
-          {entries.length > 20 && (
+          {entries.length > 50 && (
             <div className="px-6 py-3 bg-muted/20 text-center">
               <p className="text-xs text-muted-foreground font-medium">
-                ... e mais {entries.length - 20} transações
+                ... e mais {entries.length - 50} transações (edite após importar se necessário)
               </p>
             </div>
           )}
