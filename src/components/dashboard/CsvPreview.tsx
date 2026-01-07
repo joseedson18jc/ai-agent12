@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle } from 'lucide-react';
+import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, Square } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -8,6 +8,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
 import { TransactionEntry } from '@/types/finance';
 import { formatCurrency } from '@/utils/finance';
 import { useMemo, useState, useCallback } from 'react';
@@ -115,6 +116,7 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntries
     amount: string;
     date: string;
   } | null>(null);
+  const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set());
 
   const { issues, entryIssues } = useMemo(() => validateEntries(entries), [entries]);
   const hasErrors = issues.some(i => i.type === 'error');
@@ -133,6 +135,33 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntries
     : null;
 
   const previewEntries = entries.slice(0, 50);
+
+  const toggleRowSelection = useCallback((idx: number) => {
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      if (next.has(idx)) {
+        next.delete(idx);
+      } else {
+        next.add(idx);
+      }
+      return next;
+    });
+  }, []);
+
+  const toggleSelectAll = useCallback(() => {
+    if (selectedRows.size === previewEntries.length) {
+      setSelectedRows(new Set());
+    } else {
+      setSelectedRows(new Set(previewEntries.map((_, idx) => idx)));
+    }
+  }, [selectedRows.size, previewEntries.length]);
+
+  const deleteSelectedRows = useCallback(() => {
+    if (!onEntriesChange || selectedRows.size === 0) return;
+    const updatedEntries = entries.filter((_, idx) => !selectedRows.has(idx));
+    onEntriesChange(updatedEntries);
+    setSelectedRows(new Set());
+  }, [entries, onEntriesChange, selectedRows]);
 
   const startEdit = useCallback((idx: number, entry: TransactionEntry) => {
     setEditingIdx(idx);
@@ -175,6 +204,11 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntries
     if (!onEntriesChange) return;
     const updatedEntries = entries.filter((_, i) => i !== idx);
     onEntriesChange(updatedEntries);
+    setSelectedRows(prev => {
+      const next = new Set(prev);
+      next.delete(idx);
+      return next;
+    });
   }, [entries, onEntriesChange]);
 
   return (
@@ -305,6 +339,28 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntries
         </div>
       )}
 
+      {/* Bulk Actions */}
+      {selectedRows.size > 0 && onEntriesChange && (
+        <Card className="rounded-2xl border-primary/30 bg-primary/5">
+          <CardContent className="p-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <CheckSquare className="w-5 h-5 text-primary" />
+              <span className="font-medium text-foreground">
+                {selectedRows.size} {selectedRows.size === 1 ? 'linha selecionada' : 'linhas selecionadas'}
+              </span>
+            </div>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={deleteSelectedRows}
+              className="gap-2 rounded-xl"
+            >
+              <Trash2 size={14} /> Excluir Selecionadas
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Data Preview Table */}
       <Card className="rounded-3xl border-border/50 overflow-hidden">
         <CardHeader className="bg-muted/30 px-6 py-4">
@@ -320,6 +376,15 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntries
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/20">
+                  {onEntriesChange && (
+                    <TableHead className="w-[50px]">
+                      <Checkbox 
+                        checked={selectedRows.size === previewEntries.length && previewEntries.length > 0}
+                        onCheckedChange={toggleSelectAll}
+                        aria-label="Selecionar todas"
+                      />
+                    </TableHead>
+                  )}
                   <TableHead className="font-bold text-xs uppercase tracking-wide w-[100px]">Tipo</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wide">Categoria</TableHead>
                   <TableHead className="font-bold text-xs uppercase tracking-wide">Centro de Custo</TableHead>
@@ -337,6 +402,7 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntries
                   if (isEditing && editForm) {
                     return (
                       <TableRow key={entry.id || idx} className="bg-primary/5">
+                        {onEntriesChange && <TableCell />}
                         <TableCell>
                           <Select
                             value={editForm.type}
@@ -402,8 +468,17 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntries
                   return (
                     <TableRow 
                       key={entry.id || idx} 
-                      className={`hover:bg-muted/10 ${hasRowIssue ? 'bg-yellow-500/5' : ''}`}
+                      className={`hover:bg-muted/10 ${hasRowIssue ? 'bg-yellow-500/5' : ''} ${selectedRows.has(idx) ? 'bg-primary/10' : ''}`}
                     >
+                      {onEntriesChange && (
+                        <TableCell>
+                          <Checkbox 
+                            checked={selectedRows.has(idx)}
+                            onCheckedChange={() => toggleRowSelection(idx)}
+                            aria-label={`Selecionar linha ${idx + 1}`}
+                          />
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge 
                           variant="outline" 

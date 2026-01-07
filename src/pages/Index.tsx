@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useImportHistory } from '@/hooks/useImportHistory';
 import { TransactionEntry, BPSection, DreKpis } from '@/types/finance';
 import { 
   parseContaAzulCsv, 
@@ -25,6 +26,7 @@ const Index = () => {
   const { toast } = useToast();
   const { session, loading: authLoading } = useAuth();
   const navigate = useNavigate();
+  const { saveToHistory } = useImportHistory();
   const [tab, setTab] = useState<TabType>('upload');
   const [entries, setEntries] = useState<TransactionEntry[]>([]);
   const [mappings, setMappings] = useState<Record<string, BPSection>>({});
@@ -36,6 +38,7 @@ const Index = () => {
   const [isAiParsed, setIsAiParsed] = useState(false);
   const [selectedCostCenter, setSelectedCostCenter] = useState<string>('all');
   const [selectedProvider, setSelectedProvider] = useState<AIProvider>('lovable');
+  const [currentFilename, setCurrentFilename] = useState<string>('');
 
   useEffect(() => {
     if (alert) {
@@ -79,11 +82,14 @@ const Index = () => {
     if (!file) return;
     
     setIsParsing(true);
+    setCurrentFilename(file.name);
     const reader = new FileReader();
     
     reader.onload = async (event) => {
       try {
         const content = event.target?.result as string;
+        const firstLine = content.split(/\r?\n/)[0] || '';
+        const columnHeaders = firstLine.split(/[,;]/).map(h => h.trim().replace(/"/g, ''));
         
         // First try normal parsing
         try {
@@ -92,6 +98,14 @@ const Index = () => {
           setMappings({});
           setSelectedCostCenter('all');
           setIsAiParsed(false);
+          
+          // Save to history
+          saveToHistory({
+            filename: file.name,
+            columnHeaders,
+            entryCount: parsed.length
+          });
+          
           setAlert({ type: 'success', msg: `${parsed.length} transações identificadas. Revise antes de continuar.` });
           toast({
             title: "Upload concluído",
@@ -144,6 +158,14 @@ const Index = () => {
             setMappings({});
             setSelectedCostCenter('all');
             setIsAiParsed(true);
+            
+            // Save to history
+            saveToHistory({
+              filename: file.name,
+              columnHeaders,
+              entryCount: parsed.length
+            });
+            
             setAlert({ type: 'success', msg: `IA processou ${parsed.length} transações. Revise antes de continuar.` });
             toast({
               title: "✨ Processado com IA",

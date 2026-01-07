@@ -1,7 +1,9 @@
-import { Upload, Loader2, Database, Sparkles, LayoutDashboard, BarChart3, CheckCircle2, ChevronRight, Download, FileSpreadsheet } from 'lucide-react';
+import { Upload, Loader2, Database, Sparkles, LayoutDashboard, BarChart3, CheckCircle2, ChevronRight, Download, FileSpreadsheet, History, Trash2, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useImportHistory, ImportHistoryEntry } from '@/hooks/useImportHistory';
+import { Badge } from '@/components/ui/badge';
 
 interface UploadTabProps {
   isParsing: boolean;
@@ -32,6 +34,19 @@ const downloadSampleCsv = () => {
 };
 
 export const UploadTab = ({ isParsing, onCsvUpload, onLoadDemo }: UploadTabProps) => {
+  const { history, deleteEntry, clearHistory } = useImportHistory();
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleDateString('pt-BR', { 
+      day: '2-digit', 
+      month: 'short', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   return (
     <motion.div 
       key="upload"
@@ -162,6 +177,63 @@ export const UploadTab = ({ isParsing, onCsvUpload, onLoadDemo }: UploadTabProps
           </CardContent>
           <BarChart3 size={200} className="absolute -right-12 -bottom-12 opacity-10 group-hover:scale-110 group-hover:rotate-3 transition-transform duration-1000" />
         </Card>
+
+        {/* Import History */}
+        {history.length > 0 && (
+          <Card className="rounded-[2rem] p-8 border border-border/50 shadow-lg bg-card/50">
+            <CardContent className="p-0">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-muted rounded-xl flex items-center justify-center">
+                    <History size={18} className="text-muted-foreground" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-foreground text-sm">Histórico de Importações</h3>
+                    <p className="text-xs text-muted-foreground">{history.length} arquivos anteriores</p>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearHistory}
+                  className="text-muted-foreground hover:text-destructive text-xs"
+                >
+                  Limpar
+                </Button>
+              </div>
+              <div className="space-y-3 max-h-[200px] overflow-y-auto">
+                {history.slice(0, 5).map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between p-3 bg-muted/30 rounded-xl group hover:bg-muted/50 transition-colors"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <FileSpreadsheet size={16} className="text-primary shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-foreground truncate">{entry.filename}</p>
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                          <Clock size={10} />
+                          <span>{formatDate(entry.timestamp)}</span>
+                          <Badge variant="secondary" className="text-[9px] px-1.5 py-0">
+                            {entry.entryCount} linhas
+                          </Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => deleteEntry(entry.id)}
+                    >
+                      <Trash2 size={14} className="text-muted-foreground hover:text-destructive" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </motion.div>
   );
