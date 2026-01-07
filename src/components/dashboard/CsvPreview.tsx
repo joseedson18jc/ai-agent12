@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, Square } from 'lucide-react';
+import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, Square, History, RefreshCw } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { TransactionEntry } from '@/types/finance';
+import { TransactionEntry, BPSection } from '@/types/finance';
 import { formatCurrency } from '@/utils/finance';
 import { useMemo, useState, useCallback } from 'react';
 
@@ -25,6 +25,9 @@ interface CsvPreviewProps {
   onConfirm: () => void;
   onCancel: () => void;
   onEntriesChange?: (entries: TransactionEntry[]) => void;
+  pendingSavedMappings?: Record<string, BPSection> | null;
+  onApplySavedMappings?: () => void;
+  onDismissSavedMappings?: () => void;
 }
 
 const validateEntries = (entries: TransactionEntry[]): { issues: ValidationIssue[], entryIssues: Map<number, string[]> } => {
@@ -107,7 +110,16 @@ const exportToCsv = (entries: TransactionEntry[]) => {
   URL.revokeObjectURL(url);
 };
 
-export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntriesChange }: CsvPreviewProps) => {
+export const CsvPreview = ({ 
+  entries, 
+  isAiParsed, 
+  onConfirm, 
+  onCancel, 
+  onEntriesChange,
+  pendingSavedMappings,
+  onApplySavedMappings,
+  onDismissSavedMappings
+}: CsvPreviewProps) => {
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{
     type: 'receivable' | 'payable';
@@ -249,6 +261,38 @@ export const CsvPreview = ({ entries, isAiParsed, onConfirm, onCancel, onEntries
           </Button>
         </div>
       </div>
+
+      {/* Saved Mappings Banner */}
+      {pendingSavedMappings && Object.keys(pendingSavedMappings).length > 0 && (
+        <Alert className="border-primary/30 bg-primary/5 rounded-2xl">
+          <History className="h-5 w-5 text-primary" />
+          <AlertDescription className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <span className="font-semibold text-foreground">Mapeamento anterior encontrado!</span>
+              <span className="text-muted-foreground ml-2">
+                {Object.keys(pendingSavedMappings).length} categorias podem ser mapeadas automaticamente.
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={onDismissSavedMappings}
+                className="rounded-xl gap-2"
+              >
+                <X size={14} /> Ignorar
+              </Button>
+              <Button
+                size="sm"
+                onClick={onApplySavedMappings}
+                className="rounded-xl gap-2"
+              >
+                <RefreshCw size={14} /> Aplicar Mapeamentos
+              </Button>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
 
       {/* Stats Summary */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
