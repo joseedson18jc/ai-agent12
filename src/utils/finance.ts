@@ -26,35 +26,102 @@ export function parseContaAzulCsv(content: string): TransactionEntry[] {
   const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
   if (lines.length < 2) return [];
 
-  const delimiter = lines[0].includes(';') ? ';' : lines[0].includes('\t') ? '\t' : ',';
-  const header = lines[0].split(delimiter).map(h => h.trim());
+  // Auto-detect delimiter: try semicolon, tab, then comma
+  const firstLine = lines[0];
+  let delimiter = ',';
+  if (firstLine.includes(';')) delimiter = ';';
+  else if (firstLine.includes('\t')) delimiter = '\t';
+  
+  const header = firstLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
 
+  // Flexible column matching with partial/fuzzy matching
   const findIdx = (candidates: string[]) => {
-    const lower = header.map(h => h.toLowerCase());
+    const lowerHeader = header.map(h => h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, ''));
     for (const c of candidates) {
-      const idx = lower.indexOf(c.toLowerCase());
-      if (idx !== -1) return idx;
+      const normalizedCandidate = c.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      // Exact match first
+      const exactIdx = lowerHeader.indexOf(normalizedCandidate);
+      if (exactIdx !== -1) return exactIdx;
+      // Partial match (column contains the candidate)
+      const partialIdx = lowerHeader.findIndex(h => h.includes(normalizedCandidate) || normalizedCandidate.includes(h));
+      if (partialIdx !== -1) return partialIdx;
     }
     return -1;
   };
 
-  const idxTipo = findIdx(['tipo', 'type']);
-  const idxCategoria = findIdx(['categoria', 'category']);
-  const idxCentro = findIdx(['centro de custo', 'cost center', 'centro']);
-  const idxValor = findIdx(['valor', 'value', 'amount']);
-  const idxDataComp = findIdx(['data competência', 'competência', 'competencia', 'data', 'vencimento']);
+  // Extended list of possible column names for each field
+  const idxTipo = findIdx([
+    'tipo', 'type', 'movimento', 'natureza', 'operacao', 'operação', 
+    'lancamento', 'lançamento', 'transacao', 'transação', 'debito/credito', 
+    'débito/crédito', 'd/c', 'entrada/saida', 'entrada/saída'
+  ]);
+  const idxCategoria = findIdx([
+    'categoria', 'category', 'descricao', 'descrição', 'historico', 'histórico',
+    'conta', 'plano de contas', 'classificacao', 'classificação', 'nome',
+    'item', 'rubrica', 'natureza financeira'
+  ]);
+  const idxCentro = findIdx([
+    'centro de custo', 'cost center', 'centro', 'departamento', 'setor',
+    'unidade', 'filial', 'projeto', 'area', 'área'
+  ]);
+  const idxValor = findIdx([
+    'valor', 'value', 'amount', 'total', 'montante', 'quantia', 
+    'valor total', 'valor liquido', 'valor líquido', 'valor bruto',
+    'preco', 'preço', 'custo', 'receita', 'despesa'
+  ]);
+  const idxDataComp = findIdx([
+    'data competência', 'data competencia', 'competência', 'competencia', 
+    'data', 'vencimento', 'date', 'data vencimento', 'data pagamento',
+    'data emissao', 'data emissão', 'data lancamento', 'data lançamento',
+    'periodo', 'período', 'mes', 'mês', 'data ref', 'data referencia'
+  ]);
 
-  if (idxTipo === -1 || idxCategoria === -1 || idxValor === -1 || idxDataComp === -1) {
-    throw new Error(`Estrutura de colunas não identificada. Colunas obrigatórias: Tipo, Categoria, Valor e Data.`);
+  // Build helpful error message showing what was found and what's missing
+  const foundColumns: string[] = [];
+  const missingColumns: string[] = [];
+  
+  if (idxTipo !== -1) foundColumns.push(`Tipo: "${header[idxTipo]}"`);
+  else missingColumns.push('Tipo (tipo, natureza, movimento, d/c)');
+  
+  if (idxCategoria !== -1) foundColumns.push(`Categoria: "${header[idxCategoria]}"`);
+  else missingColumns.push('Categoria (categoria, descrição, conta, histórico)');
+  
+  if (idxValor !== -1) foundColumns.push(`Valor: "${header[idxValor]}"`);
+  else missingColumns.push('Valor (valor, total, montante, amount)');
+  
+  if (idxDataComp !== -1) foundColumns.push(`Data: "${header[idxDataComp]}"`);
+  else missingColumns.push('Data (data, competência, vencimento, período)');
+
+  if (missingColumns.length > 0) {
+    const headerPreview = header.slice(0, 10).join(', ');
+    throw new Error(
+      `Estrutura de colunas não identificada.\n\n` +
+      `📋 Colunas encontradas no arquivo: ${headerPreview}${header.length > 10 ? '...' : ''}\n\n` +
+      `✅ Mapeadas: ${foundColumns.length > 0 ? foundColumns.join(', ') : 'nenhuma'}\n` +
+      `❌ Faltando: ${missingColumns.join(', ')}\n\n` +
+      `💡 Dica: Renomeie as colunas do seu arquivo para incluir: Tipo, Categoria, Valor e Data.`
+    );
   }
 
   const result: TransactionEntry[] = [];
   for (let i = 1; i < lines.length; i++) {
-    const cols = lines[i].split(delimiter);
-    if (cols.length < 4) continue;
+    const cols = lines[i].split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, ''));
+    if (cols.length < 3) continue;
     
-    const tipoRaw = cols[idxTipo]?.trim().toLowerCase() || '';
-    const type: 'payable' | 'receivable' = tipoRaw.includes('pagar') || tipoRaw.includes('payable') ? 'payable' : 'receivable';
+    const tipoRaw = (cols[idxTipo] || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    
+    // Flexible type detection
+    const isPayable = 
+      tipoRaw.includes('pagar') || 
+      tipoRaw.includes('payable') || 
+      tipoRaw.includes('despesa') || 
+      tipoRaw.includes('saida') || 
+      tipoRaw.includes('debito') ||
+      tipoRaw.includes('d') && tipoRaw.length <= 2 ||
+      tipoRaw === 'p' ||
+      tipoRaw === 's';
+    
+    const type: 'payable' | 'receivable' = isPayable ? 'payable' : 'receivable';
     const category = cols[idxCategoria]?.trim() || '';
     const costCenter = idxCentro !== -1 ? cols[idxCentro]?.trim() || null : null;
     
