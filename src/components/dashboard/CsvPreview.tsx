@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, History, RefreshCw, Filter, Loader2, Wand2 } from 'lucide-react';
+import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, History, RefreshCw, Filter, Loader2, Wand2, Undo2, Redo2, Edit3 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -186,6 +186,102 @@ export const CsvPreview = ({
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [aiConfidence, setAiConfidence] = useState<Map<number, AIConfidence>>(new Map());
   const editInputRef = useRef<HTMLInputElement>(null);
+  
+  // Undo/Redo history
+  const [history, setHistory] = useState<TransactionEntry[][]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  const [batchEditMode, setBatchEditMode] = useState<'category' | 'costCenter' | null>(null);
+  const [batchEditValue, setBatchEditValue] = useState('');
+
+  // Push to history when entries change (for undo/redo)
+  const pushToHistory = useCallback((newEntries: TransactionEntry[]) => {
+    setHistory(prev => {
+      // Remove any future states if we're not at the end
+      const newHistory = prev.slice(0, historyIndex + 1);
+      newHistory.push([...newEntries]);
+      // Keep only last 20 states
+      return newHistory.slice(-20);
+    });
+    setHistoryIndex(prev => Math.min(prev + 1, 19));
+  }, [historyIndex]);
+
+  const canUndo = historyIndex > 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  const undo = useCallback(() => {
+    if (!canUndo || !onEntriesChange) return;
+    const prevState = history[historyIndex - 1];
+    if (prevState) {
+      setHistoryIndex(prev => prev - 1);
+      onEntriesChange(prevState);
+      toast({ title: "↩️ Desfazer", description: "Ação desfeita" });
+    }
+  }, [canUndo, history, historyIndex, onEntriesChange, toast]);
+
+  const redo = useCallback(() => {
+    if (!canRedo || !onEntriesChange) return;
+    const nextState = history[historyIndex + 1];
+    if (nextState) {
+      setHistoryIndex(prev => prev + 1);
+      onEntriesChange(nextState);
+      toast({ title: "↪️ Refazer", description: "Ação refeita" });
+    }
+  }, [canRedo, history, historyIndex, onEntriesChange, toast]);
+
+  // Initialize history with initial entries
+  useEffect(() => {
+    if (history.length === 0 && entries.length > 0) {
+      setHistory([[...entries]]);
+      setHistoryIndex(0);
+    }
+  }, [entries, history.length]);
+
+  // Wrap onEntriesChange to track history
+  const handleEntriesChange = useCallback((newEntries: TransactionEntry[]) => {
+    if (!onEntriesChange) return;
+    pushToHistory(newEntries);
+    onEntriesChange(newEntries);
+  }, [onEntriesChange, pushToHistory]);
+
+  // Batch edit functions
+  const applyBatchEdit = useCallback(() => {
+    if (!batchEditMode || !batchEditValue.trim() || selectedRows.size === 0) return;
+    
+    const updatedEntries = [...entries];
+    selectedRows.forEach(idx => {
+      if (updatedEntries[idx]) {
+        if (batchEditMode === 'category') {
+          updatedEntries[idx] = { ...updatedEntries[idx], category: batchEditValue.trim() };
+        } else {
+          updatedEntries[idx] = { ...updatedEntries[idx], costCenter: batchEditValue.trim() };
+        }
+      }
+    });
+    
+    handleEntriesChange(updatedEntries);
+    toast({
+      title: "✓ Edição em lote aplicada",
+      description: `${selectedRows.size} registros atualizados`
+    });
+    setBatchEditMode(null);
+    setBatchEditValue('');
+    setSelectedRows(new Set());
+  }, [batchEditMode, batchEditValue, selectedRows, entries, handleEntriesChange, toast]);
+
+  // Keyboard shortcuts for undo/redo
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey && editingIdx === null) {
+        e.preventDefault();
+        undo();
+      } else if ((e.metaKey || e.ctrlKey) && (e.key === 'y' || (e.shiftKey && e.key === 'z')) && editingIdx === null) {
+        e.preventDefault();
+        redo();
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo, editingIdx]);
 
   // Keyboard shortcuts for editing
   useEffect(() => {
@@ -309,11 +405,11 @@ export const CsvPreview = ({
   }, [selectedRows.size, previewEntries, entries]);
 
   const deleteSelectedRows = useCallback(() => {
-    if (!onEntriesChange || selectedRows.size === 0) return;
+    if (!handleEntriesChange || selectedRows.size === 0) return;
     const updatedEntries = entries.filter((_, idx) => !selectedRows.has(idx));
-    onEntriesChange(updatedEntries);
+    handleEntriesChange(updatedEntries);
     setSelectedRows(new Set());
-  }, [entries, onEntriesChange, selectedRows]);
+  }, [entries, handleEntriesChange, selectedRows]);
 
   const startEdit = useCallback((idx: number, entry: TransactionEntry) => {
     setEditingIdx(idx);
@@ -332,7 +428,7 @@ export const CsvPreview = ({
   }, []);
 
   const saveEdit = useCallback(() => {
-    if (editingIdx === null || !editForm || !onEntriesChange) return;
+    if (editingIdx === null || !editForm || !handleEntriesChange) return;
     
     const parsedAmount = parseFloat(editForm.amount) || 0;
     const signedAmount = editForm.type === 'payable' ? -Math.abs(parsedAmount) : Math.abs(parsedAmount);
@@ -347,14 +443,14 @@ export const CsvPreview = ({
       competenceDate: editForm.date
     };
     
-    onEntriesChange(updatedEntries);
+    handleEntriesChange(updatedEntries);
     setEditingIdx(null);
     setEditForm(null);
-  }, [editingIdx, editForm, entries, onEntriesChange]);
+  }, [editingIdx, editForm, entries, handleEntriesChange]);
 
   // AI Auto-fill for missing categories and cost centers
   const autoFillWithAi = useCallback(async () => {
-    if (!onEntriesChange) return;
+    if (!handleEntriesChange) return;
     
     // Find entries with missing category or cost center
     const entriesToFill = entries.map((e, idx) => ({
@@ -452,7 +548,7 @@ export const CsvPreview = ({
       });
       
       setAiConfidence(prev => new Map([...prev, ...newConfidence]));
-      onEntriesChange(updatedEntries);
+      handleEntriesChange(updatedEntries);
       
       toast({
         title: "✨ Preenchimento automático concluído",
@@ -470,18 +566,18 @@ export const CsvPreview = ({
     } finally {
       setIsAutoFilling(false);
     }
-  }, [entries, onEntriesChange, toast]);
+  }, [entries, handleEntriesChange, toast]);
 
   const deleteEntry = useCallback((idx: number) => {
-    if (!onEntriesChange) return;
+    if (!handleEntriesChange) return;
     const updatedEntries = entries.filter((_, i) => i !== idx);
-    onEntriesChange(updatedEntries);
+    handleEntriesChange(updatedEntries);
     setSelectedRows(prev => {
       const next = new Set(prev);
       next.delete(idx);
       return next;
     });
-  }, [entries, onEntriesChange]);
+  }, [entries, handleEntriesChange]);
 
   return (
     <motion.div
@@ -506,6 +602,31 @@ export const CsvPreview = ({
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* Undo/Redo buttons */}
+          {onEntriesChange && (
+            <div className="flex items-center gap-1 border border-border/50 rounded-xl p-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={undo}
+                disabled={!canUndo}
+                className="h-8 w-8 rounded-lg"
+                title="Desfazer (Ctrl+Z)"
+              >
+                <Undo2 size={16} />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={redo}
+                disabled={!canRedo}
+                className="h-8 w-8 rounded-lg"
+                title="Refazer (Ctrl+Y)"
+              >
+                <Redo2 size={16} />
+              </Button>
+            </div>
+          )}
           {isAiParsed && (
             <Badge variant="secondary" className="gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary border-primary/20">
               <Sparkles size={14} /> Processado com IA
@@ -646,21 +767,64 @@ export const CsvPreview = ({
       {/* Bulk Actions */}
       {selectedRows.size > 0 && onEntriesChange && (
         <Card className="rounded-2xl border-primary/30 bg-primary/5">
-          <CardContent className="p-4 flex items-center justify-between">
+          <CardContent className="p-4 flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <CheckSquare className="w-5 h-5 text-primary" />
               <span className="font-medium text-foreground">
                 {selectedRows.size} {selectedRows.size === 1 ? 'linha selecionada' : 'linhas selecionadas'}
               </span>
             </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={deleteSelectedRows}
-              className="gap-2 rounded-xl"
-            >
-              <Trash2 size={14} /> Excluir Selecionadas
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Batch Edit Buttons */}
+              {!batchEditMode ? (
+                <>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBatchEditMode('category')}
+                    className="gap-2 rounded-xl"
+                  >
+                    <Edit3 size={14} /> Editar Categoria
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setBatchEditMode('costCenter')}
+                    className="gap-2 rounded-xl"
+                  >
+                    <Edit3 size={14} /> Editar Centro de Custo
+                  </Button>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={batchEditValue}
+                    onChange={(e) => setBatchEditValue(e.target.value)}
+                    placeholder={batchEditMode === 'category' ? 'Nova categoria...' : 'Novo centro de custo...'}
+                    className="h-8 w-48 text-sm"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') applyBatchEdit();
+                      if (e.key === 'Escape') { setBatchEditMode(null); setBatchEditValue(''); }
+                    }}
+                    autoFocus
+                  />
+                  <Button size="sm" onClick={applyBatchEdit} disabled={!batchEditValue.trim()} className="gap-1 rounded-xl">
+                    <Check size={14} /> Aplicar
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setBatchEditMode(null); setBatchEditValue(''); }} className="rounded-xl">
+                    <X size={14} />
+                  </Button>
+                </div>
+              )}
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={deleteSelectedRows}
+                className="gap-2 rounded-xl"
+              >
+                <Trash2 size={14} /> Excluir
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
