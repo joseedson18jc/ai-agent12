@@ -19,12 +19,11 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn, signUp, signInWithGoogle } = useAuth();
+  const { user, signIn, signUp } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -111,27 +110,6 @@ const Auth = () => {
     }
   };
 
-  const handleGoogleSignIn = async () => {
-    setIsGoogleLoading(true);
-    try {
-      const { error } = await signInWithGoogle();
-      if (error) {
-        toast({
-          title: 'Erro ao entrar com Google',
-          description: error.message,
-          variant: 'destructive',
-        });
-      }
-    } catch (err) {
-      toast({
-        title: 'Erro inesperado',
-        description: 'Tente novamente mais tarde.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsGoogleLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-6 relative overflow-hidden">
@@ -194,7 +172,7 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className={`pl-12 h-14 rounded-2xl bg-muted/30 border-border/30 focus:border-primary/50 focus:bg-background/50 transition-all duration-300 ${errors.email ? 'border-destructive' : ''}`}
-                    disabled={isLoading || isGoogleLoading}
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.email && (
@@ -217,7 +195,7 @@ const Auth = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className={`pl-12 h-14 rounded-2xl bg-muted/30 border-border/30 focus:border-primary/50 focus:bg-background/50 transition-all duration-300 ${errors.password ? 'border-destructive' : ''}`}
-                    disabled={isLoading || isGoogleLoading}
+                    disabled={isLoading}
                   />
                 </div>
                 {errors.password && (
@@ -233,7 +211,7 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                disabled={isLoading || isGoogleLoading}
+                disabled={isLoading}
                 className="w-full h-14 rounded-2xl font-bold text-sm tracking-wide shadow-xl shadow-primary/25 hover:shadow-primary/40 transition-all duration-300"
               >
                 {isLoading ? (
