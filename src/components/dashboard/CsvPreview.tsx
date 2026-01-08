@@ -1162,7 +1162,7 @@ export const CsvPreview = ({
                       >
                         <div className="flex items-center gap-1">
                           {!entry.category && <AlertCircle className="h-3 w-3 text-destructive flex-shrink-0" />}
-                          <span className="truncate">{entry.category || '(vazio)'}</span>
+                          <span className="truncate">{entry.category || '—'}</span>
                           {getConfidenceInfo(idx, 'category') && (
                             <span 
                               className={`flex-shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold ${getConfidenceInfo(idx, 'category')!.textColor} bg-current/10`}
@@ -1180,7 +1180,7 @@ export const CsvPreview = ({
                       >
                         <div className="flex items-center gap-1">
                           {!entry.costCenter && <AlertTriangle className="h-3 w-3 text-yellow-500 flex-shrink-0" />}
-                          <span className="truncate">{entry.costCenter || '(vazio)'}</span>
+                          <span className="truncate">{entry.costCenter || '—'}</span>
                           {getConfidenceInfo(idx, 'costCenter') && (
                             <span 
                               className={`flex-shrink-0 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-semibold ${getConfidenceInfo(idx, 'costCenter')!.textColor} bg-current/10`}
