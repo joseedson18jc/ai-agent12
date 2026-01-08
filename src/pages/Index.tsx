@@ -10,7 +10,8 @@ import {
   parseContaAzulCsv, 
   getCategoryKey, 
   generateDemoData,
-  computeDreByMonth
+  computeDreByMonth,
+  computeDreKpis
 } from '@/utils/finance';
 import { Header } from '@/components/dashboard/Header';
 import { UploadTab } from '@/components/dashboard/UploadTab';
@@ -22,6 +23,7 @@ import { Footer } from '@/components/dashboard/Footer';
 import { CsvPreview } from '@/components/dashboard/CsvPreview';
 import { RealtimeDashboard } from '@/components/dashboard/RealtimeDashboard';
 import { RealtimeChart } from '@/components/dashboard/RealtimeChart';
+import { FinancialGoals } from '@/components/dashboard/FinancialGoals';
 
 type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast';
 
@@ -640,6 +642,11 @@ const Index = () => {
           
           {tab === 'analytics' && (
             <div className="space-y-12">
+              {/* Financial Goals */}
+              <FinancialGoals 
+                currentKpis={sortedMonths.length > 0 ? dreByMonth[sortedMonths[sortedMonths.length - 1]] : null}
+              />
+              
               {/* Realtime Dashboard with KPIs */}
               <RealtimeDashboard 
                 dreByMonth={dreByMonth}
