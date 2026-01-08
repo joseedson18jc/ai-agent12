@@ -50,16 +50,21 @@ const parseAIResponse = (content: string): AISuggestion[] => {
   return JSON.parse(jsonStr);
 };
 
-const buildSystemPrompt = (existingCategoriesContext: string, existingCostCenters: string[]) => {
+const buildSystemPrompt = (existingCategoriesContext: string, existingCostCenters: string[], userPreferences: Array<{ category: string; costCenter: string }>) => {
   const costCentersContext = existingCostCenters.length > 0
     ? `\nCENTROS DE CUSTO EXISTENTES (PRIORIZE usar estes):\n${existingCostCenters.join(', ')}`
     : '';
 
+  const preferencesContext = userPreferences.length > 0
+    ? `\nPREFERÊNCIAS DO USUÁRIO (USE estas correspondências aprendidas - ALTA PRIORIDADE):\n${userPreferences.map(p => `- "${p.category}" → "${p.costCenter}"`).join('\n')}`
+    : '';
+
   return `Você é um especialista em classificação contábil brasileira. Sua tarefa é inferir categorias e centros de custo para lançamentos financeiros que estão vazios ou incorretos.
 
-REGRAS DE INFERÊNCIA PARA CENTROS DE CUSTO:
-1. PRIORIZE usar centros de custo já existentes no arquivo
-2. Analise a CATEGORIA e DESCRIÇÃO para inferir o centro de custo correto:
+REGRAS DE INFERÊNCIA PARA CENTROS DE CUSTO (em ordem de prioridade):
+1. **PRIORIDADE MÁXIMA**: Use as PREFERÊNCIAS DO USUÁRIO abaixo - se uma categoria corresponder, use o centro de custo aprendido
+2. PRIORIZE usar centros de custo já existentes no arquivo
+3. Analise a CATEGORIA e DESCRIÇÃO para inferir o centro de custo correto:
    - Transferências financeiras, juros, tarifas → "Financeiro"
    - Salários, benefícios, FGTS, INSS → "RH" ou "Recursos Humanos"
    - Marketing, vendas, comissões → "Comercial"
@@ -68,16 +73,17 @@ REGRAS DE INFERÊNCIA PARA CENTROS DE CUSTO:
    - Sistemas, software, equipamentos de TI → "TI"
    - Impostos → "Fiscal" ou "Tributário"
 
-3. Se a categoria indica o tipo de despesa, use isso para inferir:
+4. Se a categoria indica o tipo de despesa, use isso para inferir:
    - "Transferência de Entrada/Saída" → "Financeiro"
    - "Rendimentos de Aplicações" → "Financeiro"
    - "Salários" → "RH"
 
-4. Analise padrões no arquivo:
+5. Analise padrões no arquivo:
    - Lançamentos similares devem ter o mesmo centro de custo
    - Use o histórico como referência
 ${existingCategoriesContext}
 ${costCentersContext}
+${preferencesContext}
 
 FORMATO DE RESPOSTA:
 Retorne APENAS um JSON array com as sugestões, incluindo confiança de 0 a 100:
@@ -87,7 +93,8 @@ Retorne APENAS um JSON array com as sugestões, incluindo confiança de 0 a 100:
 ]
 
 NÍVEIS DE CONFIANÇA:
-- 90-100: Padrão muito claro baseado em categoria/descrição
+- 95-100: Correspondência exata com preferências do usuário
+- 90-94: Padrão muito claro baseado em categoria/descrição
 - 70-89: Inferência baseada em centros de custo similares existentes
 - 50-69: Inferência baseada em tipo e valor
 - 0-49: Categoria genérica
@@ -105,7 +112,7 @@ serve(async (req) => {
   }
 
   try {
-    const { entries, existingCategories, existingCostCenters } = await req.json();
+    const { entries, existingCategories, existingCostCenters, userPreferences } = await req.json();
     
     if (!entries || !Array.isArray(entries) || entries.length === 0) {
       return new Response(
@@ -133,7 +140,11 @@ serve(async (req) => {
       ? existingCostCenters 
       : [];
 
-    const systemPrompt = buildSystemPrompt(existingCategoriesContext, costCentersArray);
+    const preferencesArray = userPreferences && Array.isArray(userPreferences)
+      ? userPreferences
+      : [];
+
+    const systemPrompt = buildSystemPrompt(existingCategoriesContext, costCentersArray, preferencesArray);
 
     const userPrompt = `Infira a categoria e centro de custo para os seguintes lançamentos (FOCO em preencher CENTROS DE CUSTO vazios):
 
