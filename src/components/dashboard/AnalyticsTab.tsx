@@ -131,16 +131,17 @@ export const AnalyticsTab = ({
       initial={{ opacity: 0, scale: 0.98 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.98 }}
-      className="space-y-12 pb-24"
+      className="space-y-10 pb-24"
     >
       {/* FILTER BAR & HEADER */}
       <div className="flex flex-col xl:flex-row items-start xl:items-center justify-between gap-8">
         <div>
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-widest mb-4 border border-primary/20">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-gradient-to-r from-primary/10 to-secondary/10 text-primary rounded-full text-[10px] font-bold uppercase tracking-widest mb-4 border border-primary/20">
             <LayoutDashboard size={12} /> Strategic Analytics
           </div>
-          <h2 className="text-4xl font-bold text-foreground tracking-tight leading-none uppercase">
-            Performance Gerencial.
+          <h2 className="text-4xl font-bold text-foreground tracking-tight leading-none">
+            <span className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">Performance</span>{' '}
+            <span className="bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Gerencial.</span>
           </h2>
           <p className="text-muted-foreground mt-3 font-medium text-lg">
             Diagnóstico consolidado de rentabilidade e ROI.
@@ -154,20 +155,20 @@ export const AnalyticsTab = ({
             aiInsight={aiInsight}
             selectedCostCenter={selectedCostCenter}
           />
-          <div className="glass-card flex items-center gap-4 p-3 rounded-[2rem] border border-border/50 shadow-2xl">
-            <div className="flex items-center gap-3 pl-4 pr-2 border-r border-border">
+          <div className="flex items-center gap-4 p-3 rounded-2xl border border-border/30 shadow-lg bg-card/60 backdrop-blur-sm">
+            <div className="flex items-center gap-3 pl-4 pr-2 border-r border-border/50">
               <Filter size={16} className="text-primary" />
               <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
-                Filtrar por Centro:
+                Centro:
               </span>
             </div>
             <div className="relative group">
               <select 
                 value={selectedCostCenter}
                 onChange={(e) => onCostCenterChange(e.target.value)}
-                className="bg-transparent border-none text-[11px] font-bold text-foreground outline-none pr-10 cursor-pointer uppercase tracking-[0.15em] hover:text-primary transition-colors"
+                className="bg-transparent border-none text-[11px] font-bold text-foreground outline-none pr-10 cursor-pointer uppercase tracking-[0.1em] hover:text-primary transition-colors"
               >
-                <option value="all">TODOS OS CENTROS (CONSOLIDADO)</option>
+                <option value="all">TODOS (CONSOLIDADO)</option>
                 {uniqueCostCenters.map(cc => (
                   <option key={cc} value={cc}>{cc.toUpperCase()}</option>
                 ))}
@@ -179,20 +180,20 @@ export const AnalyticsTab = ({
       </div>
 
       {/* KPI TOP STRIP */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {kpis.map((kpi, index) => {
           const Icon = kpi.icon;
           const isPositive = kpi.variation !== null && kpi.variation >= 0;
           
           return (
-            <Card key={index} className="glass-card rounded-[2.5rem] p-8 border border-border/50 shadow-xl hover:shadow-2xl transition-all group">
+            <Card key={index} className="rounded-[2rem] p-7 border border-border/30 shadow-xl hover:shadow-2xl transition-all duration-300 group bg-card/60 backdrop-blur-sm hover:border-primary/20">
               <CardContent className="p-0">
-                <div className="flex items-start justify-between mb-6">
-                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg`} style={{ backgroundColor: `hsl(var(--${kpi.color}) / 0.15)` }}>
+                <div className="flex items-start justify-between mb-5">
+                  <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-110`} style={{ backgroundColor: `hsl(var(--${kpi.color}) / 0.15)` }}>
                     <Icon size={26} style={{ color: `hsl(var(--${kpi.color}))` }} />
                   </div>
                   {kpi.variation !== null && (
-                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest ${isPositive ? 'bg-chart-3/20 text-chart-3' : 'bg-destructive/20 text-destructive'}`}>
+                    <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase tracking-widest ${isPositive ? 'bg-green-500/15 text-green-600 dark:text-green-400' : 'bg-destructive/15 text-destructive'}`}>
                       {isPositive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
                       {Math.abs(kpi.variation).toFixed(1)}%
                     </div>
@@ -211,44 +212,44 @@ export const AnalyticsTab = ({
       </div>
 
       {/* CHART SECTION */}
-      <Card className="glass-card rounded-[3rem] border border-border/50 shadow-2xl overflow-hidden">
-        <CardHeader className="p-10 pb-0">
+      <Card className="rounded-[2.5rem] border border-border/30 shadow-2xl overflow-hidden bg-card/60 backdrop-blur-sm">
+        <CardHeader className="p-8 pb-0">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
             <div>
-              <CardTitle className="text-2xl font-bold text-foreground tracking-tight uppercase">
+              <CardTitle className="text-xl font-bold text-foreground tracking-tight">
                 Evolução Mensal
               </CardTitle>
-              <p className="text-muted-foreground text-sm mt-2">
+              <p className="text-muted-foreground text-sm mt-1.5">
                 Comparativo de métricas financeiras ao longo do tempo
               </p>
             </div>
-            <div className="flex items-center gap-8">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--chart-1))' }} />
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Receita</span>
+            <div className="flex items-center gap-6 px-5 py-3 bg-muted/30 rounded-2xl">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: 'hsl(var(--chart-1))' }} />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Receita</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--chart-3))' }} />
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">EBITDA</span>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: 'hsl(var(--chart-3))' }} />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">EBITDA</span>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: 'hsl(var(--primary))' }} />
-                <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Lucro</span>
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: 'hsl(var(--primary))' }} />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Lucro</span>
               </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="p-10 h-[400px]">
+        <CardContent className="p-8 h-[380px]">
           <SimpleChart data={chartData} />
         </CardContent>
       </Card>
 
       {/* Mode Toggle */}
-      <div className="flex items-center justify-center gap-4">
+      <div className="flex items-center justify-center gap-3">
         <Button
           variant={!isComparisonMode ? "default" : "outline"}
           onClick={() => setIsComparisonMode(false)}
-          className="rounded-full px-6"
+          className="rounded-2xl px-6"
         >
           <Zap size={16} className="mr-2" />
           Modo Único
@@ -256,7 +257,7 @@ export const AnalyticsTab = ({
         <Button
           variant={isComparisonMode ? "default" : "outline"}
           onClick={() => setIsComparisonMode(true)}
-          className="rounded-full px-6"
+          className="rounded-2xl px-6"
         >
           <LayoutGrid size={16} className="mr-2" />
           Modo Comparação
@@ -271,8 +272,8 @@ export const AnalyticsTab = ({
           selectedCostCenter={selectedCostCenter}
         />
       ) : (
-      <Card className="bg-gradient-to-br from-foreground to-secondary rounded-[3rem] text-background border-0 shadow-2xl overflow-hidden">
-        <CardContent className="p-10 md:p-14">
+      <Card className="bg-gradient-to-br from-foreground via-foreground/95 to-secondary rounded-[2.5rem] text-background border-0 shadow-2xl overflow-hidden">
+        <CardContent className="p-8 md:p-12">
           <div className="flex flex-col lg:flex-row gap-10">
             <div className="lg:w-1/3 space-y-6">
               <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-xl">
