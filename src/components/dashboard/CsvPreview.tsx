@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, History, RefreshCw, Filter, Loader2, Wand2, Undo2, Redo2, Edit3, GitCompare } from 'lucide-react';
+import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, History, RefreshCw, Filter, Loader2, Wand2, Undo2, Redo2, Edit3, GitCompare, MousePointerClick } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -14,6 +14,7 @@ import { TransactionEntry, BPSection } from '@/types/finance';
 import { formatCurrency } from '@/utils/finance';
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { useCostCenterPreferences } from '@/hooks/useCostCenterPreferences';
 
 type IssueFilter = 'all' | 'errors' | 'warnings' | 'issues' | 'emptyCostCenter';
 
@@ -183,6 +184,7 @@ export const CsvPreview = ({
   onDismissSavedMappings
 }: CsvPreviewProps) => {
   const { toast } = useToast();
+  const { saveBulkPreferences, getCostCenterForCategory, getMostUsedCostCenters } = useCostCenterPreferences();
   const [editingIdx, setEditingIdx] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<{
     type: 'receivable' | 'payable';
@@ -419,6 +421,28 @@ export const CsvPreview = ({
     }
   }, [selectedRows.size, previewEntries]);
 
+  // Select all entries with empty cost centers
+  const selectEmptyCostCenters = useCallback(() => {
+    const emptyIndices = entries
+      .map((e, idx) => ({ idx, empty: !e.costCenter || e.costCenter.trim() === '' }))
+      .filter(({ empty }) => empty)
+      .map(({ idx }) => idx);
+    
+    setSelectedRows(new Set(emptyIndices));
+    
+    if (emptyIndices.length > 0) {
+      toast({
+        title: `${emptyIndices.length} registros selecionados`,
+        description: "Todos os registros com centro de custo vazio foram selecionados."
+      });
+    } else {
+      toast({
+        title: "Nenhum registro encontrado",
+        description: "Não há registros com centro de custo vazio."
+      });
+    }
+  }, [entries, toast]);
+
   const deleteSelectedRows = useCallback(() => {
     if (!handleEntriesChange || selectedRows.size === 0) return;
     const updatedEntries = entries.filter((_, idx) => !selectedRows.has(idx));
@@ -490,6 +514,14 @@ export const CsvPreview = ({
       const existingCategories = [...new Set(entries.filter(e => e.category).map(e => e.category))];
       const existingCostCenters = [...new Set(entries.filter(e => e.costCenter && e.costCenter.trim() !== '').map(e => e.costCenter))];
       
+      // Get user preferences for better AI suggestions
+      const userPreferencesForAI = existingCategories
+        .map(cat => {
+          const costCenter = getCostCenterForCategory(cat);
+          return costCenter ? { category: cat, costCenter } : null;
+        })
+        .filter((p): p is { category: string; costCenter: string } => p !== null);
+      
       // Prepare entries for AI - include description for better inference
       const entriesPayload = entriesToFill.slice(0, 50).map(({ idx, entry }) => ({
         idx,
@@ -511,7 +543,8 @@ export const CsvPreview = ({
           body: JSON.stringify({ 
             entries: entriesPayload,
             existingCategories,
-            existingCostCenters
+            existingCostCenters,
+            userPreferences: userPreferencesForAI
           }),
         }
       );
@@ -596,6 +629,20 @@ export const CsvPreview = ({
         }
       });
       
+      // Save preferences for future suggestions
+      const prefsToSave = suggestions
+        .filter((s: { idx: number; category: string; costCenter: string }) => 
+          updatedEntries[s.idx]?.category && s.costCenter
+        )
+        .map((s: { idx: number; category: string; costCenter: string }) => ({
+          category: updatedEntries[s.idx].category,
+          costCenter: s.costCenter
+        }));
+      
+      if (prefsToSave.length > 0) {
+        saveBulkPreferences(prefsToSave);
+      }
+      
       setAiConfidence(prev => new Map([...prev, ...newConfidence]));
       handleEntriesChange(updatedEntries);
       
@@ -623,7 +670,7 @@ export const CsvPreview = ({
     } finally {
       setIsAutoFilling(false);
     }
-  }, [entries, handleEntriesChange, toast]);
+  }, [entries, handleEntriesChange, toast, saveBulkPreferences, getCostCenterForCategory]);
 
   const deleteEntry = useCallback((idx: number) => {
     if (!handleEntriesChange) return;
@@ -950,6 +997,19 @@ export const CsvPreview = ({
                   </SelectContent>
                 </Select>
               </div>
+
+              {/* Select empty cost centers button */}
+              {onEntriesChange && issueCounts.emptyCostCenters > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={selectEmptyCostCenters}
+                  className="gap-2 rounded-xl"
+                  title="Selecionar todos os registros com centro de custo vazio para edição em lote"
+                >
+                  <MousePointerClick size={14} /> Selecionar Vazios ({issueCounts.emptyCostCenters})
+                </Button>
+              )}
 
               {/* AI Auto-fill button */}
               {onEntriesChange && issueCounts.total > 0 && (
