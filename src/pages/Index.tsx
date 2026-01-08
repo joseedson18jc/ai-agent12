@@ -20,6 +20,8 @@ import { ForecastingModule } from '@/components/dashboard/ForecastingModule';
 import { AlertBanner } from '@/components/dashboard/AlertBanner';
 import { Footer } from '@/components/dashboard/Footer';
 import { CsvPreview } from '@/components/dashboard/CsvPreview';
+import { RealtimeDashboard } from '@/components/dashboard/RealtimeDashboard';
+import { RealtimeChart } from '@/components/dashboard/RealtimeChart';
 
 type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast';
 
@@ -637,20 +639,39 @@ const Index = () => {
           )}
           
           {tab === 'analytics' && (
-            <AnalyticsTab
-              key="analytics"
-              entries={entries}
-              selectedCostCenter={selectedCostCenter}
-              uniqueCostCenters={uniqueCostCenters}
-              onCostCenterChange={handleCostCenterChange}
-              aiInsight={aiInsight}
-              isAiLoading={isAiLoading}
-              onGenerateInsight={generateAiInsight}
-              dreByMonth={dreByMonth}
-              sortedMonths={sortedMonths}
-              selectedProvider={selectedProvider}
-              onProviderChange={handleProviderChange}
-            />
+            <div className="space-y-12">
+              {/* Realtime Dashboard with KPIs */}
+              <RealtimeDashboard 
+                dreByMonth={dreByMonth}
+                sortedMonths={sortedMonths}
+              />
+              
+              {/* Realtime Chart */}
+              <RealtimeChart 
+                data={sortedMonths.map(month => ({
+                  month: month.split('-').reverse().join('/'),
+                  'Receita Líquida': Math.round(dreByMonth[month].revenueNet),
+                  'EBITDA': Math.round(dreByMonth[month].ebitda),
+                  'Lucro Líquido': Math.round(dreByMonth[month].netIncome),
+                }))}
+              />
+              
+              {/* Full Analytics Tab */}
+              <AnalyticsTab
+                key="analytics"
+                entries={entries}
+                selectedCostCenter={selectedCostCenter}
+                uniqueCostCenters={uniqueCostCenters}
+                onCostCenterChange={handleCostCenterChange}
+                aiInsight={aiInsight}
+                isAiLoading={isAiLoading}
+                onGenerateInsight={generateAiInsight}
+                dreByMonth={dreByMonth}
+                sortedMonths={sortedMonths}
+                selectedProvider={selectedProvider}
+                onProviderChange={handleProviderChange}
+              />
+            </div>
           )}
 
           {tab === 'forecast' && (
