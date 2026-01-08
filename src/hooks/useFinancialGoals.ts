@@ -1,6 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export interface FinancialGoal {
@@ -31,39 +29,26 @@ const METRIC_LABELS: Record<FinancialGoal['metric_type'], string> = {
   operating_expenses: 'Despesas Operacionais'
 };
 
+// Local storage key for goals
+const GOALS_STORAGE_KEY = 'financial-goals';
+
+const loadGoalsFromStorage = (): FinancialGoal[] => {
+  try {
+    const stored = localStorage.getItem(GOALS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveGoalsToStorage = (goals: FinancialGoal[]) => {
+  localStorage.setItem(GOALS_STORAGE_KEY, JSON.stringify(goals));
+};
+
 export const useFinancialGoals = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [goals, setGoals] = useState<FinancialGoal[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchGoals = useCallback(async () => {
-    if (!user) {
-      setGoals([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const { data, error } = await supabase
-        .from('financial_goals')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      
-      setGoals((data || []) as FinancialGoal[]);
-    } catch (error) {
-      console.error('Error fetching goals:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    fetchGoals();
-  }, [fetchGoals]);
+  const [goals, setGoals] = useState<FinancialGoal[]>(() => loadGoalsFromStorage());
+  const [loading] = useState(false);
 
   const createGoal = useCallback(async (
     metricType: FinancialGoal['metric_type'],
@@ -71,96 +56,61 @@ export const useFinancialGoals = () => {
     alertThreshold: number = 10,
     periodType: FinancialGoal['period_type'] = 'monthly'
   ) => {
-    if (!user) return null;
+    const newGoal: FinancialGoal = {
+      id: crypto.randomUUID(),
+      user_id: 'local',
+      metric_type: metricType,
+      target_value: targetValue,
+      alert_threshold_percent: alertThreshold,
+      period_type: periodType,
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
 
-    try {
-      const { data, error } = await supabase
-        .from('financial_goals')
-        .insert({
-          user_id: user.id,
-          metric_type: metricType,
-          target_value: targetValue,
-          alert_threshold_percent: alertThreshold,
-          period_type: periodType
-        })
-        .select()
-        .single();
+    setGoals(prev => {
+      const updated = [newGoal, ...prev];
+      saveGoalsToStorage(updated);
+      return updated;
+    });
+    
+    toast({
+      title: '🎯 Meta criada',
+      description: `Meta de ${METRIC_LABELS[metricType]} definida para ${formatGoalValue(metricType, targetValue)}`
+    });
 
-      if (error) throw error;
-
-      const newGoal = data as FinancialGoal;
-      setGoals(prev => [newGoal, ...prev]);
-      
-      toast({
-        title: '🎯 Meta criada',
-        description: `Meta de ${METRIC_LABELS[metricType]} definida para ${formatGoalValue(metricType, targetValue)}`
-      });
-
-      return newGoal;
-    } catch (error) {
-      console.error('Error creating goal:', error);
-      toast({
-        title: 'Erro ao criar meta',
-        description: 'Não foi possível salvar a meta.',
-        variant: 'destructive'
-      });
-      return null;
-    }
-  }, [user, toast]);
+    return newGoal;
+  }, [toast]);
 
   const updateGoal = useCallback(async (
     goalId: string,
     updates: Partial<Pick<FinancialGoal, 'target_value' | 'alert_threshold_percent' | 'is_active' | 'period_type'>>
   ) => {
-    try {
-      const { error } = await supabase
-        .from('financial_goals')
-        .update(updates)
-        .eq('id', goalId);
+    setGoals(prev => {
+      const updated = prev.map(g => 
+        g.id === goalId ? { ...g, ...updates, updated_at: new Date().toISOString() } : g
+      );
+      saveGoalsToStorage(updated);
+      return updated;
+    });
 
-      if (error) throw error;
-
-      setGoals(prev => prev.map(g => 
-        g.id === goalId ? { ...g, ...updates } : g
-      ));
-
-      toast({
-        title: '✓ Meta atualizada',
-        description: 'As alterações foram salvas.'
-      });
-    } catch (error) {
-      console.error('Error updating goal:', error);
-      toast({
-        title: 'Erro ao atualizar',
-        description: 'Não foi possível salvar as alterações.',
-        variant: 'destructive'
-      });
-    }
+    toast({
+      title: '✓ Meta atualizada',
+      description: 'As alterações foram salvas.'
+    });
   }, [toast]);
 
   const deleteGoal = useCallback(async (goalId: string) => {
-    try {
-      const { error } = await supabase
-        .from('financial_goals')
-        .delete()
-        .eq('id', goalId);
+    setGoals(prev => {
+      const updated = prev.filter(g => g.id !== goalId);
+      saveGoalsToStorage(updated);
+      return updated;
+    });
 
-      if (error) throw error;
-
-      setGoals(prev => prev.filter(g => g.id !== goalId));
-
-      toast({
-        title: 'Meta removida',
-        description: 'A meta foi excluída com sucesso.'
-      });
-    } catch (error) {
-      console.error('Error deleting goal:', error);
-      toast({
-        title: 'Erro ao excluir',
-        description: 'Não foi possível remover a meta.',
-        variant: 'destructive'
-      });
-    }
+    toast({
+      title: 'Meta removida',
+      description: 'A meta foi excluída com sucesso.'
+    });
   }, [toast]);
 
   const calculateProgress = useCallback((
@@ -194,6 +144,10 @@ export const useFinancialGoals = () => {
     };
   }, []);
 
+  const refetch = useCallback(() => {
+    setGoals(loadGoalsFromStorage());
+  }, []);
+
   return {
     goals,
     loading,
@@ -201,7 +155,7 @@ export const useFinancialGoals = () => {
     updateGoal,
     deleteGoal,
     calculateProgress,
-    refetch: fetchGoals
+    refetch
   };
 };
 

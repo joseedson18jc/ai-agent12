@@ -1,10 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export const usePushNotifications = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
   const [isSupported, setIsSupported] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission>('default');
@@ -36,6 +33,7 @@ export const usePushNotifications = () => {
           title: '🔔 Notificações ativadas',
           description: 'Você receberá alertas sobre anomalias financeiras.',
         });
+        setIsSubscribed(true);
         return true;
       } else if (result === 'denied') {
         toast({
@@ -72,30 +70,10 @@ export const usePushNotifications = () => {
     });
   }, [permission, toast]);
 
-  // Save subscription to database
   const saveSubscription = useCallback(async (subscription: PushSubscription) => {
-    if (!user) return;
-
-    try {
-      const keys = subscription.toJSON().keys;
-      
-      const { error } = await supabase
-        .from('push_subscriptions')
-        .upsert({
-          user_id: user.id,
-          endpoint: subscription.endpoint,
-          p256dh: keys?.p256dh || '',
-          auth: keys?.auth || '',
-        } as any, {
-          onConflict: 'user_id,endpoint',
-        });
-
-      if (error) throw error;
-      setIsSubscribed(true);
-    } catch (error) {
-      console.error('Error saving push subscription:', error);
-    }
-  }, [user]);
+    // No-op without auth, just mark as subscribed
+    setIsSubscribed(true);
+  }, []);
 
   return {
     isSupported,

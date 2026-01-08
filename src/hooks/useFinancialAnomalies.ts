@@ -1,6 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export interface FinancialAnomaly {
@@ -18,147 +16,93 @@ export interface FinancialAnomaly {
   created_at: string;
 }
 
+// Local storage key for anomalies
+const ANOMALIES_STORAGE_KEY = 'financial-anomalies';
+
+const loadAnomaliesFromStorage = (): FinancialAnomaly[] => {
+  try {
+    const stored = localStorage.getItem(ANOMALIES_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveAnomaliesToStorage = (anomalies: FinancialAnomaly[]) => {
+  localStorage.setItem(ANOMALIES_STORAGE_KEY, JSON.stringify(anomalies));
+};
+
 export const useFinancialAnomalies = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [anomalies, setAnomalies] = useState<FinancialAnomaly[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Fetch anomalies
-  const fetchAnomalies = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('financial_anomalies')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('is_dismissed', false)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const typedData = data as FinancialAnomaly[];
-      setAnomalies(typedData);
-      setUnreadCount(typedData.filter(a => !a.is_read).length);
-    } catch (error) {
-      console.error('Error fetching anomalies:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user]);
+  const [anomalies, setAnomalies] = useState<FinancialAnomaly[]>(() => 
+    loadAnomaliesFromStorage().filter(a => !a.is_dismissed)
+  );
+  const [unreadCount, setUnreadCount] = useState(() => 
+    loadAnomaliesFromStorage().filter(a => !a.is_read && !a.is_dismissed).length
+  );
+  const [isLoading] = useState(false);
 
   // Mark anomaly as read
   const markAsRead = useCallback(async (anomalyId: string) => {
-    try {
-      const { error } = await supabase
-        .from('financial_anomalies')
-        .update({ is_read: true } as any)
-        .eq('id', anomalyId);
-
-      if (error) throw error;
-
-      setAnomalies(prev =>
-        prev.map(a => (a.id === anomalyId ? { ...a, is_read: true } : a))
-      );
-      setUnreadCount(prev => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error('Error marking anomaly as read:', error);
-    }
+    setAnomalies(prev => {
+      const updated = prev.map(a => (a.id === anomalyId ? { ...a, is_read: true } : a));
+      saveAnomaliesToStorage(updated);
+      return updated;
+    });
+    setUnreadCount(prev => Math.max(0, prev - 1));
   }, []);
 
   // Dismiss anomaly
   const dismissAnomaly = useCallback(async (anomalyId: string) => {
-    try {
-      const { error } = await supabase
-        .from('financial_anomalies')
-        .update({ is_dismissed: true } as any)
-        .eq('id', anomalyId);
-
-      if (error) throw error;
-
-      setAnomalies(prev => prev.filter(a => a.id !== anomalyId));
-      toast({
-        title: 'Alerta dispensado',
-        description: 'O alerta foi removido da sua lista.',
-      });
-    } catch (error) {
-      console.error('Error dismissing anomaly:', error);
-    }
+    setAnomalies(prev => {
+      const updated = prev.filter(a => a.id !== anomalyId);
+      saveAnomaliesToStorage(updated);
+      return updated;
+    });
+    toast({
+      title: 'Alerta dispensado',
+      description: 'O alerta foi removido da sua lista.',
+    });
   }, [toast]);
 
   // Create a new anomaly (for AI detection)
   const createAnomaly = useCallback(async (anomaly: Omit<FinancialAnomaly, 'id' | 'user_id' | 'is_read' | 'is_dismissed' | 'created_at'>) => {
-    if (!user) return;
-
-    try {
-      const { error } = await supabase
-        .from('financial_anomalies')
-        .insert({
-          ...anomaly,
-          user_id: user.id,
-        } as any);
-
-      if (error) throw error;
-    } catch (error) {
-      console.error('Error creating anomaly:', error);
-    }
-  }, [user]);
-
-  // Set up realtime subscription
-  useEffect(() => {
-    if (!user) return;
-
-    fetchAnomalies();
-
-    const channel = supabase
-      .channel('financial-anomalies-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'financial_anomalies',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('New anomaly detected:', payload);
-          const newAnomaly = payload.new as FinancialAnomaly;
-          
-          setAnomalies(prev => [newAnomaly, ...prev]);
-          setUnreadCount(prev => prev + 1);
-
-          // Show toast notification
-          const severityIcons: Record<string, string> = {
-            low: '💡',
-            medium: '⚠️',
-            high: '🔶',
-            critical: '🚨',
-          };
-
-          toast({
-            title: `${severityIcons[newAnomaly.severity]} ${newAnomaly.title}`,
-            description: newAnomaly.description,
-            variant: newAnomaly.severity === 'critical' ? 'destructive' : 'default',
-          });
-
-          // Browser push notification
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(newAnomaly.title, {
-              body: newAnomaly.description,
-              icon: '/favicon.ico',
-              tag: newAnomaly.id,
-            });
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    const newAnomaly: FinancialAnomaly = {
+      ...anomaly,
+      id: crypto.randomUUID(),
+      user_id: 'local',
+      is_read: false,
+      is_dismissed: false,
+      created_at: new Date().toISOString(),
     };
-  }, [user, fetchAnomalies, toast]);
+
+    setAnomalies(prev => {
+      const updated = [newAnomaly, ...prev];
+      saveAnomaliesToStorage(updated);
+      return updated;
+    });
+    setUnreadCount(prev => prev + 1);
+
+    // Show toast notification
+    const severityIcons: Record<string, string> = {
+      low: '💡',
+      medium: '⚠️',
+      high: '🔶',
+      critical: '🚨',
+    };
+
+    toast({
+      title: `${severityIcons[newAnomaly.severity]} ${newAnomaly.title}`,
+      description: newAnomaly.description,
+      variant: newAnomaly.severity === 'critical' ? 'destructive' : 'default',
+    });
+  }, [toast]);
+
+  const refetch = useCallback(() => {
+    const stored = loadAnomaliesFromStorage().filter(a => !a.is_dismissed);
+    setAnomalies(stored);
+    setUnreadCount(stored.filter(a => !a.is_read).length);
+  }, []);
 
   return {
     anomalies,
@@ -167,6 +111,6 @@ export const useFinancialAnomalies = () => {
     markAsRead,
     dismissAnomaly,
     createAnomaly,
-    refetch: fetchAnomalies,
+    refetch,
   };
 };

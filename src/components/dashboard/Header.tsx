@@ -1,18 +1,10 @@
-import { Zap, Upload, Settings2, LayoutDashboard, TrendingUp, LogOut, User, Crown, HelpCircle } from 'lucide-react';
+import { Zap, Upload, Settings2, LayoutDashboard, TrendingUp, Crown, HelpCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
 import { NotificationsPanel } from './NotificationsPanel';
 import { RealtimeKpiIndicator } from './RealtimeKpiIndicator';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Tooltip,
   TooltipContent,
@@ -29,7 +21,6 @@ interface HeaderProps {
 }
 
 export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) => {
-  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   
   const tabs = [
@@ -38,11 +29,6 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
     { id: 'analytics' as const, icon: LayoutDashboard, label: 'Dashboard', disabled: !hasMappings },
     { id: 'forecast' as const, icon: TrendingUp, label: 'Projeção', disabled: !hasMappings },
   ];
-
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/auth');
-  };
 
   return (
     <header className="sticky top-0 z-50 backdrop-blur-2xl bg-background/70 border-b border-border/20">
@@ -114,7 +100,7 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
-          {user && <RealtimeKpiIndicator />}
+          <RealtimeKpiIndicator />
           
           <Tooltip>
             <TooltipTrigger asChild>
@@ -132,57 +118,9 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
             </TooltipContent>
           </Tooltip>
           
-          {user && <NotificationsPanel />}
+          <NotificationsPanel />
           
           <ThemeToggle />
-          
-          {user ? (
-            <>
-              <div className="hidden sm:flex flex-col items-end">
-                <span className="text-[9px] text-muted-foreground font-semibold uppercase tracking-widest">
-                  Logado como
-                </span>
-                <span className="text-xs font-bold text-foreground truncate max-w-[120px]">
-                  {user.email?.split('@')[0]}
-                </span>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-primary/15 to-secondary/15 border border-primary/25 flex items-center justify-center text-primary hover:from-primary/25 hover:to-secondary/25 transition-all duration-300 cursor-pointer group shadow-md">
-                    <div className="absolute inset-0 rounded-xl bg-primary/20 blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
-                    <User size={18} className="relative" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 rounded-2xl border-border/30 shadow-2xl backdrop-blur-xl bg-card/95">
-                  <div className="px-4 py-3">
-                    <p className="text-sm font-bold text-foreground truncate">{user.email}</p>
-                    <p className="text-[10px] text-muted-foreground flex items-center gap-1.5 mt-1">
-                      <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                      Conta ativa
-                    </p>
-                  </div>
-                  <DropdownMenuSeparator className="bg-border/30" />
-                  <DropdownMenuItem 
-                    onClick={handleSignOut} 
-                    className="text-destructive cursor-pointer rounded-xl mx-2 mb-2 hover:bg-destructive/10"
-                  >
-                    <LogOut size={14} className="mr-2" />
-                    Sair da conta
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
-          ) : (
-            <Button
-              variant="premium"
-              size="sm"
-              onClick={() => navigate('/auth')}
-              className="rounded-xl px-6"
-            >
-              <User size={14} className="mr-2" />
-              Entrar
-            </Button>
-          )}
         </motion.div>
       </div>
     </header>
