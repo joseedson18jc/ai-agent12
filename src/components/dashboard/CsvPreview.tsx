@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, History, RefreshCw, Filter, Loader2, Wand2, Undo2, Redo2, Edit3 } from 'lucide-react';
+import { FileCheck, ArrowRight, X, Sparkles, TrendingUp, TrendingDown, Calendar, Tag, AlertTriangle, AlertCircle, Download, Pencil, Check, XCircle, Trash2, CheckSquare, History, RefreshCw, Filter, Loader2, Wand2, Undo2, Redo2, Edit3, GitCompare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -9,12 +9,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { TransactionEntry, BPSection } from '@/types/finance';
 import { formatCurrency } from '@/utils/finance';
 import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-type IssueFilter = 'all' | 'errors' | 'warnings' | 'issues';
+type IssueFilter = 'all' | 'errors' | 'warnings' | 'issues' | 'emptyCostCenter';
 
 interface ValidationIssue {
   type: 'error' | 'warning';
@@ -42,6 +43,15 @@ interface FieldIssue {
 interface AIConfidence {
   categoryConfidence?: number;
   costCenterConfidence?: number;
+}
+
+interface AIConflict {
+  idx: number;
+  field: 'category' | 'costCenter';
+  geminiValue: string;
+  geminiConfidence: number;
+  gptValue: string;
+  gptConfidence: number;
 }
 
 const validateEntries = (entries: TransactionEntry[]): { 
@@ -185,6 +195,8 @@ export const CsvPreview = ({
   const [issueFilter, setIssueFilter] = useState<IssueFilter>('all');
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [aiConfidence, setAiConfidence] = useState<Map<number, AIConfidence>>(new Map());
+  const [aiConflicts, setAiConflicts] = useState<AIConflict[]>([]);
+  const [showConflictDialog, setShowConflictDialog] = useState(false);
   const editInputRef = useRef<HTMLInputElement>(null);
   
   // Undo/Redo history
@@ -346,11 +358,12 @@ export const CsvPreview = ({
     const base = entries.slice(0, 50);
     if (issueFilter === 'all') return base.map((entry, idx) => ({ entry, originalIdx: idx }));
     
-    return base.map((entry, idx) => ({ entry, originalIdx: idx })).filter(({ originalIdx }) => {
+    return base.map((entry, idx) => ({ entry, originalIdx: idx })).filter(({ entry, originalIdx }) => {
       const issues = fieldIssues.get(originalIdx) || [];
       if (issueFilter === 'errors') return issues.some(i => i.severity === 'error');
       if (issueFilter === 'warnings') return issues.some(i => i.severity === 'warning');
       if (issueFilter === 'issues') return issues.length > 0;
+      if (issueFilter === 'emptyCostCenter') return !entry.costCenter || entry.costCenter.trim() === '';
       return true;
     });
   }, [entries, issueFilter, fieldIssues]);
@@ -360,12 +373,14 @@ export const CsvPreview = ({
     const base = entries.slice(0, 50);
     let errors = 0;
     let warnings = 0;
-    base.forEach((_, idx) => {
+    let emptyCostCenters = 0;
+    base.forEach((entry, idx) => {
       const issues = fieldIssues.get(idx) || [];
       if (issues.some(i => i.severity === 'error')) errors++;
       if (issues.some(i => i.severity === 'warning')) warnings++;
+      if (!entry.costCenter || entry.costCenter.trim() === '') emptyCostCenters++;
     });
-    return { errors, warnings, total: errors + warnings };
+    return { errors, warnings, total: errors + warnings, emptyCostCenters };
   }, [entries, fieldIssues]);
 
   const receivableCount = entries.filter(e => e.type === 'receivable').length;
@@ -521,13 +536,14 @@ export const CsvPreview = ({
         throw new Error(`HTTP error: ${response.status}`);
       }
 
-      const { suggestions, dualAI } = await response.json();
+      const { suggestions, dualAI, conflictCount } = await response.json();
       
       // Apply suggestions to entries and store confidence
       const updatedEntries = [...entries];
       let filledCategoryCount = 0;
       let filledCostCenterCount = 0;
       const newConfidence = new Map<number, AIConfidence>();
+      const newConflicts: AIConflict[] = [];
       
       suggestions.forEach((s: { 
         idx: number; 
@@ -537,6 +553,14 @@ export const CsvPreview = ({
         costCenterConfidence?: number;
         categorySource?: string;
         costCenterSource?: string;
+        hasConflict?: boolean;
+        conflict?: {
+          field: 'category' | 'costCenter';
+          geminiValue: string;
+          geminiConfidence: number;
+          gptValue: string;
+          gptConfidence: number;
+        };
       }) => {
         if (updatedEntries[s.idx]) {
           const entry = updatedEntries[s.idx];
@@ -548,6 +572,18 @@ export const CsvPreview = ({
             categoryConfidence: needsCategory ? s.categoryConfidence : undefined,
             costCenterConfidence: needsCostCenter ? s.costCenterConfidence : undefined
           });
+          
+          // Track conflicts
+          if (s.hasConflict && s.conflict && needsCostCenter) {
+            newConflicts.push({
+              idx: s.idx,
+              field: s.conflict.field,
+              geminiValue: s.conflict.geminiValue,
+              geminiConfidence: s.conflict.geminiConfidence,
+              gptValue: s.conflict.gptValue,
+              gptConfidence: s.conflict.gptConfidence
+            });
+          }
           
           if (needsCategory && s.category) {
             updatedEntries[s.idx] = { ...updatedEntries[s.idx], category: s.category };
@@ -563,10 +599,17 @@ export const CsvPreview = ({
       setAiConfidence(prev => new Map([...prev, ...newConfidence]));
       handleEntriesChange(updatedEntries);
       
+      // If there are conflicts, show the dialog
+      if (newConflicts.length > 0) {
+        setAiConflicts(newConflicts);
+        setShowConflictDialog(true);
+      }
+      
       const aiInfo = dualAI ? " (Gemini + GPT-5)" : "";
+      const conflictInfo = conflictCount > 0 ? ` | ${conflictCount} conflitos para revisar` : "";
       toast({
         title: `✨ Preenchimento concluído${aiInfo}`,
-        description: `${filledCategoryCount} categorias e ${filledCostCenterCount} centros de custo preenchidos.`
+        description: `${filledCategoryCount} categorias e ${filledCostCenterCount} centros de custo preenchidos.${conflictInfo}`
       });
     } catch (error) {
       console.error("Auto-fill error:", error);
@@ -592,6 +635,35 @@ export const CsvPreview = ({
       return next;
     });
   }, [entries, handleEntriesChange]);
+
+  // Handle conflict resolution - apply chosen value
+  const resolveConflict = useCallback((conflictIdx: number, chosenValue: string) => {
+    if (!handleEntriesChange) return;
+    const conflict = aiConflicts[conflictIdx];
+    if (!conflict) return;
+
+    const updatedEntries = [...entries];
+    if (updatedEntries[conflict.idx]) {
+      updatedEntries[conflict.idx] = { 
+        ...updatedEntries[conflict.idx], 
+        costCenter: chosenValue 
+      };
+    }
+    handleEntriesChange(updatedEntries);
+    
+    // Remove this conflict from the list
+    setAiConflicts(prev => prev.filter((_, i) => i !== conflictIdx));
+    
+    toast({
+      title: "✓ Conflito resolvido",
+      description: `Centro de custo definido como "${chosenValue}"`
+    });
+  }, [aiConflicts, entries, handleEntriesChange, toast]);
+
+  const closeConflictDialog = useCallback(() => {
+    setShowConflictDialog(false);
+    setAiConflicts([]);
+  }, []);
 
   return (
     <motion.div
@@ -863,6 +935,9 @@ export const CsvPreview = ({
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">Todas as linhas</SelectItem>
+                    <SelectItem value="emptyCostCenter">
+                      Centro de custo vazio ({issueCounts.emptyCostCenters})
+                    </SelectItem>
                     <SelectItem value="issues">
                       Com problemas ({issueCounts.total})
                     </SelectItem>
@@ -1135,6 +1210,82 @@ export const CsvPreview = ({
           </Button>
         </div>
       </div>
+
+      {/* AI Conflict Resolution Dialog */}
+      <Dialog open={showConflictDialog} onOpenChange={setShowConflictDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <GitCompare className="w-5 h-5 text-primary" />
+              Conflitos entre IAs ({aiConflicts.length})
+            </DialogTitle>
+            <DialogDescription>
+              As duas IAs (Gemini e GPT-5) discordaram nos seguintes casos. Escolha a opção mais adequada:
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[400px] pr-4">
+            <div className="space-y-4">
+              {aiConflicts.map((conflict, conflictIdx) => {
+                const entry = entries[conflict.idx];
+                return (
+                  <Card key={conflict.idx} className="border-border/50">
+                    <CardContent className="p-4">
+                      <div className="mb-3">
+                        <div className="text-sm font-medium text-foreground">
+                          Linha {conflict.idx + 1}: {entry?.category || 'Sem categoria'}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {entry?.description || formatCurrency(entry?.amount || 0)} • {entry?.competenceDate}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-3">
+                        <Button
+                          variant="outline"
+                          className="h-auto py-3 flex flex-col items-start gap-1 hover:bg-blue-500/10 hover:border-blue-500"
+                          onClick={() => resolveConflict(conflictIdx, conflict.geminiValue)}
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <Badge variant="secondary" className="bg-blue-500/20 text-blue-600 text-[10px]">Gemini</Badge>
+                            <span className="text-xs text-muted-foreground ml-auto">{conflict.geminiConfidence}%</span>
+                          </div>
+                          <span className="font-medium text-sm">{conflict.geminiValue}</span>
+                        </Button>
+                        
+                        <Button
+                          variant="outline"
+                          className="h-auto py-3 flex flex-col items-start gap-1 hover:bg-green-500/10 hover:border-green-500"
+                          onClick={() => resolveConflict(conflictIdx, conflict.gptValue)}
+                        >
+                          <div className="flex items-center gap-2 w-full">
+                            <Badge variant="secondary" className="bg-green-500/20 text-green-600 text-[10px]">GPT-5</Badge>
+                            <span className="text-xs text-muted-foreground ml-auto">{conflict.gptConfidence}%</span>
+                          </div>
+                          <span className="font-medium text-sm">{conflict.gptValue}</span>
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </ScrollArea>
+          
+          {aiConflicts.length === 0 && (
+            <div className="text-center py-6 text-muted-foreground">
+              <Check className="w-12 h-12 mx-auto mb-2 text-green-500" />
+              <p>Todos os conflitos foram resolvidos!</p>
+            </div>
+          )}
+          
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={closeConflictDialog}>
+              {aiConflicts.length === 0 ? 'Fechar' : 'Resolver depois'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

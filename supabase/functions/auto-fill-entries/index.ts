@@ -24,10 +24,16 @@ interface AISuggestion {
 }
 
 interface MergedSuggestion extends AISuggestion {
-  model1: string;
-  model2: string;
   categorySource: string;
   costCenterSource: string;
+  hasConflict?: boolean;
+  conflict?: {
+    field: 'category' | 'costCenter';
+    geminiValue: string;
+    geminiConfidence: number;
+    gptValue: string;
+    gptConfidence: number;
+  };
 }
 
 const parseAIResponse = (content: string): AISuggestion[] => {
@@ -218,8 +224,10 @@ Retorne o JSON com as sugestões:`;
       console.error("GPT-5 request failed:", response2.status);
     }
 
-    // Merge suggestions - compare and choose the best
+    // Merge suggestions - compare and choose the best, track conflicts
     const mergedSuggestions: MergedSuggestion[] = [];
+    const conflicts: MergedSuggestion['conflict'][] = [];
+    
     const allIdxs = new Set([
       ...suggestions1.map(s => s.idx),
       ...suggestions2.map(s => s.idx)
@@ -237,14 +245,27 @@ Retorne o JSON com as sugestões:`;
         costCenter: '',
         categoryConfidence: 0,
         costCenterConfidence: 0,
-        model1: 'Gemini',
-        model2: 'GPT-5',
         categorySource: '',
         costCenterSource: ''
       };
 
-      // Choose category with highest confidence
       if (s1 && s2) {
+        // Check for cost center conflict (different values with similar confidence)
+        const costCenterConflict = s1.costCenter !== s2.costCenter && 
+          Math.abs(s1.costCenterConfidence - s2.costCenterConfidence) < 20;
+
+        if (costCenterConflict) {
+          merged.hasConflict = true;
+          merged.conflict = {
+            field: 'costCenter',
+            geminiValue: s1.costCenter,
+            geminiConfidence: s1.costCenterConfidence,
+            gptValue: s2.costCenter,
+            gptConfidence: s2.costCenterConfidence
+          };
+        }
+
+        // Choose category with highest confidence
         if (s1.categoryConfidence >= s2.categoryConfidence) {
           merged.category = s1.category;
           merged.categoryConfidence = s1.categoryConfidence;
@@ -292,14 +313,16 @@ Retorne o JSON com as sugestões:`;
       mergedSuggestions.push(merged);
     }
 
-    console.log(`Merged ${mergedSuggestions.length} suggestions from both AIs`);
+    const conflictCount = mergedSuggestions.filter(s => s.hasConflict).length;
+    console.log(`Merged ${mergedSuggestions.length} suggestions, ${conflictCount} conflicts`);
 
     return new Response(
       JSON.stringify({ 
         suggestions: mergedSuggestions,
         dualAI: true,
         model1: 'google/gemini-2.5-flash',
-        model2: 'openai/gpt-5-mini'
+        model2: 'openai/gpt-5-mini',
+        conflictCount
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
