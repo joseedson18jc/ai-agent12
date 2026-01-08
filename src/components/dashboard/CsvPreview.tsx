@@ -1011,8 +1011,28 @@ export const CsvPreview = ({
                 </Button>
               )}
 
-              {/* AI Auto-fill button */}
-              {onEntriesChange && issueCounts.total > 0 && (
+              {/* AI Auto-fill button for empty cost centers - DEDICATED */}
+              {onEntriesChange && issueCounts.emptyCostCenters > 0 && (
+                <Button
+                  size="sm"
+                  onClick={autoFillWithAi}
+                  disabled={isAutoFilling}
+                  className="gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 text-primary-foreground shadow-lg"
+                >
+                  {isAutoFilling ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" /> Preenchendo com IA...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} /> Auto-preencher Centros Vazios ({issueCounts.emptyCostCenters})
+                    </>
+                  )}
+                </Button>
+              )}
+
+              {/* AI Auto-fill button for all issues */}
+              {onEntriesChange && issueCounts.total > 0 && issueCounts.emptyCostCenters === 0 && (
                 <Button
                   variant="outline"
                   size="sm"

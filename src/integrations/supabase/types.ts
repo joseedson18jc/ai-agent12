@@ -59,6 +59,42 @@ export type Database = {
         }
         Relationships: []
       }
+      financial_goals: {
+        Row: {
+          alert_threshold_percent: number
+          created_at: string
+          id: string
+          is_active: boolean
+          metric_type: string
+          period_type: string
+          target_value: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          alert_threshold_percent?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          metric_type: string
+          period_type?: string
+          target_value: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          alert_threshold_percent?: number
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          metric_type?: string
+          period_type?: string
+          target_value?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       financial_metrics: {
         Row: {
           cost_center: string | null
