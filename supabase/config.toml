@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.auto-fill-entries]
 verify_jwt = false
+
+[functions.detect-anomalies]
+verify_jwt = false
