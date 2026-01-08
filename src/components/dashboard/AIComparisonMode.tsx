@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  BrainCircuit, 
-  Loader2, 
-  Sparkles, 
+import {
+  BrainCircuit,
+  Loader2,
+  Sparkles,
   LayoutGrid,
   Check,
   X
@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { DreKpis } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 export type AIProvider = 'lovable' | 'openai' | 'anthropic' | 'xai';
 
@@ -55,7 +56,7 @@ export const AIComparisonMode = ({
 
   const generateComparison = useCallback(async () => {
     if (selectedProviders.length === 0) return;
-    
+
     // Check if user is authenticated
     if (!session?.access_token) {
       toast({
@@ -66,7 +67,20 @@ export const AIComparisonMode = ({
       navigate('/auth');
       return;
     }
-    
+
+    // Get a fresh token right before calling the backend function
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const freshToken = sessionData.session?.access_token;
+    if (sessionError || !freshToken) {
+      toast({
+        title: "Sessão inválida",
+        description: "Faça login novamente para continuar.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
     setIsComparing(true);
     setResults({} as Record<AIProvider, string>);
     setLoadingProviders([...selectedProviders]);
@@ -89,7 +103,7 @@ export const AIComparisonMode = ({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${session.access_token}`,
+              'Authorization': `Bearer ${freshToken}`,
             },
             body: JSON.stringify({
               financialData,
