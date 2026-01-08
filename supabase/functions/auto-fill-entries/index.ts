@@ -5,13 +5,101 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+interface EntryPayload {
+  idx: number;
+  type: string;
+  category: string;
+  costCenter: string;
+  amount: number;
+  date: string;
+  description?: string;
+}
+
+interface AISuggestion {
+  idx: number;
+  category: string;
+  costCenter: string;
+  categoryConfidence: number;
+  costCenterConfidence: number;
+}
+
+interface MergedSuggestion extends AISuggestion {
+  model1: string;
+  model2: string;
+  categorySource: string;
+  costCenterSource: string;
+}
+
+const parseAIResponse = (content: string): AISuggestion[] => {
+  let jsonStr = content.trim();
+  if (jsonStr.startsWith("```json")) {
+    jsonStr = jsonStr.slice(7);
+  } else if (jsonStr.startsWith("```")) {
+    jsonStr = jsonStr.slice(3);
+  }
+  if (jsonStr.endsWith("```")) {
+    jsonStr = jsonStr.slice(0, -3);
+  }
+  jsonStr = jsonStr.trim();
+  return JSON.parse(jsonStr);
+};
+
+const buildSystemPrompt = (existingCategoriesContext: string, existingCostCenters: string[]) => {
+  const costCentersContext = existingCostCenters.length > 0
+    ? `\nCENTROS DE CUSTO EXISTENTES (PRIORIZE usar estes):\n${existingCostCenters.join(', ')}`
+    : '';
+
+  return `Você é um especialista em classificação contábil brasileira. Sua tarefa é inferir categorias e centros de custo para lançamentos financeiros que estão vazios ou incorretos.
+
+REGRAS DE INFERÊNCIA PARA CENTROS DE CUSTO:
+1. PRIORIZE usar centros de custo já existentes no arquivo
+2. Analise a CATEGORIA e DESCRIÇÃO para inferir o centro de custo correto:
+   - Transferências financeiras, juros, tarifas → "Financeiro"
+   - Salários, benefícios, FGTS, INSS → "RH" ou "Recursos Humanos"
+   - Marketing, vendas, comissões → "Comercial"
+   - Aluguel, água, luz, manutenção → "Administrativo"
+   - Compras de produtos, fornecedores → "Operacional"
+   - Sistemas, software, equipamentos de TI → "TI"
+   - Impostos → "Fiscal" ou "Tributário"
+
+3. Se a categoria indica o tipo de despesa, use isso para inferir:
+   - "Transferência de Entrada/Saída" → "Financeiro"
+   - "Rendimentos de Aplicações" → "Financeiro"
+   - "Salários" → "RH"
+
+4. Analise padrões no arquivo:
+   - Lançamentos similares devem ter o mesmo centro de custo
+   - Use o histórico como referência
+${existingCategoriesContext}
+${costCentersContext}
+
+FORMATO DE RESPOSTA:
+Retorne APENAS um JSON array com as sugestões, incluindo confiança de 0 a 100:
+[
+  { "idx": 1, "category": "Categoria Sugerida", "costCenter": "Centro de Custo", "categoryConfidence": 85, "costCenterConfidence": 70 },
+  { "idx": 2, "category": "Outra Categoria", "costCenter": "Outro Centro", "categoryConfidence": 60, "costCenterConfidence": 50 }
+]
+
+NÍVEIS DE CONFIANÇA:
+- 90-100: Padrão muito claro baseado em categoria/descrição
+- 70-89: Inferência baseada em centros de custo similares existentes
+- 50-69: Inferência baseada em tipo e valor
+- 0-49: Categoria genérica
+
+Se não conseguir inferir com confiança, use:
+- Centro de Custo: "Administrativo" (padrão mais comum)
+- Confiança baixa (30-50)
+
+Retorne APENAS o JSON, sem explicações.`;
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { entries, existingCategories } = await req.json();
+    const { entries, existingCategories, existingCostCenters } = await req.json();
     
     if (!entries || !Array.isArray(entries) || entries.length === 0) {
       return new Response(
@@ -26,15 +114,7 @@ serve(async (req) => {
     }
 
     // Format entries for the prompt
-    const entriesForPrompt = entries.map((e: { 
-      idx: number; 
-      type: string; 
-      category: string; 
-      costCenter: string; 
-      amount: number; 
-      date: string;
-      description?: string;
-    }) => 
+    const entriesForPrompt = entries.map((e: EntryPayload) => 
       `${e.idx}. Tipo: ${e.type === 'receivable' ? 'RECEITA' : 'DESPESA'} | Categoria atual: "${e.category || '(vazio)'}" | Centro de Custo: "${e.costCenter || '(vazio)'}" | Valor: R$ ${Math.abs(e.amount).toFixed(2)} | Data: ${e.date}${e.description ? ` | Descrição: "${e.description}"` : ''}`
     ).join('\n');
 
@@ -43,118 +123,184 @@ serve(async (req) => {
       ? `\nCATEGORIAS EXISTENTES NO ARQUIVO (use como referência):\n${existingCategories.join(', ')}`
       : '';
 
-    const systemPrompt = `Você é um especialista em classificação contábil brasileira. Sua tarefa é inferir categorias e centros de custo para lançamentos financeiros que estão vazios ou incorretos.
+    const costCentersArray = existingCostCenters && Array.isArray(existingCostCenters) 
+      ? existingCostCenters 
+      : [];
 
-REGRAS DE INFERÊNCIA:
-1. Para RECEITAS (receivable):
-   - Valores altos e redondos geralmente são "Vendas de Produtos" ou "Prestação de Serviços"
-   - Valores menores podem ser "Outras Receitas" ou "Receita Financeira"
-   
-2. Para DESPESAS (payable):
-   - Valores mensais fixos: Aluguel, Salários, Serviços de TI, Internet
-   - Valores variáveis baixos: Material de Escritório, Lanches, Transporte
-   - Valores variáveis altos: Fornecedores, Matéria Prima, Marketing
-   - Valores com padrão bancário: Tarifas Bancárias, Juros
-   - Valores no fim do mês com padrão de folha: Salários, Encargos Trabalhistas
+    const systemPrompt = buildSystemPrompt(existingCategoriesContext, costCentersArray);
 
-3. CENTROS DE CUSTO comuns:
-   - "Administrativo" - despesas gerais de escritório
-   - "Comercial" - vendas e marketing
-   - "Operacional" - produção e logística
-   - "Financeiro" - despesas bancárias e financeiras
-   - "RH" - despesas de pessoal
-   - "TI" - tecnologia e sistemas
-
-4. Analise o VALOR e a DATA para inferir:
-   - Valores múltiplos de 1000 no dia 5 ou 25 = provável salário
-   - Valores pequenos diários = despesas operacionais
-   - Valores grandes no início do mês = aluguel
-
-5. Use as categorias existentes no arquivo como referência para manter consistência
-${existingCategoriesContext}
-
-FORMATO DE RESPOSTA:
-Retorne APENAS um JSON array com as sugestões, incluindo confiança de 0 a 100:
-[
-  { "idx": 1, "category": "Categoria Sugerida", "costCenter": "Centro de Custo", "categoryConfidence": 85, "costCenterConfidence": 70 },
-  { "idx": 2, "category": "Outra Categoria", "costCenter": "Outro Centro", "categoryConfidence": 60, "costCenterConfidence": 50 }
-]
-
-NÍVEIS DE CONFIANÇA:
-- 90-100: Padrão muito claro (valor de salário no dia 5, aluguel no dia 1)
-- 70-89: Padrão provável (valor recorrente, descrição sugestiva)
-- 50-69: Inferência baseada em tipo e valor
-- 0-49: Categoria genérica (usar "Outros" + tipo)
-
-Se não conseguir inferir com confiança, use:
-- Categoria: "Outros" + tipo (ex: "Outras Receitas", "Outras Despesas")
-- Centro de Custo: "Geral"
-- Confiança baixa (30-50)
-
-Retorne APENAS o JSON, sem explicações.`;
-
-    const userPrompt = `Infira a categoria e centro de custo para os seguintes lançamentos:
+    const userPrompt = `Infira a categoria e centro de custo para os seguintes lançamentos (FOCO em preencher CENTROS DE CUSTO vazios):
 
 ${entriesForPrompt}
 
 Retorne o JSON com as sugestões:`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
+    console.log("Calling two AI models in parallel for comparison...");
+
+    // Call both AI models in parallel
+    const [response1, response2] = await Promise.all([
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "google/gemini-2.5-flash",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+        }),
       }),
-    });
+      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${LOVABLE_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-5-mini",
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt }
+          ],
+        }),
+      }),
+    ]);
 
-    if (!response.ok) {
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: "Rate limits exceeded, please try again later." }),
-          { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    // Handle rate limits
+    if (response1.status === 429 || response2.status === 429) {
+      return new Response(
+        JSON.stringify({ error: "Rate limits exceeded, please try again later." }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (response1.status === 402 || response2.status === 402) {
+      return new Response(
+        JSON.stringify({ error: "Payment required, please add funds." }),
+        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    let suggestions1: AISuggestion[] = [];
+    let suggestions2: AISuggestion[] = [];
+
+    // Parse Gemini response
+    if (response1.ok) {
+      try {
+        const data1 = await response1.json();
+        const content1 = data1.choices?.[0]?.message?.content;
+        if (content1) {
+          suggestions1 = parseAIResponse(content1);
+          console.log("Gemini suggestions:", suggestions1.length);
+        }
+      } catch (e) {
+        console.error("Failed to parse Gemini response:", e);
       }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: "Payment required, please add funds." }),
-          { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+    } else {
+      console.error("Gemini request failed:", response1.status);
+    }
+
+    // Parse GPT-5 response
+    if (response2.ok) {
+      try {
+        const data2 = await response2.json();
+        const content2 = data2.choices?.[0]?.message?.content;
+        if (content2) {
+          suggestions2 = parseAIResponse(content2);
+          console.log("GPT-5 suggestions:", suggestions2.length);
+        }
+      } catch (e) {
+        console.error("Failed to parse GPT-5 response:", e);
       }
-      const errorText = await response.text();
-      console.error("AI gateway error:", response.status, errorText);
-      throw new Error(`AI gateway error: ${response.status}`);
+    } else {
+      console.error("GPT-5 request failed:", response2.status);
     }
 
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
+    // Merge suggestions - compare and choose the best
+    const mergedSuggestions: MergedSuggestion[] = [];
+    const allIdxs = new Set([
+      ...suggestions1.map(s => s.idx),
+      ...suggestions2.map(s => s.idx)
+    ]);
 
-    if (!content) {
-      throw new Error("No response from AI");
+    for (const idx of allIdxs) {
+      const s1 = suggestions1.find(s => s.idx === idx);
+      const s2 = suggestions2.find(s => s.idx === idx);
+
+      if (!s1 && !s2) continue;
+
+      const merged: MergedSuggestion = {
+        idx,
+        category: '',
+        costCenter: '',
+        categoryConfidence: 0,
+        costCenterConfidence: 0,
+        model1: 'Gemini',
+        model2: 'GPT-5',
+        categorySource: '',
+        costCenterSource: ''
+      };
+
+      // Choose category with highest confidence
+      if (s1 && s2) {
+        if (s1.categoryConfidence >= s2.categoryConfidence) {
+          merged.category = s1.category;
+          merged.categoryConfidence = s1.categoryConfidence;
+          merged.categorySource = 'Gemini';
+        } else {
+          merged.category = s2.category;
+          merged.categoryConfidence = s2.categoryConfidence;
+          merged.categorySource = 'GPT-5';
+        }
+
+        // Choose cost center with highest confidence
+        if (s1.costCenterConfidence >= s2.costCenterConfidence) {
+          merged.costCenter = s1.costCenter;
+          merged.costCenterConfidence = s1.costCenterConfidence;
+          merged.costCenterSource = 'Gemini';
+        } else {
+          merged.costCenter = s2.costCenter;
+          merged.costCenterConfidence = s2.costCenterConfidence;
+          merged.costCenterSource = 'GPT-5';
+        }
+
+        // Boost confidence if both AIs agree
+        if (s1.costCenter === s2.costCenter) {
+          merged.costCenterConfidence = Math.min(100, merged.costCenterConfidence + 15);
+        }
+        if (s1.category === s2.category) {
+          merged.categoryConfidence = Math.min(100, merged.categoryConfidence + 15);
+        }
+      } else if (s1) {
+        merged.category = s1.category;
+        merged.costCenter = s1.costCenter;
+        merged.categoryConfidence = s1.categoryConfidence;
+        merged.costCenterConfidence = s1.costCenterConfidence;
+        merged.categorySource = 'Gemini';
+        merged.costCenterSource = 'Gemini';
+      } else if (s2) {
+        merged.category = s2.category;
+        merged.costCenter = s2.costCenter;
+        merged.categoryConfidence = s2.categoryConfidence;
+        merged.costCenterConfidence = s2.costCenterConfidence;
+        merged.categorySource = 'GPT-5';
+        merged.costCenterSource = 'GPT-5';
+      }
+
+      mergedSuggestions.push(merged);
     }
 
-    // Extract JSON from the response
-    let jsonStr = content.trim();
-    if (jsonStr.startsWith("```json")) {
-      jsonStr = jsonStr.slice(7);
-    } else if (jsonStr.startsWith("```")) {
-      jsonStr = jsonStr.slice(3);
-    }
-    if (jsonStr.endsWith("```")) {
-      jsonStr = jsonStr.slice(0, -3);
-    }
-    jsonStr = jsonStr.trim();
-
-    const suggestions = JSON.parse(jsonStr);
+    console.log(`Merged ${mergedSuggestions.length} suggestions from both AIs`);
 
     return new Response(
-      JSON.stringify({ suggestions }),
+      JSON.stringify({ 
+        suggestions: mergedSuggestions,
+        dualAI: true,
+        model1: 'google/gemini-2.5-flash',
+        model2: 'openai/gpt-5-mini'
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
 

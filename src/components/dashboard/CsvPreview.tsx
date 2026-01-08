@@ -471,8 +471,9 @@ export const CsvPreview = ({
     setIsAutoFilling(true);
     
     try {
-      // Get existing categories for context
+      // Get existing categories and cost centers for context
       const existingCategories = [...new Set(entries.filter(e => e.category).map(e => e.category))];
+      const existingCostCenters = [...new Set(entries.filter(e => e.costCenter && e.costCenter.trim() !== '').map(e => e.costCenter))];
       
       // Prepare entries for AI - include description for better inference
       const entriesPayload = entriesToFill.slice(0, 50).map(({ idx, entry }) => ({
@@ -494,7 +495,8 @@ export const CsvPreview = ({
           },
           body: JSON.stringify({ 
             entries: entriesPayload,
-            existingCategories 
+            existingCategories,
+            existingCostCenters
           }),
         }
       );
@@ -519,20 +521,29 @@ export const CsvPreview = ({
         throw new Error(`HTTP error: ${response.status}`);
       }
 
-      const { suggestions } = await response.json();
+      const { suggestions, dualAI } = await response.json();
       
       // Apply suggestions to entries and store confidence
       const updatedEntries = [...entries];
-      let filledCount = 0;
+      let filledCategoryCount = 0;
+      let filledCostCenterCount = 0;
       const newConfidence = new Map<number, AIConfidence>();
       
-      suggestions.forEach((s: { idx: number; category: string; costCenter: string; categoryConfidence?: number; costCenterConfidence?: number }) => {
+      suggestions.forEach((s: { 
+        idx: number; 
+        category: string; 
+        costCenter: string; 
+        categoryConfidence?: number; 
+        costCenterConfidence?: number;
+        categorySource?: string;
+        costCenterSource?: string;
+      }) => {
         if (updatedEntries[s.idx]) {
           const entry = updatedEntries[s.idx];
           const needsCategory = !entry.category || entry.category.trim() === '';
           const needsCostCenter = !entry.costCenter || entry.costCenter.trim() === '';
           
-          // Store confidence values
+          // Store confidence values with source info
           newConfidence.set(s.idx, {
             categoryConfidence: needsCategory ? s.categoryConfidence : undefined,
             costCenterConfidence: needsCostCenter ? s.costCenterConfidence : undefined
@@ -540,10 +551,11 @@ export const CsvPreview = ({
           
           if (needsCategory && s.category) {
             updatedEntries[s.idx] = { ...updatedEntries[s.idx], category: s.category };
-            filledCount++;
+            filledCategoryCount++;
           }
           if (needsCostCenter && s.costCenter) {
             updatedEntries[s.idx] = { ...updatedEntries[s.idx], costCenter: s.costCenter };
+            filledCostCenterCount++;
           }
         }
       });
@@ -551,9 +563,10 @@ export const CsvPreview = ({
       setAiConfidence(prev => new Map([...prev, ...newConfidence]));
       handleEntriesChange(updatedEntries);
       
+      const aiInfo = dualAI ? " (Gemini + GPT-5)" : "";
       toast({
-        title: "✨ Preenchimento automático concluído",
-        description: `${filledCount} campos foram preenchidos com sugestões da IA.`
+        title: `✨ Preenchimento concluído${aiInfo}`,
+        description: `${filledCategoryCount} categorias e ${filledCostCenterCount} centros de custo preenchidos.`
       });
     } catch (error) {
       console.error("Auto-fill error:", error);
