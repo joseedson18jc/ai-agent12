@@ -3,12 +3,13 @@ import { AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { useImportHistory } from '@/hooks/useImportHistory';
 import { useMappingTemplates } from '@/hooks/useMappingTemplates';
 import { TransactionEntry, BPSection, DreKpis } from '@/types/finance';
-import { 
-  parseContaAzulCsv, 
-  getCategoryKey, 
+import {
+  parseContaAzulCsv,
+  getCategoryKey,
   generateDemoData,
   computeDreByMonth,
   computeDreKpis
@@ -395,16 +396,29 @@ const Index = () => {
       return;
     }
 
+    // Get a fresh token right before calling the backend function
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    const freshToken = sessionData.session?.access_token;
+    if (sessionError || !freshToken) {
+      toast({
+        title: "Sessão inválida",
+        description: "Faça login novamente para continuar.",
+        variant: "destructive",
+      });
+      navigate('/auth');
+      return;
+    }
+
     setIsAiLoading(true);
     setAiInsight(null);
-    
+
     const providerNames: Record<AIProvider, string> = {
       lovable: 'Gemini',
       openai: 'GPT-4o',
       anthropic: 'Claude Sonnet 4',
       xai: 'Grok 3'
     };
-    
+
     try {
       // Prepare financial data for AI analysis
       const financialData = {
@@ -424,7 +438,7 @@ const Index = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
+            'Authorization': `Bearer ${freshToken}`,
           },
           body: JSON.stringify({
             financialData,
