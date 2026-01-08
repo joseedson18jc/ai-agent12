@@ -2,6 +2,8 @@ import { Zap, Upload, Settings2, LayoutDashboard, TrendingUp, LogOut, User, Crow
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
+import { NotificationsPanel } from './NotificationsPanel';
+import { RealtimeKpiIndicator } from './RealtimeKpiIndicator';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -112,6 +114,8 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5, delay: 0.2 }}
         >
+          {user && <RealtimeKpiIndicator />}
+          
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -127,6 +131,8 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
               <p>Ver tutorial</p>
             </TooltipContent>
           </Tooltip>
+          
+          {user && <NotificationsPanel />}
           
           <ThemeToggle />
           
