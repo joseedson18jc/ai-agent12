@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, UserPlus, Loader2, Zap, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, LogIn, UserPlus, Loader2, Zap, ArrowLeft, Chrome } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -19,11 +19,12 @@ const Auth = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signIn, signUp } = useAuth();
+  const { user, signIn, signUp, signInWithGoogle } = useAuth();
 
   useEffect(() => {
     if (user) {
@@ -110,6 +111,28 @@ const Auth = () => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        toast({
+          title: 'Erro ao entrar com Google',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (err) {
+      toast({
+        title: 'Erro inesperado',
+        description: 'Tente novamente mais tarde.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <motion.div
@@ -136,6 +159,38 @@ const Auth = () => {
           </CardHeader>
           
           <CardContent className="p-8">
+            {/* Google Sign In Button */}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleGoogleSignIn}
+              disabled={isGoogleLoading || isLoading}
+              className="w-full h-14 rounded-xl font-bold text-[11px] tracking-[0.15em] uppercase mb-6 border-2 hover:bg-muted/50 transition-all"
+            >
+              {isGoogleLoading ? (
+                <>
+                  <Loader2 size={18} className="mr-2 animate-spin" />
+                  CONECTANDO...
+                </>
+              ) : (
+                <>
+                  <Chrome size={18} className="mr-2" />
+                  CONTINUAR COM GOOGLE
+                </>
+              )}
+            </Button>
+
+            <div className="relative my-6">
+              <div className="absolute inset-0 flex items-center">
+                <span className="w-full border-t border-border/50" />
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-card px-4 text-muted-foreground font-medium tracking-wider">
+                  ou use seu email
+                </span>
+              </div>
+            </div>
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-2">
                 <div className="relative">
@@ -146,7 +201,7 @@ const Auth = () => {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     className={`pl-12 h-14 rounded-xl bg-background/50 border-border/50 ${errors.email ? 'border-destructive' : ''}`}
-                    disabled={isLoading}
+                    disabled={isLoading || isGoogleLoading}
                   />
                 </div>
                 {errors.email && (
@@ -163,7 +218,7 @@ const Auth = () => {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     className={`pl-12 h-14 rounded-xl bg-background/50 border-border/50 ${errors.password ? 'border-destructive' : ''}`}
-                    disabled={isLoading}
+                    disabled={isLoading || isGoogleLoading}
                   />
                 </div>
                 {errors.password && (
@@ -173,7 +228,7 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                disabled={isLoading}
+                disabled={isLoading || isGoogleLoading}
                 className="w-full h-14 rounded-xl font-bold text-[11px] tracking-[0.2em] uppercase"
               >
                 {isLoading ? (

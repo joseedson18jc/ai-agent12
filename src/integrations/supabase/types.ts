@@ -14,7 +14,111 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      financial_anomalies: {
+        Row: {
+          created_at: string
+          current_value: number | null
+          description: string
+          deviation_percent: number | null
+          expected_value: number | null
+          id: string
+          is_dismissed: boolean
+          is_read: boolean
+          metric_type: string | null
+          severity: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_value?: number | null
+          description: string
+          deviation_percent?: number | null
+          expected_value?: number | null
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          metric_type?: string | null
+          severity: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_value?: number | null
+          description?: string
+          deviation_percent?: number | null
+          expected_value?: number | null
+          id?: string
+          is_dismissed?: boolean
+          is_read?: boolean
+          metric_type?: string | null
+          severity?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      financial_metrics: {
+        Row: {
+          cost_center: string | null
+          created_at: string
+          id: string
+          metric_type: string
+          month: string
+          updated_at: string
+          user_id: string
+          value: number
+        }
+        Insert: {
+          cost_center?: string | null
+          created_at?: string
+          id?: string
+          metric_type: string
+          month: string
+          updated_at?: string
+          user_id: string
+          value?: number
+        }
+        Update: {
+          cost_center?: string | null
+          created_at?: string
+          id?: string
+          metric_type?: string
+          month?: string
+          updated_at?: string
+          user_id?: string
+          value?: number
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
