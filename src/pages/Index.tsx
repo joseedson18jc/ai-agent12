@@ -1,9 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { useImportHistory } from '@/hooks/useImportHistory';
 import { useMappingTemplates } from '@/hooks/useMappingTemplates';
 import { TransactionEntry, BPSection, DreKpis } from '@/types/finance';
@@ -30,8 +27,6 @@ type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast';
 
 const Index = () => {
   const { toast } = useToast();
-  const { session, loading: authLoading } = useAuth();
-  const navigate = useNavigate();
   const { saveToHistory, findSimilarImport, updateMappings } = useImportHistory();
   const { templates, saveTemplate, deleteTemplate } = useMappingTemplates();
   const [tab, setTab] = useState<TabType>('upload');
@@ -385,30 +380,6 @@ const Index = () => {
   }, []);
 
   const generateAiInsight = useCallback(async (provider: AIProvider = selectedProvider) => {
-    // Check if user is authenticated
-    if (!session?.access_token) {
-      toast({
-        title: "Autenticação necessária",
-        description: "Faça login para usar as análises de IA.",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
-    // Get a fresh token right before calling the backend function
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const freshToken = sessionData.session?.access_token;
-    if (sessionError || !freshToken) {
-      toast({
-        title: "Sessão inválida",
-        description: "Faça login novamente para continuar.",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
     setIsAiLoading(true);
     setAiInsight(null);
 
@@ -438,7 +409,6 @@ const Index = () => {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${freshToken}`,
           },
           body: JSON.stringify({
             financialData,
@@ -449,15 +419,6 @@ const Index = () => {
       );
 
       if (!response.ok) {
-        if (response.status === 401) {
-          toast({
-            title: "Sessão expirada",
-            description: "Por favor, faça login novamente.",
-            variant: "destructive",
-          });
-          navigate('/auth');
-          throw new Error("Unauthorized");
-        }
         if (response.status === 429) {
           toast({
             title: "Limite de requisições",

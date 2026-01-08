@@ -1,20 +1,16 @@
 import { useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   BrainCircuit,
   Loader2,
   Sparkles,
   LayoutGrid,
   Check,
-  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DreKpis } from '@/types/finance';
-import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/integrations/supabase/client';
 
 export type AIProvider = 'lovable' | 'openai' | 'anthropic' | 'xai';
 
@@ -36,9 +32,7 @@ export const AIComparisonMode = ({
   sortedMonths,
   selectedCostCenter
 }: AIComparisonModeProps) => {
-  const { session } = useAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
   const [selectedProviders, setSelectedProviders] = useState<AIProvider[]>(['lovable', 'openai']);
   const [results, setResults] = useState<Record<AIProvider, string>>({} as Record<AIProvider, string>);
   const [loadingProviders, setLoadingProviders] = useState<AIProvider[]>([]);
@@ -56,30 +50,6 @@ export const AIComparisonMode = ({
 
   const generateComparison = useCallback(async () => {
     if (selectedProviders.length === 0) return;
-
-    // Check if user is authenticated
-    if (!session?.access_token) {
-      toast({
-        title: "Autenticação necessária",
-        description: "Faça login para usar as análises de IA.",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
-
-    // Get a fresh token right before calling the backend function
-    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-    const freshToken = sessionData.session?.access_token;
-    if (sessionError || !freshToken) {
-      toast({
-        title: "Sessão inválida",
-        description: "Faça login novamente para continuar.",
-        variant: "destructive",
-      });
-      navigate('/auth');
-      return;
-    }
 
     setIsComparing(true);
     setResults({} as Record<AIProvider, string>);
@@ -103,7 +73,6 @@ export const AIComparisonMode = ({
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
-              'Authorization': `Bearer ${freshToken}`,
             },
             body: JSON.stringify({
               financialData,
@@ -114,9 +83,6 @@ export const AIComparisonMode = ({
         );
 
         if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error("Autenticação necessária");
-          }
           throw new Error(`HTTP error: ${response.status}`);
         }
 
@@ -174,7 +140,7 @@ export const AIComparisonMode = ({
 
     await Promise.all(promises);
     setIsComparing(false);
-  }, [selectedProviders, dreByMonth, sortedMonths, selectedCostCenter, session, toast, navigate]);
+  }, [selectedProviders, dreByMonth, sortedMonths, selectedCostCenter, toast]);
 
   const hasResults = Object.keys(results).length > 0;
 

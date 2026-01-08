@@ -1,6 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
+import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 export interface FinancialMetric {
@@ -23,10 +21,25 @@ export interface RealtimeKpis {
   cogs: number;
 }
 
+// Local storage key
+const METRICS_STORAGE_KEY = 'financial-metrics';
+
+const loadMetricsFromStorage = (): FinancialMetric[] => {
+  try {
+    const stored = localStorage.getItem(METRICS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
+  }
+};
+
+const saveMetricsToStorage = (metrics: FinancialMetric[]) => {
+  localStorage.setItem(METRICS_STORAGE_KEY, JSON.stringify(metrics));
+};
+
 export const useRealtimeMetrics = () => {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [metrics, setMetrics] = useState<FinancialMetric[]>([]);
+  const [metrics, setMetrics] = useState<FinancialMetric[]>(() => loadMetricsFromStorage());
   const [kpis, setKpis] = useState<RealtimeKpis>({
     revenue: 0,
     ebitda: 0,
@@ -35,7 +48,7 @@ export const useRealtimeMetrics = () => {
     opex: 0,
     cogs: 0,
   });
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   // Calculate KPIs from metrics
@@ -53,111 +66,45 @@ export const useRealtimeMetrics = () => {
     };
   }, []);
 
-  // Fetch initial metrics
-  const fetchMetrics = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      const { data, error } = await supabase
-        .from('financial_metrics')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('updated_at', { ascending: false });
-
-      if (error) throw error;
-
-      const typedData = data as FinancialMetric[];
-      setMetrics(typedData);
-      setKpis(calculateKpis(typedData));
-      setLastUpdate(new Date());
-    } catch (error) {
-      console.error('Error fetching metrics:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [user, calculateKpis]);
-
-  // Save metrics to database
+  // Save metrics
   const saveMetrics = useCallback(async (newMetrics: Partial<FinancialMetric>[]) => {
-    if (!user) return;
+    const metricsWithDefaults = newMetrics.map(m => ({
+      ...m,
+      id: m.id || crypto.randomUUID(),
+      user_id: 'local',
+      created_at: m.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })) as FinancialMetric[];
 
-    try {
-      const metricsWithUser = newMetrics.map(m => ({
-        ...m,
-        user_id: user.id,
-      }));
-
-      const { error } = await supabase
-        .from('financial_metrics')
-        .upsert(metricsWithUser as any, { 
-          onConflict: 'id',
-          ignoreDuplicates: false 
-        });
-
-      if (error) throw error;
-
-      toast({
-        title: '📊 Métricas atualizadas',
-        description: 'Seus dados financeiros foram salvos com sucesso.',
-      });
-    } catch (error) {
-      console.error('Error saving metrics:', error);
-      toast({
-        title: 'Erro ao salvar',
-        description: 'Não foi possível salvar as métricas.',
-        variant: 'destructive',
-      });
-    }
-  }, [user, toast]);
-
-  // Set up realtime subscription
-  useEffect(() => {
-    if (!user) return;
-
-    fetchMetrics();
-
-    const channel = supabase
-      .channel('financial-metrics-realtime')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'financial_metrics',
-          filter: `user_id=eq.${user.id}`,
-        },
-        (payload) => {
-          console.log('Realtime metric update:', payload);
-          
-          if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE') {
-            setMetrics(prev => {
-              const newMetric = payload.new as FinancialMetric;
-              const existing = prev.findIndex(m => m.id === newMetric.id);
-              
-              if (existing >= 0) {
-                const updated = [...prev];
-                updated[existing] = newMetric;
-                return updated;
-              }
-              return [...prev, newMetric];
-            });
-            setLastUpdate(new Date());
-          } else if (payload.eventType === 'DELETE') {
-            setMetrics(prev => prev.filter(m => m.id !== (payload.old as FinancialMetric).id));
-          }
+    setMetrics(prev => {
+      const updated = [...prev];
+      metricsWithDefaults.forEach(newMetric => {
+        const idx = updated.findIndex(m => m.id === newMetric.id);
+        if (idx >= 0) {
+          updated[idx] = newMetric;
+        } else {
+          updated.push(newMetric);
         }
-      )
-      .subscribe();
+      });
+      saveMetricsToStorage(updated);
+      setKpis(calculateKpis(updated));
+      return updated;
+    });
+    
+    setLastUpdate(new Date());
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, fetchMetrics]);
+    toast({
+      title: '📊 Métricas atualizadas',
+      description: 'Seus dados financeiros foram salvos com sucesso.',
+    });
+  }, [toast, calculateKpis]);
 
-  // Update KPIs when metrics change
-  useEffect(() => {
-    setKpis(calculateKpis(metrics));
-  }, [metrics, calculateKpis]);
+  const refetch = useCallback(() => {
+    const stored = loadMetricsFromStorage();
+    setMetrics(stored);
+    setKpis(calculateKpis(stored));
+    setLastUpdate(new Date());
+  }, [calculateKpis]);
 
   return {
     metrics,
@@ -165,6 +112,6 @@ export const useRealtimeMetrics = () => {
     isLoading,
     lastUpdate,
     saveMetrics,
-    refetch: fetchMetrics,
+    refetch,
   };
 };

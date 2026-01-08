@@ -14,8 +14,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useRealtimeMetrics, RealtimeKpis } from '@/hooks/useRealtimeMetrics';
 import { formatCurrency } from '@/utils/finance';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 interface RealtimeMetricCardProps {
@@ -136,7 +134,6 @@ interface RealtimeDashboardProps {
 
 export const RealtimeDashboard = ({ dreByMonth, sortedMonths }: RealtimeDashboardProps) => {
   const { kpis, isLoading, lastUpdate, refetch } = useRealtimeMetrics();
-  const { session } = useAuth();
   const { toast } = useToast();
   const [isDetecting, setIsDetecting] = useState(false);
 
@@ -148,7 +145,7 @@ export const RealtimeDashboard = ({ dreByMonth, sortedMonths }: RealtimeDashboar
   }, [dreByMonth, sortedMonths]);
 
   const detectAnomalies = async () => {
-    if (!session?.access_token || !dreByMonth) return;
+    if (!dreByMonth) return;
     
     setIsDetecting(true);
     try {
@@ -158,7 +155,6 @@ export const RealtimeDashboard = ({ dreByMonth, sortedMonths }: RealtimeDashboar
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
             financialData: dreByMonth,
@@ -244,7 +240,7 @@ export const RealtimeDashboard = ({ dreByMonth, sortedMonths }: RealtimeDashboar
             Dashboard <span className="gradient-text">Inteligente</span>
           </h2>
           <p className="text-muted-foreground mt-2 font-medium">
-            KPIs atualizados automaticamente via WebSocket
+            KPIs atualizados automaticamente
           </p>
         </div>
 
