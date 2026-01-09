@@ -36,6 +36,7 @@ const Index = () => {
   const [tab, setTab] = useState<TabType>('upload');
   const [entries, setEntries] = useState<TransactionEntry[]>([]);
   const [mappings, setMappings] = useState<Record<string, BPSection>>({});
+  const [mappingSources, setMappingSources] = useState<Record<string, 'local' | 'ai' | 'manual' | 'template'>>({});
   const [alert, setAlert] = useState<{ type: 'success' | 'error', msg: string } | null>(null);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [isAiLoading, setIsAiLoading] = useState(false);
@@ -75,21 +76,25 @@ const Index = () => {
   const dreByMonth = useMemo(() => computeDreByMonth(analyticsEntries), [analyticsEntries]);
   const sortedMonths = useMemo(() => Object.keys(dreByMonth).sort(), [dreByMonth]);
 
-  const handleMapEntry = useCallback((categoryKey: string, bpSection: BPSection) => {
+  const handleMapEntry = useCallback((categoryKey: string, bpSection: BPSection, source: 'local' | 'ai' | 'manual' | 'template' = 'manual') => {
     const newMappings = { ...mappings, [categoryKey]: bpSection };
     setMappings(newMappings);
+    setMappingSources(prev => ({ ...prev, [categoryKey]: source }));
     setEntries(prev => prev.map(e => {
       const eKey = getCategoryKey(e.category, e.costCenter);
       return eKey === categoryKey ? { ...e, bpSection } : e;
     }));
   }, [mappings]);
 
-  const handleBulkMap = useCallback((categoryKeys: string[], bpSection: BPSection) => {
+  const handleBulkMap = useCallback((categoryKeys: string[], bpSection: BPSection, source: 'local' | 'ai' | 'manual' | 'template' = 'manual') => {
     const newMappings = { ...mappings };
+    const newSources = { ...mappingSources };
     categoryKeys.forEach(key => {
       newMappings[key] = bpSection;
+      newSources[key] = source;
     });
     setMappings(newMappings);
+    setMappingSources(newSources);
     setEntries(prev => prev.map(e => {
       const eKey = getCategoryKey(e.category, e.costCenter);
       if (categoryKeys.includes(eKey)) {
@@ -326,9 +331,15 @@ const Index = () => {
         }
       });
       
-      // Apply local mappings immediately
+      // Apply local mappings immediately with source tracking
       if (Object.keys(localMappings).length > 0) {
+        const localSources: Record<string, 'local' | 'ai' | 'manual' | 'template'> = {};
+        Object.keys(localMappings).forEach(key => {
+          localSources[key] = 'local';
+        });
+        
         setMappings(prev => ({ ...prev, ...localMappings }));
+        setMappingSources(prev => ({ ...prev, ...localSources }));
         setEntries(prev => prev.map(e => {
           const key = getCategoryKey(e.category, e.costCenter);
           if (localMappings[key]) {
@@ -384,11 +395,14 @@ const Index = () => {
         const { mappings: aiMappings } = await response.json();
         
         const newMappings: Record<string, BPSection> = {};
+        const aiSources: Record<string, 'local' | 'ai' | 'manual' | 'template'> = {};
         aiMappings.forEach((m: { key: string; section: BPSection }) => {
           newMappings[m.key] = m.section;
+          aiSources[m.key] = 'ai';
         });
         
         setMappings(prev => ({ ...prev, ...newMappings }));
+        setMappingSources(prev => ({ ...prev, ...aiSources }));
         setEntries(prev => prev.map(e => {
           const key = getCategoryKey(e.category, e.costCenter);
           if (newMappings[key]) {
@@ -483,9 +497,10 @@ const Index = () => {
               key="mapping"
               entries={entries}
               mappings={mappings}
+              mappingSources={mappingSources}
               isAutoMapping={isAutoMapping}
-              onMapEntry={handleMapEntry}
-              onBulkMap={handleBulkMap}
+              onMapEntry={(key, section) => handleMapEntry(key, section, 'manual')}
+              onBulkMap={(keys, section) => handleBulkMap(keys, section, 'manual')}
               onAutoMap={autoMapWithAi}
               onFinish={() => {
                 // Save mappings to history before finishing
@@ -505,14 +520,17 @@ const Index = () => {
               onApplyTemplate={(template) => {
                 // Apply template mappings to current entries
                 const newMappings = { ...mappings };
+                const newSources = { ...mappingSources };
                 Object.entries(template.mappings).forEach(([key, section]) => {
                   // Check if this key exists in current entries
                   const entryExists = entries.some(e => getCategoryKey(e.category, e.costCenter) === key);
                   if (entryExists) {
                     newMappings[key] = section;
+                    newSources[key] = 'template';
                   }
                 });
                 setMappings(newMappings);
+                setMappingSources(newSources);
                 setEntries(prev => prev.map(e => {
                   const key = getCategoryKey(e.category, e.costCenter);
                   if (newMappings[key]) {
