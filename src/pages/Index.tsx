@@ -12,6 +12,7 @@ import {
   computeDreByMonth,
   computeDreKpis
 } from '@/utils/finance';
+import { autoMapContaAzulCategory } from '@/utils/contaAzulAutoMapper';
 import { Header } from '@/components/dashboard/Header';
 import { UploadTab } from '@/components/dashboard/UploadTab';
 import { MappingTab } from '@/components/dashboard/MappingTab';
@@ -312,63 +313,99 @@ const Index = () => {
         }
       });
       
-      const categoriesPayload = Array.from(uniqueCategories.entries()).map(([key, data]) => ({
-        key,
-        ...data
-      }));
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auto-map-categories`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ categories: categoriesPayload }),
+      // STEP 1: Try local Conta Azul auto-mapping first (instant, no API call)
+      const localMappings: Record<string, BPSection> = {};
+      const unmappedCategories: { key: string; category: string; costCenter: string | null; type: string; totalAmount: number }[] = [];
+      
+      uniqueCategories.forEach((data, key) => {
+        const localSection = autoMapContaAzulCategory(data.category);
+        if (localSection) {
+          localMappings[key] = localSection;
+        } else {
+          unmappedCategories.push({ key, ...data });
         }
-      );
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          toast({
-            title: "Limite de requisições",
-            description: "Por favor, aguarde um momento e tente novamente.",
-            variant: "destructive",
-          });
-          throw new Error("Rate limit exceeded");
-        }
-        if (response.status === 402) {
-          toast({
-            title: "Créditos insuficientes",
-            description: "Adicione créditos para continuar usando a IA.",
-            variant: "destructive",
-          });
-          throw new Error("Payment required");
-        }
-        throw new Error(`HTTP error: ${response.status}`);
+      });
+      
+      // Apply local mappings immediately
+      if (Object.keys(localMappings).length > 0) {
+        setMappings(prev => ({ ...prev, ...localMappings }));
+        setEntries(prev => prev.map(e => {
+          const key = getCategoryKey(e.category, e.costCenter);
+          if (localMappings[key]) {
+            return { ...e, bpSection: localMappings[key] };
+          }
+          return e;
+        }));
+        
+        toast({
+          title: "🎯 Mapeamento inteligente local",
+          description: `${Object.keys(localMappings).length} categorias Conta Azul reconhecidas automaticamente.`
+        });
       }
+      
+      // STEP 2: If there are still unmapped categories, use AI
+      if (unmappedCategories.length > 0) {
+        toast({
+          title: "🤖 Processando com IA",
+          description: `${unmappedCategories.length} categorias restantes sendo analisadas por Grok 4...`
+        });
+        
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/auto-map-categories`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ categories: unmappedCategories }),
+          }
+        );
 
-      const { mappings: aiMappings } = await response.json();
-      
-      const newMappings: Record<string, BPSection> = {};
-      aiMappings.forEach((m: { key: string; section: BPSection }) => {
-        newMappings[m.key] = m.section;
-      });
-      
-      setMappings(prev => ({ ...prev, ...newMappings }));
-      setEntries(prev => prev.map(e => {
-        const key = getCategoryKey(e.category, e.costCenter);
-        if (newMappings[key]) {
-          return { ...e, bpSection: newMappings[key] };
+        if (!response.ok) {
+          if (response.status === 429) {
+            toast({
+              title: "Limite de requisições",
+              description: "Por favor, aguarde um momento e tente novamente.",
+              variant: "destructive",
+            });
+            throw new Error("Rate limit exceeded");
+          }
+          if (response.status === 402) {
+            toast({
+              title: "Créditos insuficientes",
+              description: "Adicione créditos para continuar usando a IA.",
+              variant: "destructive",
+            });
+            throw new Error("Payment required");
+          }
+          throw new Error(`HTTP error: ${response.status}`);
         }
-        return e;
-      }));
+
+        const { mappings: aiMappings } = await response.json();
+        
+        const newMappings: Record<string, BPSection> = {};
+        aiMappings.forEach((m: { key: string; section: BPSection }) => {
+          newMappings[m.key] = m.section;
+        });
+        
+        setMappings(prev => ({ ...prev, ...newMappings }));
+        setEntries(prev => prev.map(e => {
+          const key = getCategoryKey(e.category, e.costCenter);
+          if (newMappings[key]) {
+            return { ...e, bpSection: newMappings[key] };
+          }
+          return e;
+        }));
+        
+        toast({
+          title: "✨ Auto-mapeamento por IA concluído",
+          description: `${Object.keys(newMappings).length} categorias adicionais classificadas por Grok 4.`
+        });
+      }
       
-      setAlert({ type: 'success', msg: 'Classificação inteligente com Gemini Pro aplicada.' });
-      toast({
-        title: "✨ Auto-mapeamento concluído",
-        description: `${Object.keys(newMappings).length} categorias classificadas com IA.`
-      });
+      const totalMapped = Object.keys(localMappings).length + (unmappedCategories.length > 0 ? unmappedCategories.length : 0);
+      setAlert({ type: 'success', msg: `Classificação inteligente completa: ${totalMapped} categorias mapeadas.` });
+      
     } catch (error) {
       console.error("Auto-map error:", error);
       if (!(error instanceof Error) || !error.message.includes("Rate limit") && !error.message.includes("Payment required")) {
