@@ -23,19 +23,6 @@ interface AISuggestion {
   costCenterConfidence: number;
 }
 
-interface MergedSuggestion extends AISuggestion {
-  categorySource: string;
-  costCenterSource: string;
-  hasConflict?: boolean;
-  conflict?: {
-    field: 'category' | 'costCenter';
-    geminiValue: string;
-    geminiConfidence: number;
-    gptValue: string;
-    gptConfidence: number;
-  };
-}
-
 const parseAIResponse = (content: string): AISuggestion[] => {
   let jsonStr = content.trim();
   if (jsonStr.startsWith("```json")) {
@@ -121,9 +108,9 @@ serve(async (req) => {
       );
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
+    if (!XAI_API_KEY) {
+      throw new Error("XAI_API_KEY is not configured");
     }
 
     // Format entries for the prompt
@@ -152,188 +139,69 @@ ${entriesForPrompt}
 
 Retorne o JSON com as sugestões:`;
 
-    console.log("Calling two AI models in parallel for comparison...");
+    console.log("Calling xAI Grok 4 for auto-fill...");
 
-    // Call both AI models in parallel
-    const [response1, response2] = await Promise.all([
-      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "google/gemini-2.5-flash",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-        }),
+    const response = await fetch("https://api.x.ai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${XAI_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "grok-4-latest",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt }
+        ],
       }),
-      fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${LOVABLE_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: "openai/gpt-5-mini",
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt }
-          ],
-        }),
-      }),
-    ]);
+    });
 
     // Handle rate limits
-    if (response1.status === 429 || response2.status === 429) {
+    if (response.status === 429) {
       return new Response(
         JSON.stringify({ error: "Rate limits exceeded, please try again later." }),
         { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    if (response1.status === 402 || response2.status === 402) {
+    if (response.status === 402) {
       return new Response(
         JSON.stringify({ error: "Payment required, please add funds." }),
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    let suggestions1: AISuggestion[] = [];
-    let suggestions2: AISuggestion[] = [];
-
-    // Parse Gemini response
-    if (response1.ok) {
-      try {
-        const data1 = await response1.json();
-        const content1 = data1.choices?.[0]?.message?.content;
-        if (content1) {
-          suggestions1 = parseAIResponse(content1);
-          console.log("Gemini suggestions:", suggestions1.length);
-        }
-      } catch (e) {
-        console.error("Failed to parse Gemini response:", e);
-      }
-    } else {
-      console.error("Gemini request failed:", response1.status);
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("xAI API error:", response.status, errorText);
+      throw new Error(`xAI API error: ${response.status}`);
     }
 
-    // Parse GPT-5 response
-    if (response2.ok) {
-      try {
-        const data2 = await response2.json();
-        const content2 = data2.choices?.[0]?.message?.content;
-        if (content2) {
-          suggestions2 = parseAIResponse(content2);
-          console.log("GPT-5 suggestions:", suggestions2.length);
-        }
-      } catch (e) {
-        console.error("Failed to parse GPT-5 response:", e);
+    let suggestions: AISuggestion[] = [];
+
+    try {
+      const data = await response.json();
+      const content = data.choices?.[0]?.message?.content;
+      if (content) {
+        suggestions = parseAIResponse(content);
+        console.log("xAI Grok 4 suggestions:", suggestions.length);
       }
-    } else {
-      console.error("GPT-5 request failed:", response2.status);
+    } catch (e) {
+      console.error("Failed to parse xAI response:", e);
     }
 
-    // Merge suggestions - compare and choose the best, track conflicts
-    const mergedSuggestions: MergedSuggestion[] = [];
-    const conflicts: MergedSuggestion['conflict'][] = [];
-    
-    const allIdxs = new Set([
-      ...suggestions1.map(s => s.idx),
-      ...suggestions2.map(s => s.idx)
-    ]);
+    // Add source info to suggestions
+    const suggestionsWithSource = suggestions.map(s => ({
+      ...s,
+      categorySource: 'Grok 4',
+      costCenterSource: 'Grok 4'
+    }));
 
-    for (const idx of allIdxs) {
-      const s1 = suggestions1.find(s => s.idx === idx);
-      const s2 = suggestions2.find(s => s.idx === idx);
-
-      if (!s1 && !s2) continue;
-
-      const merged: MergedSuggestion = {
-        idx,
-        category: '',
-        costCenter: '',
-        categoryConfidence: 0,
-        costCenterConfidence: 0,
-        categorySource: '',
-        costCenterSource: ''
-      };
-
-      if (s1 && s2) {
-        // Check for cost center conflict (different values with similar confidence)
-        const costCenterConflict = s1.costCenter !== s2.costCenter && 
-          Math.abs(s1.costCenterConfidence - s2.costCenterConfidence) < 20;
-
-        if (costCenterConflict) {
-          merged.hasConflict = true;
-          merged.conflict = {
-            field: 'costCenter',
-            geminiValue: s1.costCenter,
-            geminiConfidence: s1.costCenterConfidence,
-            gptValue: s2.costCenter,
-            gptConfidence: s2.costCenterConfidence
-          };
-        }
-
-        // Choose category with highest confidence
-        if (s1.categoryConfidence >= s2.categoryConfidence) {
-          merged.category = s1.category;
-          merged.categoryConfidence = s1.categoryConfidence;
-          merged.categorySource = 'Gemini';
-        } else {
-          merged.category = s2.category;
-          merged.categoryConfidence = s2.categoryConfidence;
-          merged.categorySource = 'GPT-5';
-        }
-
-        // Choose cost center with highest confidence
-        if (s1.costCenterConfidence >= s2.costCenterConfidence) {
-          merged.costCenter = s1.costCenter;
-          merged.costCenterConfidence = s1.costCenterConfidence;
-          merged.costCenterSource = 'Gemini';
-        } else {
-          merged.costCenter = s2.costCenter;
-          merged.costCenterConfidence = s2.costCenterConfidence;
-          merged.costCenterSource = 'GPT-5';
-        }
-
-        // Boost confidence if both AIs agree
-        if (s1.costCenter === s2.costCenter) {
-          merged.costCenterConfidence = Math.min(100, merged.costCenterConfidence + 15);
-        }
-        if (s1.category === s2.category) {
-          merged.categoryConfidence = Math.min(100, merged.categoryConfidence + 15);
-        }
-      } else if (s1) {
-        merged.category = s1.category;
-        merged.costCenter = s1.costCenter;
-        merged.categoryConfidence = s1.categoryConfidence;
-        merged.costCenterConfidence = s1.costCenterConfidence;
-        merged.categorySource = 'Gemini';
-        merged.costCenterSource = 'Gemini';
-      } else if (s2) {
-        merged.category = s2.category;
-        merged.costCenter = s2.costCenter;
-        merged.categoryConfidence = s2.categoryConfidence;
-        merged.costCenterConfidence = s2.costCenterConfidence;
-        merged.categorySource = 'GPT-5';
-        merged.costCenterSource = 'GPT-5';
-      }
-
-      mergedSuggestions.push(merged);
-    }
-
-    const conflictCount = mergedSuggestions.filter(s => s.hasConflict).length;
-    console.log(`Merged ${mergedSuggestions.length} suggestions, ${conflictCount} conflicts`);
+    console.log(`Processed ${suggestionsWithSource.length} suggestions`);
 
     return new Response(
       JSON.stringify({ 
-        suggestions: mergedSuggestions,
-        dualAI: true,
-        model1: 'google/gemini-2.5-flash',
-        model2: 'openai/gpt-5-mini',
-        conflictCount
+        suggestions: suggestionsWithSource,
+        model: 'xai/grok-4-latest'
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

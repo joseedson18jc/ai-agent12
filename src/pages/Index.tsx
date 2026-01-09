@@ -14,7 +14,7 @@ import {
 import { Header } from '@/components/dashboard/Header';
 import { UploadTab } from '@/components/dashboard/UploadTab';
 import { MappingTab } from '@/components/dashboard/MappingTab';
-import { AnalyticsTab, AIProvider } from '@/components/dashboard/AnalyticsTab';
+import { AnalyticsTab } from '@/components/dashboard/AnalyticsTab';
 import { ForecastingModule } from '@/components/dashboard/ForecastingModule';
 import { AlertBanner } from '@/components/dashboard/AlertBanner';
 import { Footer } from '@/components/dashboard/Footer';
@@ -39,7 +39,7 @@ const Index = () => {
   const [isAutoMapping, setIsAutoMapping] = useState(false);
   const [isAiParsed, setIsAiParsed] = useState(false);
   const [selectedCostCenter, setSelectedCostCenter] = useState<string>('all');
-  const [selectedProvider, setSelectedProvider] = useState<AIProvider>('lovable');
+  // AI provider removed - now using xAI Grok 4 only
   const [currentFilename, setCurrentFilename] = useState<string>('');
   const [currentHistoryId, setCurrentHistoryId] = useState<string | null>(null);
   const [pendingSavedMappings, setPendingSavedMappings] = useState<Record<string, BPSection> | null>(null);
@@ -379,146 +379,9 @@ const Index = () => {
     setAiInsight(null);
   }, []);
 
-  const generateAiInsight = useCallback(async (provider: AIProvider = selectedProvider) => {
-    setIsAiLoading(true);
-    setAiInsight(null);
-
-    const providerNames: Record<AIProvider, string> = {
-      lovable: 'Gemini',
-      openai: 'GPT-4o',
-      anthropic: 'Claude Sonnet 4',
-      xai: 'Grok 3'
-    };
-
-    try {
-      // Prepare financial data for AI analysis
-      const financialData = {
-        costCenter: selectedCostCenter,
-        months: sortedMonths,
-        data: sortedMonths.map(month => ({
-          month,
-          ...dreByMonth[month]
-        }))
-      };
-
-      console.log(`Generating insights with ${providerNames[provider]}...`);
-
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/financial-insights`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            financialData,
-            costCenter: selectedCostCenter,
-            provider
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          toast({
-            title: "Limite de requisições",
-            description: "Por favor, aguarde um momento e tente novamente.",
-            variant: "destructive",
-          });
-          throw new Error("Rate limit exceeded");
-        }
-        if (response.status === 402) {
-          toast({
-            title: "Créditos insuficientes",
-            description: "Adicione créditos para continuar usando a análise AI.",
-            variant: "destructive",
-          });
-          throw new Error("Payment required");
-        }
-        throw new Error(`HTTP error: ${response.status}`);
-      }
-
-      // Stream the response
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response body");
-
-      const decoder = new TextDecoder();
-      let textBuffer = "";
-      let insightText = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        
-        textBuffer += decoder.decode(value, { stream: true });
-
-        let newlineIndex: number;
-        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
-          let line = textBuffer.slice(0, newlineIndex);
-          textBuffer = textBuffer.slice(newlineIndex + 1);
-
-          if (line.endsWith("\r")) line = line.slice(0, -1);
-          if (line.startsWith(":") || line.trim() === "") continue;
-          if (!line.startsWith("data: ")) continue;
-
-          const jsonStr = line.slice(6).trim();
-          if (jsonStr === "[DONE]") break;
-
-          try {
-            const parsed = JSON.parse(jsonStr);
-            const content = parsed.choices?.[0]?.delta?.content;
-            if (content) {
-              insightText += content;
-              setAiInsight(insightText);
-            }
-          } catch {
-            textBuffer = line + "\n" + textBuffer;
-            break;
-          }
-        }
-      }
-
-      if (!insightText) {
-        throw new Error("No insight generated");
-      }
-    } catch (error) {
-      console.error("AI insight error:", error);
-      // Fallback to simulated insight
-      const insight = `
-## 📊 Análise Estratégica - ${selectedCostCenter === 'all' ? 'Consolidado' : selectedCostCenter}
-
-### 1. Comparativo Mensal (MoM)
-🟢 **Receita Líquida**: Crescimento de **36%** no último período
-🟢 **EBITDA**: Variação positiva de **28%** vs. mês anterior
-🟡 **Margem Líquida**: Estável em **12.5%**
-
-### 2. Diagnóstico de Variação
-- O aumento na receita foi impulsionado principalmente pelo segmento de **Consultoria Digital**
-- OpEx manteve-se controlado com crescimento de apenas **6.7%**
-- CPV apresentou leve pressão de **+20%**, requerendo atenção
-
-### 3. Plano de Ação Estratégico
-
-**🔴 Alta Prioridade**
-- Renegociar contratos de matéria-prima para conter aumento do CPV
-
-**🟡 Média Prioridade**  
-- Expandir operações no centro de custo Digital (maior margem)
-
-**🟢 Baixa Prioridade**
-- Automatizar processos administrativos para reduzir OpEx
-      `.trim();
-      
-      setAiInsight(insight);
-    } finally {
-      setIsAiLoading(false);
-    }
-  }, [selectedCostCenter, sortedMonths, dreByMonth, toast, selectedProvider]);
-
-  const handleProviderChange = useCallback((provider: AIProvider) => {
-    setSelectedProvider(provider);
-    // Clear existing insight when provider changes
-    setAiInsight(null);
+  const generateAiInsight = useCallback(async () => {
+    // Now using xAI Grok 4 - insights generated in AIComparisonMode component
+    console.log('AI insights now handled by AIComparisonMode with xAI Grok 4');
   }, []);
 
   return (
@@ -650,8 +513,6 @@ const Index = () => {
                 onGenerateInsight={generateAiInsight}
                 dreByMonth={dreByMonth}
                 sortedMonths={sortedMonths}
-                selectedProvider={selectedProvider}
-                onProviderChange={handleProviderChange}
               />
             </div>
           )}
