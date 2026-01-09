@@ -8,19 +8,15 @@ import {
   Target,
   Wallet,
   TrendingUp,
-  BrainCircuit,
-  Loader2,
-  Layers,
-  Sparkles,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { TransactionEntry, DreKpis } from '@/types/finance';
-import { computeDreByMonth, formatCurrency } from '@/utils/finance';
+import { computeDreByMonth, formatCurrency, computeDreKpis } from '@/utils/finance';
 import { SimpleChart } from './SimpleChart';
 import { PdfExport } from './PdfExport';
 import { AIComparisonMode } from './AIComparisonMode';
+import { PeriodFilter, PeriodType, filterMonthsByPeriod } from './PeriodFilter';
 
 interface AnalyticsTabProps {
   entries: TransactionEntry[];
@@ -45,7 +41,8 @@ export const AnalyticsTab = ({
   dreByMonth: propDreByMonth,
   sortedMonths: propSortedMonths,
 }: AnalyticsTabProps) => {
-  const [isComparisonMode, setIsComparisonMode] = useState(false);
+  const [periodType, setPeriodType] = useState<PeriodType>('all');
+  const [periodValue, setPeriodValue] = useState<string>('');
   
   const analyticsEntries = useMemo(() => {
     if (selectedCostCenter === 'all') return entries;
@@ -55,8 +52,45 @@ export const AnalyticsTab = ({
   const computedDreByMonth = useMemo(() => computeDreByMonth(analyticsEntries), [analyticsEntries]);
   const computedSortedMonths = useMemo(() => Object.keys(computedDreByMonth).sort(), [computedDreByMonth]);
   
-  const dreByMonth = propDreByMonth ?? computedDreByMonth;
-  const sortedMonths = propSortedMonths ?? computedSortedMonths;
+  const allDreByMonth = propDreByMonth ?? computedDreByMonth;
+  const allSortedMonths = propSortedMonths ?? computedSortedMonths;
+  
+  // Filter months by selected period
+  const sortedMonths = useMemo(() => 
+    filterMonthsByPeriod(allSortedMonths, periodType, periodValue),
+    [allSortedMonths, periodType, periodValue]
+  );
+  
+  // Compute aggregated DRE for filtered period
+  const dreByMonth = useMemo(() => {
+    const filtered: Record<string, DreKpis> = {};
+    sortedMonths.forEach(month => {
+      if (allDreByMonth[month]) {
+        filtered[month] = allDreByMonth[month];
+      }
+    });
+    return filtered;
+  }, [allDreByMonth, sortedMonths]);
+  
+  // Handle period change
+  const handlePeriodChange = (period: PeriodType) => {
+    setPeriodType(period);
+    if (period === 'all') {
+      setPeriodValue('');
+    } else if (period === 'year' && allSortedMonths.length > 0) {
+      // Default to most recent year
+      const years = new Set(allSortedMonths.map(m => m.split('-')[0]));
+      setPeriodValue(Array.from(years).sort().reverse()[0]);
+    } else if (period === 'quarter' && allSortedMonths.length > 0) {
+      // Default to most recent quarter
+      const lastMonth = allSortedMonths[allSortedMonths.length - 1];
+      const [year, monthNum] = lastMonth.split('-');
+      const q = Math.ceil(parseInt(monthNum) / 3);
+      setPeriodValue(`${year}-Q${q}`);
+    } else if (period === 'month' && allSortedMonths.length > 0) {
+      setPeriodValue(allSortedMonths[allSortedMonths.length - 1]);
+    }
+  };
 
   const chartData = useMemo(() => 
     sortedMonths.map(month => ({
@@ -132,13 +166,24 @@ export const AnalyticsTab = ({
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <div className="flex flex-col xl:flex-row items-start xl:items-center gap-4">
           <PdfExport 
             dreByMonth={dreByMonth}
             sortedMonths={sortedMonths}
             aiInsight={aiInsight}
             selectedCostCenter={selectedCostCenter}
           />
+          
+          {/* Period Filter */}
+          <PeriodFilter
+            sortedMonths={allSortedMonths}
+            selectedPeriod={periodType}
+            selectedValue={periodValue}
+            onPeriodChange={handlePeriodChange}
+            onValueChange={setPeriodValue}
+          />
+          
+          {/* Cost Center Filter */}
           <div className="flex items-center gap-4 p-3 rounded-2xl border border-border/30 shadow-lg bg-card/60 backdrop-blur-sm">
             <div className="flex items-center gap-3 pl-4 pr-2 border-r border-border/50">
               <Filter size={16} className="text-primary" />
