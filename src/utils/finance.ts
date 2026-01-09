@@ -212,17 +212,37 @@ export function computeDreKpis(entries: TransactionEntry[]): DreKpis {
     const sections = Array.isArray(section) ? section : [section];
     return entries
       .filter(e => e.bpSection && sections.includes(e.bpSection))
-      .reduce((sum, e) => sum + e.amount, 0);
+      .reduce((sum, e) => {
+        // For revenue items, use absolute value (should be positive)
+        // For expense items, the amount should already be negative
+        const amount = e.amount;
+        return sum + amount;
+      }, 0);
   };
 
-  const revenueGross = sumBy('revenue');
-  const deductions = sumBy('deductions');
-  const cogs = sumBy('cogs');
-  const opex = sumBy(['administrative', 'sales', 'operational_other', 'other']);
-  const depreciation = sumBy('depreciation');
-  const financial = sumBy('financial');
-  const incomeTax = sumBy('income_tax');
+  // Revenue should be positive (entries with type 'receivable' have positive amounts)
+  const revenueGross = Math.abs(sumBy('revenue'));
+  
+  // Deductions reduce revenue (should be negative, but we make it negative for calculation)
+  const deductions = -Math.abs(sumBy('deductions'));
+  
+  // COGS is a cost (negative)
+  const cogs = -Math.abs(sumBy('cogs'));
+  
+  // OpEx is an expense (negative)
+  const opex = -Math.abs(sumBy(['administrative', 'sales', 'operational_other', 'other']));
+  
+  // Depreciation is an expense (negative)
+  const depreciation = -Math.abs(sumBy('depreciation'));
+  
+  // Financial items can be positive (income) or negative (expense)
+  const financialRaw = sumBy('financial');
+  const financial = financialRaw; // Keep the sign as-is
+  
+  // Income tax is always negative
+  const incomeTax = -Math.abs(sumBy('income_tax'));
 
+  // DRE calculations
   const revenueNet = revenueGross + deductions;
   const grossProfit = revenueNet + cogs;
   const ebitda = grossProfit + opex;
