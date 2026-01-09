@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Settings2, Wand2, Loader2, ChevronRight, ArrowRight, Save, FolderOpen, Pencil, Check, X, Trash2, Filter, ListChecks } from 'lucide-react';
+import { Settings2, Wand2, Loader2, ChevronRight, ArrowRight, Save, FolderOpen, Pencil, Check, X, Trash2, Filter, ListChecks, Cpu, Sparkles, User, FileText } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,15 +7,18 @@ import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { TransactionEntry, BPSection, BP_SECTIONS } from '@/types/finance';
 import { getCategoryKey, formatCurrency } from '@/utils/finance';
 import { MappingTemplate } from '@/hooks/useMappingTemplates';
 
 type FilterType = 'all' | 'unmapped' | 'mapped';
+export type MappingSource = 'local' | 'ai' | 'manual' | 'template';
 
 interface MappingTabProps {
   entries: TransactionEntry[];
   mappings: Record<string, BPSection>;
+  mappingSources?: Record<string, MappingSource>;
   isAutoMapping: boolean;
   onMapEntry: (categoryKey: string, bpSection: BPSection) => void;
   onBulkMap?: (categoryKeys: string[], bpSection: BPSection) => void;
@@ -27,9 +30,41 @@ interface MappingTabProps {
   onDeleteTemplate?: (id: string) => void;
 }
 
+const sourceConfig: Record<MappingSource, { label: string; icon: typeof Cpu; color: string; bgColor: string; description: string }> = {
+  local: {
+    label: 'Local',
+    icon: Sparkles,
+    color: 'text-chart-3',
+    bgColor: 'bg-chart-3/20',
+    description: 'Mapeado automaticamente por regras locais do Conta Azul'
+  },
+  ai: {
+    label: 'IA',
+    icon: Cpu,
+    color: 'text-chart-4',
+    bgColor: 'bg-chart-4/20',
+    description: 'Mapeado por Inteligência Artificial (Grok 4)'
+  },
+  manual: {
+    label: 'Manual',
+    icon: User,
+    color: 'text-muted-foreground',
+    bgColor: 'bg-muted',
+    description: 'Mapeado manualmente pelo usuário'
+  },
+  template: {
+    label: 'Template',
+    icon: FileText,
+    color: 'text-chart-2',
+    bgColor: 'bg-chart-2/20',
+    description: 'Mapeado a partir de um template salvo'
+  }
+};
+
 export const MappingTab = ({ 
   entries, 
   mappings, 
+  mappingSources = {},
   isAutoMapping, 
   onMapEntry,
   onBulkMap,
@@ -86,6 +121,15 @@ export const MappingTab = ({
   const mappedCount = Array.from(new Set(entries.map(e => getCategoryKey(e.category, e.costCenter)))).filter(k => mappings[k]).length;
   const unmappedCount = totalUniqueKeys - mappedCount;
   const mappingProgress = Math.round((mappedCount / totalUniqueKeys) * 100);
+
+  // Count mappings by source
+  const sourceStats = useMemo(() => {
+    const stats: Record<MappingSource, number> = { local: 0, ai: 0, manual: 0, template: 0 };
+    Object.values(mappingSources).forEach(source => {
+      stats[source]++;
+    });
+    return stats;
+  }, [mappingSources]);
 
   const handleSaveTemplate = () => {
     if (templateName.trim() && onSaveTemplate) {
@@ -177,6 +221,32 @@ export const MappingTab = ({
                     style={{ boxShadow: '0 0 10px hsl(var(--primary) / 0.5)' }}
                   />
                 </div>
+                
+                {/* Source statistics */}
+                {mappedCount > 0 && (
+                  <div className="mt-4 pt-3 border-t border-border/50 flex flex-wrap gap-2">
+                    {(Object.entries(sourceStats) as [MappingSource, number][]).map(([source, count]) => {
+                      if (count === 0) return null;
+                      const config = sourceConfig[source];
+                      const IconComponent = config.icon;
+                      return (
+                        <TooltipProvider key={source}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className={`inline-flex items-center gap-1 px-2 py-1 rounded-md ${config.bgColor}`}>
+                                <IconComponent size={10} className={config.color} />
+                                <span className={`text-[9px] font-bold ${config.color}`}>{count}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="text-xs">{count} {config.description.toLowerCase()}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
               
               <div className="flex flex-col gap-3">
@@ -391,18 +461,40 @@ export const MappingTab = ({
                     }`} />
                   </div>
 
-                  {/* Show section label when mapped */}
+                  {/* Show section label and source indicator when mapped */}
                   <AnimatePresence>
                     {isMapped && !isEditing && (
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 pt-4 border-t border-primary/20"
+                        className="mt-4 pt-4 border-t border-primary/20 space-y-2"
                       >
                         <span className="text-[10px] font-bold text-primary uppercase tracking-widest">
                           ✓ {BP_SECTIONS.find(s => s.value === mappings[key])?.label}
                         </span>
+                        
+                        {/* Source confidence indicator */}
+                        {mappingSources[key] && (
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg ${sourceConfig[mappingSources[key]].bgColor}`}>
+                                  {(() => {
+                                    const IconComponent = sourceConfig[mappingSources[key]].icon;
+                                    return <IconComponent size={12} className={sourceConfig[mappingSources[key]].color} />;
+                                  })()}
+                                  <span className={`text-[9px] font-bold uppercase tracking-wider ${sourceConfig[mappingSources[key]].color}`}>
+                                    {sourceConfig[mappingSources[key]].label}
+                                  </span>
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="text-xs">{sourceConfig[mappingSources[key]].description}</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
