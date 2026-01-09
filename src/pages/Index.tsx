@@ -23,6 +23,7 @@ import { CsvPreview } from '@/components/dashboard/CsvPreview';
 import { RealtimeDashboard } from '@/components/dashboard/RealtimeDashboard';
 import { RealtimeChart } from '@/components/dashboard/RealtimeChart';
 import { FinancialGoals } from '@/components/dashboard/FinancialGoals';
+import { ValidationResultsPanel } from '@/components/dashboard/ValidationResultsPanel';
 
 type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast';
 
@@ -30,7 +31,7 @@ const Index = () => {
   const { toast } = useToast();
   const { saveToHistory, findSimilarImport, updateMappings } = useImportHistory();
   const { templates, saveTemplate, deleteTemplate } = useMappingTemplates();
-  const { validateEntries, runAIValidation, isValidating, validationResult } = useDataValidation();
+  const { validateEntries, runAIValidation, isValidating, validationResult, clearValidation } = useDataValidation();
   const [tab, setTab] = useState<TabType>('upload');
   const [entries, setEntries] = useState<TransactionEntry[]>([]);
   const [mappings, setMappings] = useState<Record<string, BPSection>>({});
@@ -404,6 +405,18 @@ const Index = () => {
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-12">
         <AlertBanner alert={alert} onDismiss={() => setAlert(null)} />
         
+        {/* Validation Results Panel */}
+        <AnimatePresence>
+          {validationResult && (
+            <div className="mb-6">
+              <ValidationResultsPanel 
+                result={validationResult}
+                totalEntries={entries.length}
+                onDismiss={clearValidation}
+              />
+            </div>
+          )}
+        </AnimatePresence>
         <AnimatePresence mode="wait" initial={false}>
           {tab === 'upload' && (
             <UploadTab 
