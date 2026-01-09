@@ -39,11 +39,11 @@ serve(async (req) => {
     const userId = userData.user.id;
     const { financialData, metrics } = await req.json();
 
-    console.log('Analyzing financial data for anomalies...');
+    console.log('Analyzing financial data for anomalies with xAI Grok 4...');
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      throw new Error("LOVABLE_API_KEY is not configured");
+    const XAI_API_KEY = Deno.env.get("XAI_API_KEY");
+    if (!XAI_API_KEY) {
+      throw new Error("XAI_API_KEY is not configured");
     }
 
     const systemPrompt = `Você é um analista financeiro especializado em detecção de anomalias. 
@@ -83,14 +83,14 @@ Identifique:
 3. Margens inconsistentes
 4. Qualquer comportamento financeiro suspeito`;
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    const response = await fetch("https://api.x.ai/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${XAI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "grok-4-latest",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -100,7 +100,7 @@ Identifique:
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('AI API error:', response.status, errorText);
+      console.error('xAI API error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
@@ -114,13 +114,13 @@ Identifique:
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      throw new Error(`AI API error: ${response.status}`);
+      throw new Error(`xAI API error: ${response.status}`);
     }
 
     const aiResponse = await response.json();
     const content = aiResponse.choices?.[0]?.message?.content || '{"anomalies": []}';
     
-    console.log('AI response:', content);
+    console.log('xAI Grok 4 response:', content);
 
     // Parse the JSON response
     let anomalies = [];

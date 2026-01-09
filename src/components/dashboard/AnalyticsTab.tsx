@@ -10,11 +10,8 @@ import {
   TrendingUp,
   BrainCircuit,
   Loader2,
-  Lightbulb,
   Layers,
   Sparkles,
-  LayoutGrid,
-  Zap
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,8 +22,6 @@ import { SimpleChart } from './SimpleChart';
 import { PdfExport } from './PdfExport';
 import { AIComparisonMode } from './AIComparisonMode';
 
-export type AIProvider = 'lovable' | 'openai' | 'anthropic' | 'xai';
-
 interface AnalyticsTabProps {
   entries: TransactionEntry[];
   selectedCostCenter: string;
@@ -34,19 +29,10 @@ interface AnalyticsTabProps {
   onCostCenterChange: (value: string) => void;
   aiInsight: string | null;
   isAiLoading: boolean;
-  onGenerateInsight: (provider: AIProvider) => void;
+  onGenerateInsight: () => void;
   dreByMonth?: Record<string, DreKpis>;
   sortedMonths?: string[];
-  selectedProvider?: AIProvider;
-  onProviderChange?: (provider: AIProvider) => void;
 }
-
-const AI_PROVIDERS: { id: AIProvider; label: string; description: string }[] = [
-  { id: 'lovable', label: 'Gemini', description: 'Google Gemini 2.5 Flash' },
-  { id: 'openai', label: 'GPT-4o', description: 'OpenAI GPT-4o' },
-  { id: 'anthropic', label: 'Claude', description: 'Anthropic Claude Sonnet 4' },
-  { id: 'xai', label: 'Grok', description: 'xAI Grok 3' },
-];
 
 export const AnalyticsTab = ({
   entries,
@@ -58,8 +44,6 @@ export const AnalyticsTab = ({
   onGenerateInsight,
   dreByMonth: propDreByMonth,
   sortedMonths: propSortedMonths,
-  selectedProvider = 'lovable',
-  onProviderChange
 }: AnalyticsTabProps) => {
   const [isComparisonMode, setIsComparisonMode] = useState(false);
   
@@ -244,109 +228,12 @@ export const AnalyticsTab = ({
         </CardContent>
       </Card>
 
-      {/* Mode Toggle */}
-      <div className="flex items-center justify-center gap-3">
-        <Button
-          variant={!isComparisonMode ? "default" : "outline"}
-          onClick={() => setIsComparisonMode(false)}
-          className="rounded-2xl px-6"
-        >
-          <Zap size={16} className="mr-2" />
-          Modo Único
-        </Button>
-        <Button
-          variant={isComparisonMode ? "default" : "outline"}
-          onClick={() => setIsComparisonMode(true)}
-          className="rounded-2xl px-6"
-        >
-          <LayoutGrid size={16} className="mr-2" />
-          Modo Comparação
-        </Button>
-      </div>
-
-      {/* AI INSIGHTS SECTION */}
-      {isComparisonMode ? (
-        <AIComparisonMode
-          dreByMonth={dreByMonth}
-          sortedMonths={sortedMonths}
-          selectedCostCenter={selectedCostCenter}
-        />
-      ) : (
-      <Card className="bg-gradient-to-br from-foreground via-foreground/95 to-secondary rounded-[2.5rem] text-background border-0 shadow-2xl overflow-hidden">
-        <CardContent className="p-8 md:p-12">
-          <div className="flex flex-col lg:flex-row gap-10">
-            <div className="lg:w-1/3 space-y-6">
-              <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center shadow-xl">
-                <BrainCircuit size={32} className="text-primary-foreground" />
-              </div>
-              <h3 className="text-3xl font-bold tracking-tight uppercase">
-                Análise Estratégica AI
-              </h3>
-              <p className="text-muted font-medium leading-relaxed">
-                Escolha seu modelo de IA preferido para análises estratégicas personalizadas.
-              </p>
-              
-              {/* AI Provider Selector */}
-              <div className="space-y-3">
-                <p className="text-[10px] font-bold text-muted uppercase tracking-widest">
-                  Modelo de IA
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  {AI_PROVIDERS.map((provider) => (
-                    <button
-                      key={provider.id}
-                      onClick={() => onProviderChange?.(provider.id)}
-                      disabled={isAiLoading}
-                      className={`px-4 py-3 rounded-xl text-left transition-all ${
-                        selectedProvider === provider.id
-                          ? 'bg-primary text-primary-foreground shadow-lg'
-                          : 'bg-background/20 text-background hover:bg-background/30'
-                      } ${isAiLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                      <span className="block text-xs font-bold">{provider.label}</span>
-                      <span className="block text-[9px] opacity-70">{provider.description}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <Button
-                onClick={() => onGenerateInsight(selectedProvider)}
-                disabled={isAiLoading}
-                className="w-full px-8 py-4 h-auto bg-primary text-primary-foreground rounded-2xl font-bold text-[11px] tracking-[0.2em] hover:bg-primary/90 transition-all shadow-xl flex items-center justify-center gap-3"
-              >
-                {isAiLoading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    ANALISANDO COM {AI_PROVIDERS.find(p => p.id === selectedProvider)?.label.toUpperCase()}...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} />
-                    GERAR INSIGHTS
-                  </>
-                )}
-              </Button>
-            </div>
-            
-            <div className="lg:w-2/3 bg-background/10 rounded-[2rem] p-8 min-h-[300px] backdrop-blur-sm border border-background/20">
-              {aiInsight ? (
-                <div className="prose prose-invert max-w-none text-sm leading-relaxed">
-                  <div dangerouslySetInnerHTML={{ __html: aiInsight.replace(/\n/g, '<br/>') }} />
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-muted space-y-4">
-                  <Layers size={48} className="opacity-30" />
-                  <p className="text-sm font-medium text-center">
-                    Clique em "Gerar Insights" para receber uma análise estratégica personalizada com IA
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-      )}
+      {/* AI INSIGHTS SECTION - GROK 4 ONLY */}
+      <AIComparisonMode
+        dreByMonth={dreByMonth}
+        sortedMonths={sortedMonths}
+        selectedCostCenter={selectedCostCenter}
+      />
 
       {/* DRE TABLE */}
       <Card className="glass-card rounded-[3rem] border border-border/50 shadow-2xl overflow-hidden">
@@ -394,19 +281,21 @@ export const AnalyticsTab = ({
                     <td className="px-6 py-6 text-right font-mono text-xs font-bold text-destructive/60">
                       {dre.opex.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                     </td>
-                    <td className="px-6 py-6 text-right font-mono text-xs font-bold" style={{ color: 'hsl(var(--chart-3))' }}>
+                    <td className="px-6 py-6 text-right font-mono text-sm font-bold text-foreground">
                       {dre.ebitda.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                     </td>
-                    <td className={`px-6 py-6 text-right font-mono text-xs font-bold ${dre.netIncome >= 0 ? 'text-primary' : 'text-destructive'}`}>
+                    <td className={`px-6 py-6 text-right font-mono text-xs font-bold ${dre.netIncome >= 0 ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
                       {dre.netIncome.toLocaleString('pt-BR', { maximumFractionDigits: 0 })}
                     </td>
                     <td className="px-6 py-6 text-right">
-                      <span className={`text-[9px] font-bold px-3.5 py-1.5 rounded-xl uppercase tracking-widest ${
-                        netMargin >= 15 
-                          ? 'bg-chart-3 text-primary-foreground shadow-lg' 
-                          : 'bg-muted text-muted-foreground'
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wider ${
+                        netMargin >= 20 
+                          ? 'bg-green-500/15 text-green-600 dark:text-green-400' 
+                          : netMargin >= 10 
+                          ? 'bg-yellow-500/15 text-yellow-600 dark:text-yellow-400' 
+                          : 'bg-destructive/15 text-destructive'
                       }`}>
-                        {dre.netMargin}%
+                        {netMargin >= 20 ? '🟢' : netMargin >= 10 ? '🟡' : '🔴'} {dre.netMargin}%
                       </span>
                     </td>
                   </tr>
