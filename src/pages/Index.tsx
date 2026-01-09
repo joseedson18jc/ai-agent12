@@ -3,6 +3,7 @@ import { AnimatePresence } from 'framer-motion';
 import { useToast } from '@/hooks/use-toast';
 import { useImportHistory } from '@/hooks/useImportHistory';
 import { useMappingTemplates } from '@/hooks/useMappingTemplates';
+import { useDataValidation } from '@/hooks/useDataValidation';
 import { TransactionEntry, BPSection, DreKpis } from '@/types/finance';
 import {
   parseContaAzulCsv,
@@ -29,6 +30,7 @@ const Index = () => {
   const { toast } = useToast();
   const { saveToHistory, findSimilarImport, updateMappings } = useImportHistory();
   const { templates, saveTemplate, deleteTemplate } = useMappingTemplates();
+  const { validateEntries, runAIValidation, isValidating, validationResult } = useDataValidation();
   const [tab, setTab] = useState<TabType>('upload');
   const [entries, setEntries] = useState<TransactionEntry[]>([]);
   const [mappings, setMappings] = useState<Record<string, BPSection>>({});
@@ -118,11 +120,17 @@ const Index = () => {
         // Check for similar import with saved mappings
         const similarImport = findSimilarImport(columnHeaders);
         
-        const processParsedData = (parsed: TransactionEntry[], isAi: boolean) => {
+        const processParsedData = async (parsed: TransactionEntry[], isAi: boolean) => {
           setEntries(parsed);
           setMappings({});
           setSelectedCostCenter('all');
           setIsAiParsed(isAi);
+          
+          // Run validation on parsed data
+          const validationResult = await validateEntries(parsed);
+          
+          // Run AI anomaly detection in background (non-blocking)
+          runAIValidation(parsed);
           
           // Save to history and store the history ID
           const historyEntry = saveToHistory({
@@ -148,7 +156,7 @@ const Index = () => {
         // First try normal parsing
         try {
           const parsed = parseContaAzulCsv(content);
-          processParsedData(parsed, false);
+          await processParsedData(parsed, false);
           setAlert({ type: 'success', msg: `${parsed.length} transações identificadas. Revise antes de continuar.` });
           toast({
             title: "Upload concluído",
@@ -196,7 +204,7 @@ const Index = () => {
               throw new Error('Nenhuma transação válida encontrada após processamento AI');
             }
 
-            processParsedData(parsed, true);
+            await processParsedData(parsed, true);
             setAlert({ type: 'success', msg: `IA processou ${parsed.length} transações. Revise antes de continuar.` });
             toast({
               title: "✨ Processado com IA",
@@ -222,7 +230,7 @@ const Index = () => {
       setIsParsing(false);
     };
     reader.readAsText(file);
-  }, [toast, findSimilarImport, saveToHistory]);
+  }, [toast, findSimilarImport, saveToHistory, validateEntries, runAIValidation]);
 
   const handleApplySavedMappings = useCallback(() => {
     if (!pendingSavedMappings) return;
