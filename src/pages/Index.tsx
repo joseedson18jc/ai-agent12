@@ -25,8 +25,9 @@ import { RealtimeDashboard } from '@/components/dashboard/RealtimeDashboard';
 import { RealtimeChart } from '@/components/dashboard/RealtimeChart';
 import { FinancialGoals } from '@/components/dashboard/FinancialGoals';
 import { ValidationResultsPanel } from '@/components/dashboard/ValidationResultsPanel';
+import { MeetingPrepTab } from '@/components/dashboard/MeetingPrepTab';
 
-type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast';
+type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast' | 'meeting-prep';
 
 const Index = () => {
   const { toast } = useToast();
@@ -594,10 +595,19 @@ const Index = () => {
           )}
 
           {tab === 'forecast' && (
-            <ForecastingModule 
+            <ForecastingModule
               key="forecast"
               dreByMonth={dreByMonth}
               sortedMonths={sortedMonths}
+            />
+          )}
+
+          {tab === 'meeting-prep' && (
+            <MeetingPrepTab
+              key="meeting-prep"
+              dreByMonth={dreByMonth}
+              sortedMonths={sortedMonths}
+              selectedCostCenter={selectedCostCenter}
             />
           )}
         </AnimatePresence>

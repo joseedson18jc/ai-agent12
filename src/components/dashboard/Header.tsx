@@ -1,4 +1,4 @@
-import { Zap, Upload, Settings2, LayoutDashboard, TrendingUp, Crown, HelpCircle } from 'lucide-react';
+import { Zap, Upload, Settings2, LayoutDashboard, TrendingUp, Presentation, Crown, HelpCircle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
@@ -11,7 +11,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast';
+type TabType = 'upload' | 'preview' | 'mapping' | 'analytics' | 'forecast' | 'meeting-prep';
 
 interface HeaderProps {
   tab: TabType;
@@ -28,6 +28,7 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
     { id: 'mapping' as const, icon: Settings2, label: 'Mapeamento', disabled: !hasEntries },
     { id: 'analytics' as const, icon: LayoutDashboard, label: 'Dashboard', disabled: !hasMappings },
     { id: 'forecast' as const, icon: TrendingUp, label: 'Projeção', disabled: !hasMappings },
+    { id: 'meeting-prep' as const, icon: Presentation, label: 'Reunião', disabled: !hasMappings },
   ];
 
   return (
