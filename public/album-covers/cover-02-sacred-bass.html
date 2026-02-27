@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1400">
+<title>MC - Sacred Bass</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  .cover {
+    width: 1400px; height: 1400px;
+    background: #0a0a0a;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Bebas Neue', sans-serif;
+  }
+
+  /* Radial background glow */
+  .radial-glow {
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at center, rgba(212,160,23,0.08) 0%, transparent 50%);
+  }
+
+  /* Mandala SVG */
+  .mandala-svg {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1000px; height: 1000px;
+  }
+
+  .mandala-ring {
+    fill: none;
+    stroke-linecap: round;
+  }
+  .gold { stroke: #d4a017; }
+  .amber { stroke: #ff6b00; }
+  .gold-dim { stroke: rgba(212,160,23,0.2); }
+  .amber-dim { stroke: rgba(255,107,0,0.15); }
+
+  .glow-gold {
+    filter: drop-shadow(0 0 4px rgba(212,160,23,0.6)) drop-shadow(0 0 10px rgba(212,160,23,0.3));
+  }
+  .glow-amber {
+    filter: drop-shadow(0 0 4px rgba(255,107,0,0.6)) drop-shadow(0 0 10px rgba(255,107,0,0.3));
+  }
+
+  /* MC text at center */
+  .mc-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 200px;
+    letter-spacing: 25px;
+    color: #d4a017;
+    text-shadow:
+      0 0 20px rgba(212,160,23,0.8),
+      0 0 40px rgba(212,160,23,0.4),
+      0 0 80px rgba(212,160,23,0.2);
+    z-index: 10;
+  }
+
+  /* Top text */
+  .top-text {
+    position: absolute;
+    top: 60px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    font-size: 16px;
+    letter-spacing: 14px;
+    color: rgba(212,160,23,0.4);
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  /* Artist name bottom */
+  .artist-name {
+    position: absolute;
+    bottom: 100px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 22px;
+    letter-spacing: 16px;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  /* Genre bottom */
+  .genre-tag {
+    position: absolute;
+    bottom: 60px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    font-size: 13px;
+    letter-spacing: 10px;
+    color: rgba(212,160,23,0.35);
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  /* Bass wave rings */
+  @keyframes bass-pulse {
+    0% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 0.1; transform: translate(-50%, -50%) scale(1.05); }
+    100% { opacity: 0.3; transform: translate(-50%, -50%) scale(1); }
+  }
+  .bass-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    border: 1px solid rgba(212,160,23,0.15);
+    animation: bass-pulse 4s ease-in-out infinite;
+  }
+  .bass-ring:nth-child(1) { width: 1100px; height: 1100px; animation-delay: 0s; }
+  .bass-ring:nth-child(2) { width: 1200px; height: 1200px; animation-delay: 0.5s; }
+  .bass-ring:nth-child(3) { width: 1300px; height: 1300px; animation-delay: 1s; }
+
+  /* Decorative corner triangles */
+  .corner-tri {
+    position: absolute;
+    width: 0; height: 0;
+    border-style: solid;
+  }
+  .corner-tri.tl { top: 30px; left: 30px; border-width: 0 0 50px 50px; border-color: transparent transparent transparent rgba(212,160,23,0.15); }
+  .corner-tri.tr { top: 30px; right: 30px; border-width: 50px 0 0 50px; border-color: transparent transparent transparent rgba(212,160,23,0.15); transform: scaleX(-1); }
+  .corner-tri.bl { bottom: 30px; left: 30px; border-width: 50px 50px 0 0; border-color: rgba(212,160,23,0.15) transparent transparent transparent; }
+  .corner-tri.br { bottom: 30px; right: 30px; border-width: 0 50px 50px 0; border-color: transparent rgba(212,160,23,0.15) transparent transparent; }
+
+  /* Vignette */
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 35%, rgba(0,0,0,0.8) 100%);
+    z-index: 5;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="radial-glow"></div>
+
+  <div class="bass-ring"></div>
+  <div class="bass-ring"></div>
+  <div class="bass-ring"></div>
+
+  <svg class="mandala-svg" viewBox="0 0 1000 1000">
+    <!-- Outer rings -->
+    <circle cx="500" cy="500" r="480" class="mandala-ring gold-dim" stroke-width="0.5"/>
+    <circle cx="500" cy="500" r="460" class="mandala-ring amber-dim" stroke-width="0.5"/>
+    <circle cx="500" cy="500" r="420" class="mandala-ring gold glow-gold" stroke-width="1.5" stroke-dasharray="8,12"/>
+    <circle cx="500" cy="500" r="400" class="mandala-ring amber glow-amber" stroke-width="1" stroke-dasharray="4,16"/>
+
+    <!-- Middle rings -->
+    <circle cx="500" cy="500" r="350" class="mandala-ring gold glow-gold" stroke-width="1.5"/>
+    <circle cx="500" cy="500" r="330" class="mandala-ring amber-dim" stroke-width="0.5" stroke-dasharray="2,8"/>
+    <circle cx="500" cy="500" r="300" class="mandala-ring gold glow-gold" stroke-width="1" stroke-dasharray="15,10"/>
+    <circle cx="500" cy="500" r="270" class="mandala-ring amber glow-amber" stroke-width="1.5"/>
+
+    <!-- Inner rings -->
+    <circle cx="500" cy="500" r="220" class="mandala-ring gold glow-gold" stroke-width="1" stroke-dasharray="6,6"/>
+    <circle cx="500" cy="500" r="200" class="mandala-ring amber glow-amber" stroke-width="2"/>
+    <circle cx="500" cy="500" r="170" class="mandala-ring gold-dim" stroke-width="0.5"/>
+    <circle cx="500" cy="500" r="140" class="mandala-ring gold glow-gold" stroke-width="1.5"/>
+
+    <!-- Sacred triangles pointing up -->
+    <polygon points="500,150 720,530 280,530" class="mandala-ring gold glow-gold" stroke-width="1.5"/>
+    <!-- Sacred triangle pointing down -->
+    <polygon points="500,850 720,470 280,470" class="mandala-ring amber glow-amber" stroke-width="1.5"/>
+
+    <!-- Inner star -->
+    <polygon points="500,220 660,500 500,780 340,500" class="mandala-ring gold glow-gold" stroke-width="1" stroke-dasharray="4,4"/>
+
+    <!-- Hexagon -->
+    <polygon points="500,200 760,350 760,650 500,800 240,650 240,350" class="mandala-ring amber glow-amber" stroke-width="1" stroke-dasharray="8,6"/>
+
+    <!-- Small hexagon -->
+    <polygon points="500,300 640,400 640,600 500,700 360,600 360,400" class="mandala-ring gold glow-gold" stroke-width="1"/>
+
+    <!-- Radial lines -->
+    <line x1="500" y1="50" x2="500" y2="150" class="mandala-ring gold-dim" stroke-width="1"/>
+    <line x1="500" y1="850" x2="500" y2="950" class="mandala-ring gold-dim" stroke-width="1"/>
+    <line x1="50" y1="500" x2="150" y2="500" class="mandala-ring gold-dim" stroke-width="1"/>
+    <line x1="850" y1="500" x2="950" y2="500" class="mandala-ring gold-dim" stroke-width="1"/>
+
+    <!-- Diagonal radial lines -->
+    <line x1="146" y1="146" x2="220" y2="220" class="mandala-ring amber-dim" stroke-width="1"/>
+    <line x1="854" y1="146" x2="780" y2="220" class="mandala-ring amber-dim" stroke-width="1"/>
+    <line x1="146" y1="854" x2="220" y2="780" class="mandala-ring amber-dim" stroke-width="1"/>
+    <line x1="854" y1="854" x2="780" y2="780" class="mandala-ring amber-dim" stroke-width="1"/>
+
+    <!-- Dot accents on intersections -->
+    <circle cx="500" cy="150" r="4" fill="#d4a017" class="glow-gold"/>
+    <circle cx="500" cy="850" r="4" fill="#d4a017" class="glow-gold"/>
+    <circle cx="150" cy="500" r="4" fill="#d4a017" class="glow-gold"/>
+    <circle cx="850" cy="500" r="4" fill="#d4a017" class="glow-gold"/>
+    <circle cx="280" cy="530" r="3" fill="#ff6b00" class="glow-amber"/>
+    <circle cx="720" cy="530" r="3" fill="#ff6b00" class="glow-amber"/>
+    <circle cx="280" cy="470" r="3" fill="#ff6b00" class="glow-amber"/>
+    <circle cx="720" cy="470" r="3" fill="#ff6b00" class="glow-amber"/>
+
+    <!-- Small ornamental dots -->
+    <circle cx="500" cy="200" r="2" fill="#d4a017" opacity="0.6"/>
+    <circle cx="500" cy="800" r="2" fill="#d4a017" opacity="0.6"/>
+    <circle cx="200" cy="500" r="2" fill="#d4a017" opacity="0.6"/>
+    <circle cx="800" cy="500" r="2" fill="#d4a017" opacity="0.6"/>
+    <circle cx="340" cy="300" r="2" fill="#ff6b00" opacity="0.4"/>
+    <circle cx="660" cy="300" r="2" fill="#ff6b00" opacity="0.4"/>
+    <circle cx="340" cy="700" r="2" fill="#ff6b00" opacity="0.4"/>
+    <circle cx="660" cy="700" r="2" fill="#ff6b00" opacity="0.4"/>
+  </svg>
+
+  <div class="corner-tri tl"></div>
+  <div class="corner-tri tr"></div>
+  <div class="corner-tri bl"></div>
+  <div class="corner-tri br"></div>
+
+  <div class="top-text">ELECTRONIC TRIBAL CIRCUIT</div>
+  <div class="mc-text">MC</div>
+  <div class="artist-name">MATHEUS CASTRO</div>
+  <div class="genre-tag">SACRED BASS</div>
+
+  <div class="vignette"></div>
+</div>
+</body>
+</html>

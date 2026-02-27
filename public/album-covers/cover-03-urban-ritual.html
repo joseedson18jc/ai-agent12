@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1400">
+<title>MC - Urban Ritual</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  .cover {
+    width: 1400px; height: 1400px;
+    background: #0a0a0a;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Bebas Neue', sans-serif;
+  }
+
+  /* Scan lines */
+  .scanlines {
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 3px,
+      rgba(255,255,255,0.015) 3px,
+      rgba(255,255,255,0.015) 4px
+    );
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  /* Noise texture */
+  .noise {
+    position: absolute; inset: 0;
+    opacity: 0.04;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    z-index: 2;
+  }
+
+  /* Main mask SVG */
+  .mask-svg {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 700px; height: 900px;
+    z-index: 4;
+  }
+
+  .mask-stroke {
+    fill: none;
+    stroke: #ff1744;
+    stroke-width: 2;
+    filter: drop-shadow(0 0 6px rgba(255,23,68,0.6)) drop-shadow(0 0 15px rgba(255,23,68,0.3));
+  }
+  .mask-stroke-white {
+    fill: none;
+    stroke: rgba(255,255,255,0.7);
+    stroke-width: 1.5;
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.3));
+  }
+  .mask-fill {
+    fill: rgba(255,23,68,0.06);
+    stroke: none;
+  }
+  .mask-dot {
+    fill: #ff1744;
+    filter: drop-shadow(0 0 3px rgba(255,23,68,0.8));
+  }
+
+  /* Glitch strips */
+  .glitch-strip {
+    position: absolute;
+    left: 0; right: 0;
+    background: rgba(255,23,68,0.08);
+    z-index: 6;
+  }
+  .glitch-strip:nth-child(1) { top: 380px; height: 3px; transform: translateX(20px); }
+  .glitch-strip:nth-child(2) { top: 520px; height: 5px; transform: translateX(-15px); background: rgba(255,255,255,0.05); }
+  .glitch-strip:nth-child(3) { top: 680px; height: 2px; transform: translateX(30px); }
+  .glitch-strip:nth-child(4) { top: 820px; height: 4px; transform: translateX(-25px); background: rgba(255,23,68,0.1); }
+  .glitch-strip:nth-child(5) { top: 950px; height: 2px; transform: translateX(10px); }
+
+  /* Red accent bars */
+  .red-bar {
+    position: absolute;
+    background: #ff1744;
+    z-index: 7;
+    opacity: 0.15;
+  }
+  .red-bar.left { left: 0; top: 400px; width: 250px; height: 2px; }
+  .red-bar.right { right: 0; top: 900px; width: 300px; height: 2px; }
+
+  /* MC Text - stencil style */
+  .mc-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -55%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 360px;
+    letter-spacing: 20px;
+    color: #fff;
+    text-shadow:
+      0 0 10px rgba(255,23,68,0.6),
+      0 0 30px rgba(255,23,68,0.3),
+      4px 4px 0px rgba(255,23,68,0.2);
+    z-index: 8;
+    mix-blend-mode: difference;
+  }
+
+  /* Subtitle */
+  .subtitle {
+    position: absolute;
+    top: 58%; left: 50%;
+    transform: translate(-50%, 60px);
+    font-family: 'Inter', sans-serif;
+    font-weight: 700;
+    font-size: 24px;
+    letter-spacing: 20px;
+    color: #ff1744;
+    text-transform: uppercase;
+    z-index: 8;
+    text-shadow: 0 0 10px rgba(255,23,68,0.5);
+  }
+
+  /* Artist name */
+  .artist-name {
+    position: absolute;
+    bottom: 100px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    font-size: 20px;
+    letter-spacing: 16px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    z-index: 8;
+  }
+
+  /* Genre tag */
+  .genre-tag {
+    position: absolute;
+    top: 65px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', monospace;
+    font-weight: 400;
+    font-size: 14px;
+    letter-spacing: 10px;
+    color: rgba(255,23,68,0.4);
+    text-transform: uppercase;
+    z-index: 8;
+  }
+
+  /* Vertical red line accents */
+  .v-line {
+    position: absolute;
+    top: 0; bottom: 0;
+    width: 1px;
+    z-index: 2;
+  }
+  .v-line.l1 { left: 120px; background: linear-gradient(180deg, transparent, rgba(255,23,68,0.15), transparent); }
+  .v-line.l2 { right: 120px; background: linear-gradient(180deg, transparent, rgba(255,23,68,0.15), transparent); }
+
+  /* Border frame */
+  .frame {
+    position: absolute;
+    inset: 25px;
+    border: 1px solid rgba(255,23,68,0.12);
+    z-index: 7;
+    pointer-events: none;
+  }
+
+  /* Vignette */
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.75) 100%);
+    z-index: 9;
+    pointer-events: none;
+  }
+
+  /* Glitch animation */
+  @keyframes glitch-shift {
+    0%, 90%, 100% { transform: translateX(0); }
+    92% { transform: translateX(-8px); }
+    94% { transform: translateX(6px); }
+    96% { transform: translateX(-3px); }
+    98% { transform: translateX(4px); }
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="noise"></div>
+  <div class="scanlines"></div>
+
+  <div class="v-line l1"></div>
+  <div class="v-line l2"></div>
+
+  <!-- Tribal mask SVG -->
+  <svg class="mask-svg" viewBox="0 0 700 900">
+    <!-- Mask outer shape -->
+    <path class="mask-fill" d="M350,80 L520,200 L560,400 L540,600 L480,750 L350,820 L220,750 L160,600 L140,400 L180,200 Z"/>
+    <path class="mask-stroke" d="M350,80 L520,200 L560,400 L540,600 L480,750 L350,820 L220,750 L160,600 L140,400 L180,200 Z"/>
+
+    <!-- Inner mask contour -->
+    <path class="mask-stroke-white" d="M350,140 L480,240 L510,400 L495,570 L445,690 L350,750 L255,690 L205,570 L190,400 L220,240 Z" stroke-dasharray="6,4"/>
+
+    <!-- Eyes -->
+    <ellipse cx="270" cy="380" rx="55" ry="35" class="mask-stroke" stroke-width="2.5"/>
+    <ellipse cx="430" cy="380" rx="55" ry="35" class="mask-stroke" stroke-width="2.5"/>
+    <circle cx="270" cy="380" r="12" class="mask-dot"/>
+    <circle cx="430" cy="380" r="12" class="mask-dot"/>
+
+    <!-- Nose -->
+    <path class="mask-stroke-white" d="M330,440 L350,520 L370,440" stroke-width="1.5"/>
+
+    <!-- Mouth -->
+    <line x1="290" y1="580" x2="410" y2="580" class="mask-stroke" stroke-width="2"/>
+    <line x1="300" y1="600" x2="400" y2="600" class="mask-stroke-white" stroke-width="1" stroke-dasharray="8,4"/>
+
+    <!-- Tribal marks - forehead -->
+    <line x1="300" y1="200" x2="350" y2="170" class="mask-stroke" stroke-width="1.5"/>
+    <line x1="400" y1="200" x2="350" y2="170" class="mask-stroke" stroke-width="1.5"/>
+    <line x1="310" y1="230" x2="350" y2="205" class="mask-stroke-white" stroke-width="1"/>
+    <line x1="390" y1="230" x2="350" y2="205" class="mask-stroke-white" stroke-width="1"/>
+
+    <!-- Tribal marks - cheeks -->
+    <line x1="170" y1="380" x2="200" y2="370" class="mask-stroke" stroke-width="1.5"/>
+    <line x1="170" y1="400" x2="200" y2="400" class="mask-stroke" stroke-width="1.5"/>
+    <line x1="170" y1="420" x2="200" y2="430" class="mask-stroke" stroke-width="1.5"/>
+
+    <line x1="530" y1="380" x2="500" y2="370" class="mask-stroke" stroke-width="1.5"/>
+    <line x1="530" y1="400" x2="500" y2="400" class="mask-stroke" stroke-width="1.5"/>
+    <line x1="530" y1="420" x2="500" y2="430" class="mask-stroke" stroke-width="1.5"/>
+
+    <!-- Vertical tribal lines on chin -->
+    <line x1="320" y1="630" x2="320" y2="700" class="mask-stroke-white" stroke-width="1"/>
+    <line x1="350" y1="630" x2="350" y2="720" class="mask-stroke-white" stroke-width="1"/>
+    <line x1="380" y1="630" x2="380" y2="700" class="mask-stroke-white" stroke-width="1"/>
+
+    <!-- Decorative dots -->
+    <circle cx="350" cy="280" r="4" class="mask-dot"/>
+    <circle cx="320" cy="300" r="2.5" class="mask-dot" opacity="0.6"/>
+    <circle cx="380" cy="300" r="2.5" class="mask-dot" opacity="0.6"/>
+    <circle cx="250" cy="500" r="3" class="mask-dot" opacity="0.5"/>
+    <circle cx="450" cy="500" r="3" class="mask-dot" opacity="0.5"/>
+  </svg>
+
+  <div class="glitch-strip"></div>
+  <div class="glitch-strip"></div>
+  <div class="glitch-strip"></div>
+  <div class="glitch-strip"></div>
+  <div class="glitch-strip"></div>
+
+  <div class="red-bar left"></div>
+  <div class="red-bar right"></div>
+
+  <div class="frame"></div>
+
+  <div class="genre-tag">ELECTRONIC TRIBAL CIRCUIT</div>
+  <div class="mc-text">MC</div>
+  <div class="subtitle">URBAN RITUAL</div>
+  <div class="artist-name">MATHEUS CASTRO</div>
+
+  <div class="vignette"></div>
+</div>
+</body>
+</html>

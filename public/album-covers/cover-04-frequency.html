@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1400">
+<title>MC - Frequency</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  .cover {
+    width: 1400px; height: 1400px;
+    background: linear-gradient(180deg, #0a0a0a 0%, #0d0520 50%, #0a0a0a 100%);
+    position: relative;
+    overflow: hidden;
+    font-family: 'Bebas Neue', sans-serif;
+  }
+
+  /* Waveform SVG */
+  .waveform-svg {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+  }
+
+  /* Bar styling */
+  .bar {
+    fill: url(#barGradient);
+    opacity: 0.9;
+  }
+  .bar-glow {
+    fill: url(#barGradient);
+    opacity: 0.25;
+    filter: blur(6px);
+  }
+
+  /* Tribal border patterns */
+  .tribal-border {
+    fill: none;
+    stroke: rgba(124,58,237,0.4);
+    stroke-width: 1.5;
+  }
+  .tribal-border-bright {
+    fill: none;
+    stroke: #a855f7;
+    stroke-width: 1.5;
+    filter: drop-shadow(0 0 4px rgba(168,85,247,0.5));
+  }
+  .tribal-dot {
+    fill: #c084fc;
+    filter: drop-shadow(0 0 3px rgba(192,132,252,0.6));
+  }
+
+  /* MC text */
+  .mc-text {
+    position: absolute;
+    top: 200px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 220px;
+    letter-spacing: 25px;
+    color: #fff;
+    text-shadow:
+      0 0 15px rgba(124,58,237,0.6),
+      0 0 40px rgba(124,58,237,0.3),
+      0 0 80px rgba(168,85,247,0.2);
+    z-index: 10;
+  }
+
+  /* Album title */
+  .album-title {
+    position: absolute;
+    bottom: 200px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 60px;
+    letter-spacing: 15px;
+    color: #a855f7;
+    text-shadow: 0 0 15px rgba(168,85,247,0.5);
+    z-index: 10;
+  }
+
+  /* Genre tag */
+  .genre-tag {
+    position: absolute;
+    bottom: 140px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    font-size: 15px;
+    letter-spacing: 12px;
+    color: rgba(192,132,252,0.4);
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  /* Artist name */
+  .artist-name {
+    position: absolute;
+    bottom: 80px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    font-size: 18px;
+    letter-spacing: 14px;
+    color: rgba(255,255,255,0.35);
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  /* Horizontal accent */
+  .h-accent {
+    position: absolute;
+    left: 100px; right: 100px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(124,58,237,0.3), transparent);
+  }
+  .h-accent.top { top: 320px; }
+  .h-accent.bottom { bottom: 320px; }
+
+  /* Vignette */
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.6) 100%);
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  /* Subtle glow behind waveform */
+  .center-glow {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 1000px; height: 400px;
+    background: radial-gradient(ellipse, rgba(124,58,237,0.1) 0%, transparent 70%);
+    z-index: 0;
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="center-glow"></div>
+
+  <svg class="waveform-svg" viewBox="0 0 1400 1400">
+    <defs>
+      <linearGradient id="barGradient" x1="0" y1="1" x2="0" y2="0">
+        <stop offset="0%" stop-color="#7c3aed"/>
+        <stop offset="50%" stop-color="#a855f7"/>
+        <stop offset="100%" stop-color="#c084fc"/>
+      </linearGradient>
+    </defs>
+
+    <!-- Tribal border ornaments - TOP -->
+    <!-- Zigzag line -->
+    <polyline class="tribal-border-bright" points="200,100 230,70 260,100 290,70 320,100 350,70 380,100 410,70 440,100 470,70 500,100 530,70 560,100 590,70 620,100 650,70 680,100 710,70 740,100 770,70 800,100 830,70 860,100 890,70 920,100 950,70 980,100 1010,70 1040,100 1070,70 1100,100 1130,70 1160,100 1190,70"/>
+    <polyline class="tribal-border" points="200,120 230,95 260,120 290,95 320,120 350,95 380,120 410,95 440,120 470,95 500,120 530,95 560,120 590,95 620,120 650,95 680,120 710,95 740,120 770,95 800,120 830,95 860,120 890,95 920,120 950,95 980,120 1010,95 1040,120 1070,95 1100,120 1130,95 1160,120 1190,95"/>
+
+    <!-- Dot pattern - top -->
+    <circle class="tribal-dot" cx="200" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="260" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="320" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="380" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="440" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="500" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="560" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="620" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="680" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="740" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="800" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="860" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="920" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="980" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="1040" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="1100" cy="55" r="2.5"/>
+    <circle class="tribal-dot" cx="1160" cy="55" r="2.5"/>
+
+    <!-- Tribal border ornaments - BOTTOM (mirrored) -->
+    <polyline class="tribal-border-bright" points="200,1300 230,1330 260,1300 290,1330 320,1300 350,1330 380,1300 410,1330 440,1300 470,1330 500,1300 530,1330 560,1300 590,1330 620,1300 650,1330 680,1300 710,1330 740,1300 770,1330 800,1300 830,1330 860,1300 890,1330 920,1300 950,1330 980,1300 1010,1330 1040,1300 1070,1330 1100,1300 1130,1330 1160,1300 1190,1330"/>
+    <polyline class="tribal-border" points="200,1280 230,1305 260,1280 290,1305 320,1280 350,1305 380,1280 410,1305 440,1280 470,1305 500,1280 530,1305 560,1280 590,1305 620,1280 650,1305 680,1280 710,1305 740,1280 770,1305 800,1280 830,1305 860,1280 890,1305 920,1280 950,1305 980,1280 1010,1305 1040,1280 1070,1305 1100,1280 1130,1305 1160,1280 1190,1305"/>
+
+    <!-- Dot pattern - bottom -->
+    <circle class="tribal-dot" cx="200" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="260" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="320" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="380" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="440" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="500" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="560" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="620" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="680" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="740" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="800" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="860" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="920" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="980" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="1040" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="1100" cy="1345" r="2.5"/>
+    <circle class="tribal-dot" cx="1160" cy="1345" r="2.5"/>
+
+    <!-- Triangle accents - top corners -->
+    <polygon class="tribal-border-bright" points="140,40 160,70 120,70"/>
+    <polygon class="tribal-border-bright" points="1260,40 1280,70 1240,70"/>
+
+    <!-- Triangle accents - bottom corners -->
+    <polygon class="tribal-border-bright" points="140,1360 160,1330 120,1330"/>
+    <polygon class="tribal-border-bright" points="1260,1360 1280,1330 1240,1330"/>
+
+    <!-- WAVEFORM BARS (centered at y=700) -->
+    <!-- Glow layer -->
+    <g class="bar-glow" transform="translate(0,0)">
+      <rect x="180" y="640" width="12" height="120" rx="3"/>
+      <rect x="200" y="610" width="12" height="180" rx="3"/>
+      <rect x="220" y="630" width="12" height="140" rx="3"/>
+      <rect x="240" y="580" width="12" height="240" rx="3"/>
+      <rect x="260" y="620" width="12" height="160" rx="3"/>
+      <rect x="280" y="560" width="12" height="280" rx="3"/>
+      <rect x="300" y="600" width="12" height="200" rx="3"/>
+      <rect x="320" y="540" width="12" height="320" rx="3"/>
+      <rect x="340" y="580" width="12" height="240" rx="3"/>
+      <rect x="360" y="500" width="12" height="400" rx="3"/>
+      <rect x="380" y="550" width="12" height="300" rx="3"/>
+      <rect x="400" y="480" width="12" height="440" rx="3"/>
+      <rect x="420" y="520" width="12" height="360" rx="3"/>
+      <rect x="440" y="460" width="12" height="480" rx="3"/>
+      <rect x="460" y="500" width="12" height="400" rx="3"/>
+      <rect x="480" y="440" width="12" height="520" rx="3"/>
+      <rect x="500" y="470" width="12" height="460" rx="3"/>
+      <rect x="520" y="420" width="12" height="560" rx="3"/>
+      <rect x="540" y="460" width="12" height="480" rx="3"/>
+      <rect x="560" y="400" width="12" height="600" rx="3"/>
+      <rect x="580" y="440" width="12" height="520" rx="3"/>
+      <rect x="600" y="380" width="12" height="640" rx="3"/>
+      <rect x="620" y="420" width="12" height="560" rx="3"/>
+      <rect x="640" y="360" width="12" height="680" rx="3"/>
+      <rect x="660" y="400" width="12" height="600" rx="3"/>
+      <rect x="680" y="350" width="12" height="700" rx="3"/>
+      <rect x="700" y="380" width="12" height="640" rx="3"/>
+      <rect x="720" y="350" width="12" height="700" rx="3"/>
+      <rect x="740" y="390" width="12" height="620" rx="3"/>
+      <rect x="760" y="360" width="12" height="680" rx="3"/>
+      <rect x="780" y="400" width="12" height="600" rx="3"/>
+      <rect x="800" y="370" width="12" height="660" rx="3"/>
+      <rect x="820" y="410" width="12" height="580" rx="3"/>
+      <rect x="840" y="380" width="12" height="640" rx="3"/>
+      <rect x="860" y="430" width="12" height="540" rx="3"/>
+      <rect x="880" y="400" width="12" height="600" rx="3"/>
+      <rect x="900" y="450" width="12" height="500" rx="3"/>
+      <rect x="920" y="420" width="12" height="560" rx="3"/>
+      <rect x="940" y="470" width="12" height="460" rx="3"/>
+      <rect x="960" y="440" width="12" height="520" rx="3"/>
+      <rect x="980" y="490" width="12" height="420" rx="3"/>
+      <rect x="1000" y="460" width="12" height="480" rx="3"/>
+      <rect x="1020" y="510" width="12" height="380" rx="3"/>
+      <rect x="1040" y="490" width="12" height="420" rx="3"/>
+      <rect x="1060" y="540" width="12" height="320" rx="3"/>
+      <rect x="1080" y="520" width="12" height="360" rx="3"/>
+      <rect x="1100" y="570" width="12" height="260" rx="3"/>
+      <rect x="1120" y="550" width="12" height="300" rx="3"/>
+      <rect x="1140" y="590" width="12" height="220" rx="3"/>
+      <rect x="1160" y="610" width="12" height="180" rx="3"/>
+      <rect x="1180" y="630" width="12" height="140" rx="3"/>
+      <rect x="1200" y="650" width="12" height="100" rx="3"/>
+    </g>
+
+    <!-- Main bars layer -->
+    <g>
+      <rect class="bar" x="180" y="640" width="12" height="120" rx="3"/>
+      <rect class="bar" x="200" y="610" width="12" height="180" rx="3"/>
+      <rect class="bar" x="220" y="630" width="12" height="140" rx="3"/>
+      <rect class="bar" x="240" y="580" width="12" height="240" rx="3"/>
+      <rect class="bar" x="260" y="620" width="12" height="160" rx="3"/>
+      <rect class="bar" x="280" y="560" width="12" height="280" rx="3"/>
+      <rect class="bar" x="300" y="600" width="12" height="200" rx="3"/>
+      <rect class="bar" x="320" y="540" width="12" height="320" rx="3"/>
+      <rect class="bar" x="340" y="580" width="12" height="240" rx="3"/>
+      <rect class="bar" x="360" y="500" width="12" height="400" rx="3"/>
+      <rect class="bar" x="380" y="550" width="12" height="300" rx="3"/>
+      <rect class="bar" x="400" y="480" width="12" height="440" rx="3"/>
+      <rect class="bar" x="420" y="520" width="12" height="360" rx="3"/>
+      <rect class="bar" x="440" y="460" width="12" height="480" rx="3"/>
+      <rect class="bar" x="460" y="500" width="12" height="400" rx="3"/>
+      <rect class="bar" x="480" y="440" width="12" height="520" rx="3"/>
+      <rect class="bar" x="500" y="470" width="12" height="460" rx="3"/>
+      <rect class="bar" x="520" y="420" width="12" height="560" rx="3"/>
+      <rect class="bar" x="540" y="460" width="12" height="480" rx="3"/>
+      <rect class="bar" x="560" y="400" width="12" height="600" rx="3"/>
+      <rect class="bar" x="580" y="440" width="12" height="520" rx="3"/>
+      <rect class="bar" x="600" y="380" width="12" height="640" rx="3"/>
+      <rect class="bar" x="620" y="420" width="12" height="560" rx="3"/>
+      <rect class="bar" x="640" y="360" width="12" height="680" rx="3"/>
+      <rect class="bar" x="660" y="400" width="12" height="600" rx="3"/>
+      <rect class="bar" x="680" y="350" width="12" height="700" rx="3"/>
+      <rect class="bar" x="700" y="380" width="12" height="640" rx="3"/>
+      <rect class="bar" x="720" y="350" width="12" height="700" rx="3"/>
+      <rect class="bar" x="740" y="390" width="12" height="620" rx="3"/>
+      <rect class="bar" x="760" y="360" width="12" height="680" rx="3"/>
+      <rect class="bar" x="780" y="400" width="12" height="600" rx="3"/>
+      <rect class="bar" x="800" y="370" width="12" height="660" rx="3"/>
+      <rect class="bar" x="820" y="410" width="12" height="580" rx="3"/>
+      <rect class="bar" x="840" y="380" width="12" height="640" rx="3"/>
+      <rect class="bar" x="860" y="430" width="12" height="540" rx="3"/>
+      <rect class="bar" x="880" y="400" width="12" height="600" rx="3"/>
+      <rect class="bar" x="900" y="450" width="12" height="500" rx="3"/>
+      <rect class="bar" x="920" y="420" width="12" height="560" rx="3"/>
+      <rect class="bar" x="940" y="470" width="12" height="460" rx="3"/>
+      <rect class="bar" x="960" y="440" width="12" height="520" rx="3"/>
+      <rect class="bar" x="980" y="490" width="12" height="420" rx="3"/>
+      <rect class="bar" x="1000" y="460" width="12" height="480" rx="3"/>
+      <rect class="bar" x="1020" y="510" width="12" height="380" rx="3"/>
+      <rect class="bar" x="1040" y="490" width="12" height="420" rx="3"/>
+      <rect class="bar" x="1060" y="540" width="12" height="320" rx="3"/>
+      <rect class="bar" x="1080" y="520" width="12" height="360" rx="3"/>
+      <rect class="bar" x="1100" y="570" width="12" height="260" rx="3"/>
+      <rect class="bar" x="1120" y="550" width="12" height="300" rx="3"/>
+      <rect class="bar" x="1140" y="590" width="12" height="220" rx="3"/>
+      <rect class="bar" x="1160" y="610" width="12" height="180" rx="3"/>
+      <rect class="bar" x="1180" y="630" width="12" height="140" rx="3"/>
+      <rect class="bar" x="1200" y="650" width="12" height="100" rx="3"/>
+    </g>
+
+    <!-- Side tribal ornaments - left -->
+    <line x1="80" y1="400" x2="80" y2="1000" class="tribal-border-bright" stroke-dasharray="6,8"/>
+    <line x1="100" y1="420" x2="100" y2="980" class="tribal-border" stroke-dasharray="3,6"/>
+    <circle class="tribal-dot" cx="80" cy="400" r="3"/>
+    <circle class="tribal-dot" cx="80" cy="1000" r="3"/>
+    <circle class="tribal-dot" cx="80" cy="700" r="3"/>
+
+    <!-- Side tribal ornaments - right -->
+    <line x1="1320" y1="400" x2="1320" y2="1000" class="tribal-border-bright" stroke-dasharray="6,8"/>
+    <line x1="1300" y1="420" x2="1300" y2="980" class="tribal-border" stroke-dasharray="3,6"/>
+    <circle class="tribal-dot" cx="1320" cy="400" r="3"/>
+    <circle class="tribal-dot" cx="1320" cy="1000" r="3"/>
+    <circle class="tribal-dot" cx="1320" cy="700" r="3"/>
+  </svg>
+
+  <div class="h-accent top"></div>
+  <div class="h-accent bottom"></div>
+
+  <div class="mc-text">MC</div>
+  <div class="album-title">FREQUENCY</div>
+  <div class="genre-tag">ELECTRONIC TRIBAL CIRCUIT</div>
+  <div class="artist-name">MATHEUS CASTRO</div>
+
+  <div class="vignette"></div>
+</div>
+</body>
+</html>

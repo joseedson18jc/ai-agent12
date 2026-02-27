@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1400">
+<title>MC - Tribal Circuit</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+  .cover {
+    width: 1400px; height: 1400px;
+    background: #0a0a0a;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Bebas Neue', sans-serif;
+  }
+
+  /* Background grid pattern */
+  .grid-bg {
+    position: absolute; inset: 0;
+    background-image:
+      linear-gradient(rgba(0,240,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,240,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Circuit SVG layer */
+  .circuit-svg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+  }
+
+  .circuit-line {
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .cyan { stroke: #00f0ff; filter: drop-shadow(0 0 6px #00f0ff) drop-shadow(0 0 12px rgba(0,240,255,0.4)); }
+  .magenta { stroke: #ff00aa; filter: drop-shadow(0 0 6px #ff00aa) drop-shadow(0 0 12px rgba(255,0,170,0.4)); }
+  .dim-cyan { stroke: rgba(0,240,255,0.15); stroke-width: 1; }
+  .dim-magenta { stroke: rgba(255,0,170,0.15); stroke-width: 1; }
+
+  .circuit-node {
+    fill: #00f0ff;
+    filter: drop-shadow(0 0 4px #00f0ff);
+  }
+  .circuit-node.mag { fill: #ff00aa; filter: drop-shadow(0 0 4px #ff00aa); }
+
+  /* Tribal chevrons */
+  .tribal-chevron {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    opacity: 0.8;
+  }
+
+  /* Center MC text */
+  .mc-text {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 280px;
+    letter-spacing: 30px;
+    color: #fff;
+    text-shadow:
+      0 0 20px rgba(0,240,255,0.8),
+      0 0 40px rgba(0,240,255,0.4),
+      0 0 80px rgba(0,240,255,0.2),
+      0 0 10px rgba(255,0,170,0.4);
+    z-index: 10;
+  }
+
+  /* Artist name */
+  .artist-name {
+    position: absolute;
+    bottom: 120px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Inter', sans-serif;
+    font-weight: 300;
+    font-size: 28px;
+    letter-spacing: 18px;
+    color: rgba(255,255,255,0.6);
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  /* Genre tag */
+  .genre-tag {
+    position: absolute;
+    top: 80px; left: 50%;
+    transform: translateX(-50%);
+    font-family: 'Orbitron', monospace;
+    font-weight: 400;
+    font-size: 16px;
+    letter-spacing: 12px;
+    color: rgba(0,240,255,0.5);
+    text-transform: uppercase;
+    z-index: 10;
+  }
+
+  /* Horizontal accent lines */
+  .h-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0,240,255,0.3), transparent);
+  }
+  .h-line.top { top: 140px; }
+  .h-line.bottom { bottom: 180px; }
+
+  /* Corner accents */
+  .corner {
+    position: absolute;
+    width: 60px; height: 60px;
+    border-color: rgba(0,240,255,0.4);
+    border-style: solid;
+    border-width: 0;
+  }
+  .corner.tl { top: 40px; left: 40px; border-top-width: 2px; border-left-width: 2px; }
+  .corner.tr { top: 40px; right: 40px; border-top-width: 2px; border-right-width: 2px; }
+  .corner.bl { bottom: 40px; left: 40px; border-bottom-width: 2px; border-left-width: 2px; }
+  .corner.br { bottom: 40px; right: 40px; border-bottom-width: 2px; border-right-width: 2px; }
+
+  /* Pulse animation */
+  @keyframes pulse-glow {
+    0%, 100% { opacity: 0.6; }
+    50% { opacity: 1; }
+  }
+  .pulse { animation: pulse-glow 3s ease-in-out infinite; }
+
+  /* Vignette */
+  .vignette {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.7) 100%);
+    z-index: 5;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+<div class="cover">
+  <div class="grid-bg"></div>
+
+  <svg class="circuit-svg" viewBox="0 0 1400 1400">
+    <!-- Dim background circuits -->
+    <path class="circuit-line dim-cyan" d="M0,200 H400 L450,250 H600"/>
+    <path class="circuit-line dim-cyan" d="M1400,300 H1000 L950,350 H800"/>
+    <path class="circuit-line dim-magenta" d="M200,0 V350 L250,400 V500"/>
+    <path class="circuit-line dim-magenta" d="M1200,1400 V1050 L1150,1000 V900"/>
+    <path class="circuit-line dim-cyan" d="M0,1100 H300 L350,1050 H500"/>
+    <path class="circuit-line dim-cyan" d="M1400,1100 H1100 L1050,1050 H900"/>
+
+    <!-- Main circuit paths - left side -->
+    <path class="circuit-line cyan" d="M0,500 H200 L250,450 H380 L420,490 H500 L520,470"/>
+    <path class="circuit-line cyan" d="M0,600 H150 L180,570 H280"/>
+    <path class="circuit-line magenta" d="M0,750 H180 L220,710 H350 L380,740"/>
+    <path class="circuit-line cyan" d="M0,900 H250 L290,860 H400 L440,900 H500"/>
+
+    <!-- Main circuit paths - right side -->
+    <path class="circuit-line cyan" d="M1400,500 H1200 L1150,450 H1020 L980,490 H900 L880,470"/>
+    <path class="circuit-line magenta" d="M1400,650 H1250 L1220,620 H1120"/>
+    <path class="circuit-line cyan" d="M1400,800 H1180 L1140,760 H1050"/>
+    <path class="circuit-line magenta" d="M1400,950 H1200 L1160,910 H1050 L1010,950 H930"/>
+
+    <!-- Tribal chevrons - top -->
+    <path class="tribal-chevron cyan" d="M600,180 L700,250 L800,180"/>
+    <path class="tribal-chevron magenta" d="M620,210 L700,265 L780,210"/>
+    <path class="tribal-chevron cyan" d="M560,160 L700,240 L840,160"/>
+
+    <!-- Tribal chevrons - bottom -->
+    <path class="tribal-chevron cyan" d="M600,1220 L700,1150 L800,1220"/>
+    <path class="tribal-chevron magenta" d="M620,1190 L700,1135 L780,1190"/>
+    <path class="tribal-chevron cyan" d="M560,1240 L700,1160 L840,1240"/>
+
+    <!-- Tribal arrows - left -->
+    <path class="tribal-chevron magenta" d="M180,600 L250,700 L180,800"/>
+    <path class="tribal-chevron cyan" d="M210,620 L265,700 L210,780"/>
+
+    <!-- Tribal arrows - right -->
+    <path class="tribal-chevron magenta" d="M1220,600 L1150,700 L1220,800"/>
+    <path class="tribal-chevron cyan" d="M1190,620 L1135,700 L1190,780"/>
+
+    <!-- Diamond shapes around center -->
+    <path class="tribal-chevron cyan" d="M700,350 L850,500 L700,650 L550,500 Z" style="opacity:0.3"/>
+    <path class="tribal-chevron magenta" d="M700,380 L820,500 L700,620 L580,500 Z" style="opacity:0.2"/>
+
+    <!-- Circuit nodes -->
+    <circle class="circuit-node" cx="200" cy="500" r="4"/>
+    <circle class="circuit-node" cx="380" cy="450" r="3"/>
+    <circle class="circuit-node" cx="500" cy="490" r="4"/>
+    <circle class="circuit-node mag" cx="180" cy="750" r="4"/>
+    <circle class="circuit-node" cx="350" cy="710" r="3"/>
+    <circle class="circuit-node" cx="250" cy="900" r="4"/>
+
+    <circle class="circuit-node" cx="1200" cy="500" r="4"/>
+    <circle class="circuit-node" cx="1020" cy="450" r="3"/>
+    <circle class="circuit-node mag" cx="1250" cy="650" r="4"/>
+    <circle class="circuit-node" cx="1180" cy="800" r="4"/>
+    <circle class="circuit-node mag" cx="1200" cy="950" r="4"/>
+
+    <!-- Small tribal dots pattern -->
+    <circle class="circuit-node" cx="500" cy="300" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node" cx="530" cy="320" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node" cx="560" cy="300" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node" cx="840" cy="300" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node" cx="870" cy="320" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node" cx="900" cy="300" r="2" style="opacity:0.4"/>
+
+    <circle class="circuit-node mag" cx="500" cy="1100" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node mag" cx="530" cy="1080" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node mag" cx="560" cy="1100" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node mag" cx="840" cy="1100" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node mag" cx="870" cy="1080" r="2" style="opacity:0.4"/>
+    <circle class="circuit-node mag" cx="900" cy="1100" r="2" style="opacity:0.4"/>
+
+    <!-- Vertical circuit traces -->
+    <path class="circuit-line dim-cyan" d="M500,0 V200 L520,220 V320"/>
+    <path class="circuit-line dim-cyan" d="M900,0 V200 L880,220 V320"/>
+    <path class="circuit-line dim-magenta" d="M500,1400 V1200 L520,1180 V1080"/>
+    <path class="circuit-line dim-magenta" d="M900,1400 V1200 L880,1180 V1080"/>
+  </svg>
+
+  <div class="h-line top"></div>
+  <div class="h-line bottom"></div>
+
+  <div class="corner tl"></div>
+  <div class="corner tr"></div>
+  <div class="corner bl"></div>
+  <div class="corner br"></div>
+
+  <div class="genre-tag">ELECTRONIC TRIBAL CIRCUIT</div>
+  <div class="mc-text pulse">MC</div>
+  <div class="artist-name">MATHEUS CASTRO</div>
+
+  <div class="vignette"></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MC - Album Cover Designs | Electronic Tribal Circuit</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a0a;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 40px 20px;
+  }
+
+  .header {
+    text-align: center;
+    margin-bottom: 60px;
+  }
+  .header h1 {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: 48px;
+    letter-spacing: 10px;
+    color: #fff;
+    margin-bottom: 12px;
+  }
+  .header p {
+    font-weight: 300;
+    font-size: 16px;
+    letter-spacing: 8px;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+  }
+  .header .line {
+    width: 200px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    margin: 20px auto;
+  }
+
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+    gap: 40px;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 20px;
+  }
+
+  .cover-card {
+    position: relative;
+    background: #111;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.06);
+    transition: transform 0.3s ease, border-color 0.3s ease;
+  }
+  .cover-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255,255,255,0.15);
+  }
+
+  .cover-preview {
+    position: relative;
+    width: 100%;
+    padding-top: 100%; /* 1:1 aspect ratio */
+    overflow: hidden;
+    background: #0a0a0a;
+  }
+  .cover-preview iframe {
+    position: absolute;
+    top: 0; left: 0;
+    width: 1400px;
+    height: 1400px;
+    transform-origin: top left;
+    border: none;
+    pointer-events: none;
+  }
+
+  .cover-info {
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .cover-info .number {
+    font-family: 'Orbitron', monospace;
+    font-weight: 700;
+    font-size: 14px;
+    color: rgba(255,255,255,0.3);
+    letter-spacing: 2px;
+  }
+  .cover-info .name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 24px;
+    letter-spacing: 4px;
+    color: #fff;
+  }
+  .cover-info .link {
+    font-size: 13px;
+    color: rgba(255,255,255,0.4);
+    text-decoration: none;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    border: 1px solid rgba(255,255,255,0.15);
+    padding: 6px 16px;
+    border-radius: 4px;
+    transition: all 0.2s;
+  }
+  .cover-info .link:hover {
+    color: #fff;
+    border-color: rgba(255,255,255,0.4);
+    background: rgba(255,255,255,0.05);
+  }
+
+  /* Color indicators per design */
+  .cover-card[data-theme="cyan"] .cover-info { border-top: 2px solid #00f0ff; }
+  .cover-card[data-theme="gold"] .cover-info { border-top: 2px solid #d4a017; }
+  .cover-card[data-theme="red"] .cover-info { border-top: 2px solid #ff1744; }
+  .cover-card[data-theme="purple"] .cover-info { border-top: 2px solid #a855f7; }
+  .cover-card[data-theme="green"] .cover-info { border-top: 2px solid #00ff88; }
+
+  .footer {
+    text-align: center;
+    margin-top: 80px;
+    padding: 30px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  .footer p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.25);
+    letter-spacing: 3px;
+  }
+  .footer .tip {
+    margin-top: 12px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.15);
+    letter-spacing: 1px;
+    line-height: 1.8;
+  }
+
+  @media (max-width: 800px) {
+    .gallery {
+      grid-template-columns: 1fr;
+    }
+    .header h1 { font-size: 28px; letter-spacing: 5px; }
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <h1>MC</h1>
+    <div class="line"></div>
+    <p>Album Cover Designs</p>
+  </div>
+
+  <div class="gallery" id="gallery">
+    <div class="cover-card" data-theme="cyan">
+      <div class="cover-preview">
+        <iframe src="cover-01-tribal-circuit.html" id="frame1" loading="lazy" sandbox="allow-same-origin"></iframe>
+      </div>
+      <div class="cover-info">
+        <div>
+          <div class="number">01</div>
+          <div class="name">TRIBAL CIRCUIT</div>
+        </div>
+        <a href="cover-01-tribal-circuit.html" class="link" target="_blank">Full Size</a>
+      </div>
+    </div>
+
+    <div class="cover-card" data-theme="gold">
+      <div class="cover-preview">
+        <iframe src="cover-02-sacred-bass.html" id="frame2" loading="lazy" sandbox="allow-same-origin"></iframe>
+      </div>
+      <div class="cover-info">
+        <div>
+          <div class="number">02</div>
+          <div class="name">SACRED BASS</div>
+        </div>
+        <a href="cover-02-sacred-bass.html" class="link" target="_blank">Full Size</a>
+      </div>
+    </div>
+
+    <div class="cover-card" data-theme="red">
+      <div class="cover-preview">
+        <iframe src="cover-03-urban-ritual.html" id="frame3" loading="lazy" sandbox="allow-same-origin"></iframe>
+      </div>
+      <div class="cover-info">
+        <div>
+          <div class="number">03</div>
+          <div class="name">URBAN RITUAL</div>
+        </div>
+        <a href="cover-03-urban-ritual.html" class="link" target="_blank">Full Size</a>
+      </div>
+    </div>
+
+    <div class="cover-card" data-theme="purple">
+      <div class="cover-preview">
+        <iframe src="cover-04-frequency.html" id="frame4" loading="lazy" sandbox="allow-same-origin"></iframe>
+      </div>
+      <div class="cover-info">
+        <div>
+          <div class="number">04</div>
+          <div class="name">FREQUENCY</div>
+        </div>
+        <a href="cover-04-frequency.html" class="link" target="_blank">Full Size</a>
+      </div>
+    </div>
+
+    <div class="cover-card" data-theme="green">
+      <div class="cover-preview">
+        <iframe src="cover-05-neon-tribe.html" id="frame5" loading="lazy" sandbox="allow-same-origin"></iframe>
+      </div>
+      <div class="cover-info">
+        <div>
+          <div class="number">05</div>
+          <div class="name">NEON TRIBE</div>
+        </div>
+        <a href="cover-05-neon-tribe.html" class="link" target="_blank">Full Size</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>MC &mdash; ELECTRONIC TRIBAL CIRCUIT &mdash; 2026</p>
+    <p class="tip">
+      Each cover is 1400x1400px (SoundCloud ready).<br>
+      Click "Full Size" to open at native resolution, then right-click to save or screenshot.
+    </p>
+  </div>
+
+  <script>
+    // Scale iframes to fit their containers
+    function scaleFrames() {
+      document.querySelectorAll('.cover-preview').forEach(container => {
+        const iframe = container.querySelector('iframe');
+        if (iframe) {
+          const containerWidth = container.offsetWidth;
+          const scale = containerWidth / 1400;
+          iframe.style.transform = `scale(${scale})`;
+        }
+      });
+    }
+    window.addEventListener('load', scaleFrames);
+    window.addEventListener('resize', scaleFrames);
+  </script>
+</body>
+</html>
