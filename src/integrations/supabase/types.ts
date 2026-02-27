@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      claude_skills: {
+        Row: {
+          id: number
+          name: string
+          description: string
+          category: string
+          source: string
+          source_url: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id: number
+          name: string
+          description: string
+          category: string
+          source: string
+          source_url: string
+          status: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          name?: string
+          description?: string
+          category?: string
+          source?: string
+          source_url?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "claude_skills_category_fkey"
+            columns: ["category"]
+            isOneToOne: false
+            referencedRelation: "skill_categories"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       financial_anomalies: {
         Row: {
           created_at: string
@@ -125,6 +169,30 @@ export type Database = {
           updated_at?: string
           user_id?: string
           value?: number
+        }
+        Relationships: []
+      }
+      skill_categories: {
+        Row: {
+          id: string
+          label: string
+          icon: string
+          description: string
+          created_at: string
+        }
+        Insert: {
+          id: string
+          label: string
+          icon: string
+          description: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          label?: string
+          icon?: string
+          description?: string
+          created_at?: string
         }
         Relationships: []
       }

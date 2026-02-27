@@ -7,7 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
-import { claudeSkills, skillCategories, type ClaudeSkill } from '@/data/claudeSkills';
+import { useClaudeSkills } from '@/hooks/useClaudeSkills';
+import type { ClaudeSkill } from '@/data/claudeSkills';
 
 const statusConfig = {
   verified: { label: 'Verified', icon: CheckCircle2, className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/25' },
@@ -17,31 +18,14 @@ const statusConfig = {
 
 const ClaudeSkills = () => {
   const navigate = useNavigate();
+  const { skills, categories, stats, searchSkills, getCategoryInfo } = useClaudeSkills();
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
   const filteredSkills = useMemo(() => {
-    return claudeSkills.filter((skill) => {
-      const matchesSearch =
-        !search ||
-        skill.name.toLowerCase().includes(search.toLowerCase()) ||
-        skill.description.toLowerCase().includes(search.toLowerCase());
-      const matchesCategory = !selectedCategory || skill.category === selectedCategory;
-      const matchesStatus = !selectedStatus || skill.status === selectedStatus;
-      return matchesSearch && matchesCategory && matchesStatus;
-    });
-  }, [search, selectedCategory, selectedStatus]);
-
-  const stats = useMemo(() => ({
-    total: claudeSkills.length,
-    verified: claudeSkills.filter((s) => s.status === 'verified').length,
-    community: claudeSkills.filter((s) => s.status === 'community').length,
-    needed: claudeSkills.filter((s) => s.status === 'needed').length,
-  }), []);
-
-  const getCategoryInfo = (categoryId: string) =>
-    skillCategories.find((c) => c.id === categoryId);
+    return searchSkills(search, selectedCategory, selectedStatus);
+  }, [search, selectedCategory, selectedStatus, searchSkills]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -144,7 +128,7 @@ const ClaudeSkills = () => {
               <Filter size={12} className="mr-1.5" />
               All Categories
             </Button>
-            {skillCategories.map((cat) => (
+            {categories.map((cat) => (
               <Button
                 key={cat.id}
                 variant={selectedCategory === cat.id ? 'default' : 'outline'}
@@ -185,7 +169,7 @@ const ClaudeSkills = () => {
 
         {/* Results count */}
         <p className="text-sm text-muted-foreground mb-4">
-          Showing {filteredSkills.length} of {claudeSkills.length} skills
+          Showing {filteredSkills.length} of {skills.length} skills
         </p>
 
         {/* Skills Grid */}
