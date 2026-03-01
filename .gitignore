@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Weekly analysis reports (generated, not tracked)
+reports/
