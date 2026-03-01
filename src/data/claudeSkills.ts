@@ -117,7 +117,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'testing',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'verified',
   },
   {
     id: 10,
@@ -126,7 +126,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'testing',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
 
   // Debugging & Troubleshooting
@@ -173,7 +173,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'debugging',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
 
   // Collaboration & Workflow
@@ -267,7 +267,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'development',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'verified',
   },
   {
     id: 26,
@@ -276,7 +276,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'development',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'verified',
   },
   {
     id: 27,
@@ -285,7 +285,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'development',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
 
   // Security & Performance
@@ -296,7 +296,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'security',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'verified',
   },
   {
     id: 29,
@@ -305,7 +305,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'security',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
   {
     id: 30,
@@ -314,7 +314,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'security',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
   {
     id: 31,
@@ -323,7 +323,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'security',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
 
   // Documentation & Automation
@@ -334,7 +334,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'documentation',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
   {
     id: 33,
@@ -343,7 +343,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'documentation',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
   {
     id: 34,
@@ -352,7 +352,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'documentation',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
 
   // Media & Content Creation
@@ -390,7 +390,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'media',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
 
   // Data & Analysis
@@ -401,7 +401,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'data',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
   {
     id: 40,
@@ -410,7 +410,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'data',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
   {
     id: 41,
@@ -419,7 +419,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'data',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
 
   // Writing & Research
@@ -448,7 +448,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'writing',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
   {
     id: 45,
@@ -457,7 +457,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'writing',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'needed',
+    status: 'community',
   },
 
   // Meta Skills
