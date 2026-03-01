@@ -1,35 +1,27 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, ExternalLink, CheckCircle2, Users, AlertCircle, Filter } from 'lucide-react';
+import { ArrowLeft, Search, ExternalLink, Filter, Bot, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
-import { useClaudeSkills } from '@/hooks/useClaudeSkills';
-import type { ClaudeSkill } from '@/data/claudeSkills';
+import { useClaudeAgents } from '@/hooks/useClaudeAgents';
+import type { ClaudeAgent, AgentCategory } from '@/data/claudeAgents';
 
-const statusConfig = {
-  verified: { label: 'Verified', icon: CheckCircle2, className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/25' },
-  community: { label: 'Community', icon: Users, className: 'bg-blue-500/15 text-blue-600 border-blue-500/25' },
-  needed: { label: 'Needed', icon: AlertCircle, className: 'bg-amber-500/15 text-amber-600 border-amber-500/25' },
-};
-
-const ClaudeSkills = () => {
+const ClaudeAgents = () => {
   const navigate = useNavigate();
-  const { skills, categories, stats, searchSkills, getCategoryInfo } = useClaudeSkills();
+  const { agents, categories, stats, searchAgents, getCategoryInfo } = useClaudeAgents();
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<AgentCategory | null>(null);
 
-  const filteredSkills = useMemo(() => {
-    return searchSkills(search, selectedCategory, selectedStatus);
-  }, [search, selectedCategory, selectedStatus, searchSkills]);
+  const filteredAgents = useMemo(() => {
+    return searchAgents(search, selectedCategory);
+  }, [search, selectedCategory, searchAgents]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-2xl bg-background/70 border-b border-border/20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-20 flex items-center justify-between">
           <motion.div
@@ -47,11 +39,12 @@ const ClaudeSkills = () => {
               <ArrowLeft size={20} />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-foreground tracking-tight leading-none">
-                Claude Skills
+              <h1 className="text-xl font-bold text-foreground tracking-tight leading-none flex items-center gap-2">
+                <Bot size={22} className="text-primary" />
+                Claude Agents
               </h1>
               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.25em] mt-1.5">
-                Awesome Collection
+                Specialized Subagents
               </p>
             </div>
           </motion.div>
@@ -63,13 +56,13 @@ const ClaudeSkills = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <a
-              href="https://github.com/karanb192/awesome-claude-skills"
+              href="https://github.com/affaan-m/everything-claude-code"
               target="_blank"
               rel="noopener noreferrer"
             >
               <Button variant="outline" size="sm" className="rounded-xl gap-2 text-xs">
                 <ExternalLink size={14} />
-                GitHub
+                Source
               </Button>
             </a>
             <ThemeToggle />
@@ -80,21 +73,22 @@ const ClaudeSkills = () => {
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
         {/* Stats */}
         <motion.div
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          {[
-            { label: 'Total Skills', value: stats.total, color: 'text-foreground' },
-            { label: 'Verified', value: stats.verified, color: 'text-emerald-500' },
-            { label: 'Community', value: stats.community, color: 'text-blue-500' },
-            { label: 'Needed', value: stats.needed, color: 'text-amber-500' },
-          ].map((stat) => (
-            <Card key={stat.label} className="border-border/30 bg-card/50">
+          <Card className="border-border/30 bg-card/50 col-span-2 md:col-span-1">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-foreground">{stats.total}</p>
+              <p className="text-xs text-muted-foreground mt-1">Total Agents</p>
+            </CardContent>
+          </Card>
+          {categories.map((cat) => (
+            <Card key={cat.id} className="border-border/30 bg-card/50">
               <CardContent className="p-4 text-center">
-                <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                <p className="text-2xl font-bold text-primary">{stats.byCategory[cat.id]}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{cat.icon} {cat.label.split(' ')[0]}</p>
               </CardContent>
             </Card>
           ))}
@@ -110,14 +104,13 @@ const ClaudeSkills = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             <Input
-              placeholder="Search skills by name or description..."
+              placeholder="Search agents by name, role, or description..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 rounded-xl border-border/30 bg-card/50"
             />
           </div>
 
-          {/* Category filters */}
           <div className="flex flex-wrap gap-2">
             <Button
               variant={selectedCategory === null ? 'default' : 'outline'}
@@ -141,60 +134,34 @@ const ClaudeSkills = () => {
               </Button>
             ))}
           </div>
-
-          {/* Status filters */}
-          <div className="flex gap-2">
-            <Button
-              variant={selectedStatus === null ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedStatus(null)}
-              className="rounded-xl text-xs"
-            >
-              All Status
-            </Button>
-            {Object.entries(statusConfig).map(([key, config]) => (
-              <Button
-                key={key}
-                variant={selectedStatus === key ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedStatus(selectedStatus === key ? null : key)}
-                className="rounded-xl text-xs gap-1.5"
-              >
-                <config.icon size={12} />
-                {config.label}
-              </Button>
-            ))}
-          </div>
         </motion.div>
 
-        {/* Results count */}
         <p className="text-sm text-muted-foreground mb-4">
-          Showing {filteredSkills.length} of {skills.length} skills
+          Showing {filteredAgents.length} of {agents.length} agents
         </p>
 
-        {/* Skills Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Agents Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <AnimatePresence mode="popLayout">
-            {filteredSkills.map((skill, index) => (
-              <SkillCard key={skill.id} skill={skill} index={index} getCategoryInfo={getCategoryInfo} />
+            {filteredAgents.map((agent, index) => (
+              <AgentCard key={agent.id} agent={agent} index={index} getCategoryInfo={getCategoryInfo} />
             ))}
           </AnimatePresence>
         </div>
 
-        {filteredSkills.length === 0 && (
+        {filteredAgents.length === 0 && (
           <motion.div
             className="text-center py-16"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <p className="text-muted-foreground text-lg">No skills found matching your filters.</p>
+            <p className="text-muted-foreground text-lg">No agents found matching your filters.</p>
             <Button
               variant="outline"
               className="mt-4 rounded-xl"
               onClick={() => {
                 setSearch('');
                 setSelectedCategory(null);
-                setSelectedStatus(null);
               }}
             >
               Clear filters
@@ -209,8 +176,8 @@ const ClaudeSkills = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
-          <Button variant="outline" className="rounded-xl text-xs gap-2" onClick={() => navigate('/claude-agents')}>
-            View Agents
+          <Button variant="outline" className="rounded-xl text-xs gap-2" onClick={() => navigate('/claude-skills')}>
+            View Skills Catalog
           </Button>
           <Button variant="outline" className="rounded-xl text-xs gap-2" onClick={() => navigate('/claude-commands')}>
             View Slash Commands
@@ -221,16 +188,14 @@ const ClaudeSkills = () => {
   );
 };
 
-interface SkillCardProps {
-  skill: ClaudeSkill;
+interface AgentCardProps {
+  agent: ClaudeAgent;
   index: number;
-  getCategoryInfo: (id: string) => { id: string; label: string; icon: string; description: string } | undefined;
+  getCategoryInfo: (id: AgentCategory) => { id: string; label: string; icon: string; description: string } | undefined;
 }
 
-const SkillCard = ({ skill, index, getCategoryInfo }: SkillCardProps) => {
-  const status = statusConfig[skill.status];
-  const category = getCategoryInfo(skill.category);
-  const StatusIcon = status.icon;
+const AgentCard = ({ agent, index, getCategoryInfo }: AgentCardProps) => {
+  const category = getCategoryInfo(agent.category);
 
   return (
     <motion.div
@@ -238,35 +203,50 @@ const SkillCard = ({ skill, index, getCategoryInfo }: SkillCardProps) => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.3, delay: index * 0.03 }}
+      transition={{ duration: 0.3, delay: index * 0.05 }}
     >
       <Card className="h-full border-border/30 bg-card/50 hover:bg-card/80 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-sm font-mono font-bold text-foreground group-hover:text-primary transition-colors">
-              {skill.name}
-            </CardTitle>
-            <Badge variant="outline" className={`shrink-0 text-[10px] ${status.className}`}>
-              <StatusIcon size={10} className="mr-1" />
-              {status.label}
-            </Badge>
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                <Bot size={16} className="text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-sm font-mono font-bold text-foreground group-hover:text-primary transition-colors">
+                  {agent.name}
+                </CardTitle>
+                <p className="text-[10px] text-primary/70 font-medium">{agent.role}</p>
+              </div>
+            </div>
+            {category && (
+              <Badge variant="outline" className="shrink-0 text-[10px] bg-primary/5 text-primary/80 border-primary/20">
+                {category.icon} {category.label.split(' ')[0]}
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
-          <p className="text-xs text-muted-foreground leading-relaxed">{skill.description}</p>
-          <div className="flex items-center justify-between">
-            {category && (
-              <span className="text-[10px] text-muted-foreground/70">
-                {category.icon} {category.label}
+          <p className="text-xs text-muted-foreground leading-relaxed">{agent.description}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {agent.capabilities.map((cap) => (
+              <span
+                key={cap}
+                className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full bg-muted/50 text-muted-foreground"
+              >
+                <Zap size={8} />
+                {cap}
               </span>
-            )}
+            ))}
+          </div>
+          <div className="flex items-center justify-end pt-1">
             <a
-              href={skill.sourceUrl}
+              href={agent.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[10px] text-primary/60 hover:text-primary flex items-center gap-1 transition-colors"
             >
-              {skill.source}
+              {agent.source}
               <ExternalLink size={10} />
             </a>
           </div>
@@ -276,4 +256,4 @@ const SkillCard = ({ skill, index, getCategoryInfo }: SkillCardProps) => {
   );
 };
 
-export default ClaudeSkills;
+export default ClaudeAgents;

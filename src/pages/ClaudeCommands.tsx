@@ -1,35 +1,27 @@
 import { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, ExternalLink, CheckCircle2, Users, AlertCircle, Filter } from 'lucide-react';
+import { ArrowLeft, Search, ExternalLink, Filter, Terminal, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ThemeToggle } from '@/components/dashboard/ThemeToggle';
-import { useClaudeSkills } from '@/hooks/useClaudeSkills';
-import type { ClaudeSkill } from '@/data/claudeSkills';
+import { useClaudeCommands } from '@/hooks/useClaudeCommands';
+import type { ClaudeCommand, CommandCategory } from '@/data/claudeCommands';
 
-const statusConfig = {
-  verified: { label: 'Verified', icon: CheckCircle2, className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/25' },
-  community: { label: 'Community', icon: Users, className: 'bg-blue-500/15 text-blue-600 border-blue-500/25' },
-  needed: { label: 'Needed', icon: AlertCircle, className: 'bg-amber-500/15 text-amber-600 border-amber-500/25' },
-};
-
-const ClaudeSkills = () => {
+const ClaudeCommands = () => {
   const navigate = useNavigate();
-  const { skills, categories, stats, searchSkills, getCategoryInfo } = useClaudeSkills();
+  const { commands, categories, stats, searchCommands, getCategoryInfo } = useClaudeCommands();
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<CommandCategory | null>(null);
 
-  const filteredSkills = useMemo(() => {
-    return searchSkills(search, selectedCategory, selectedStatus);
-  }, [search, selectedCategory, selectedStatus, searchSkills]);
+  const filteredCommands = useMemo(() => {
+    return searchCommands(search, selectedCategory);
+  }, [search, selectedCategory, searchCommands]);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
       <header className="sticky top-0 z-50 backdrop-blur-2xl bg-background/70 border-b border-border/20">
         <div className="max-w-7xl mx-auto px-6 lg:px-8 h-20 flex items-center justify-between">
           <motion.div
@@ -47,11 +39,12 @@ const ClaudeSkills = () => {
               <ArrowLeft size={20} />
             </Button>
             <div>
-              <h1 className="text-xl font-bold text-foreground tracking-tight leading-none">
-                Claude Skills
+              <h1 className="text-xl font-bold text-foreground tracking-tight leading-none flex items-center gap-2">
+                <Terminal size={22} className="text-primary" />
+                Slash Commands
               </h1>
               <p className="text-[10px] text-muted-foreground font-semibold uppercase tracking-[0.25em] mt-1.5">
-                Awesome Collection
+                Quick Actions
               </p>
             </div>
           </motion.div>
@@ -63,13 +56,13 @@ const ClaudeSkills = () => {
             transition={{ duration: 0.5, delay: 0.2 }}
           >
             <a
-              href="https://github.com/karanb192/awesome-claude-skills"
+              href="https://github.com/affaan-m/everything-claude-code"
               target="_blank"
               rel="noopener noreferrer"
             >
               <Button variant="outline" size="sm" className="rounded-xl gap-2 text-xs">
                 <ExternalLink size={14} />
-                GitHub
+                Source
               </Button>
             </a>
             <ThemeToggle />
@@ -80,21 +73,22 @@ const ClaudeSkills = () => {
       <main className="max-w-7xl mx-auto px-6 lg:px-8 py-8">
         {/* Stats */}
         <motion.div
-          className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+          className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 mb-8"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.1 }}
         >
-          {[
-            { label: 'Total Skills', value: stats.total, color: 'text-foreground' },
-            { label: 'Verified', value: stats.verified, color: 'text-emerald-500' },
-            { label: 'Community', value: stats.community, color: 'text-blue-500' },
-            { label: 'Needed', value: stats.needed, color: 'text-amber-500' },
-          ].map((stat) => (
-            <Card key={stat.label} className="border-border/30 bg-card/50">
+          <Card className="border-border/30 bg-card/50">
+            <CardContent className="p-4 text-center">
+              <p className="text-3xl font-bold text-foreground">{stats.total}</p>
+              <p className="text-xs text-muted-foreground mt-1">Total Commands</p>
+            </CardContent>
+          </Card>
+          {categories.slice(0, 4).map((cat) => (
+            <Card key={cat.id} className="border-border/30 bg-card/50">
               <CardContent className="p-4 text-center">
-                <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
-                <p className="text-xs text-muted-foreground mt-1">{stat.label}</p>
+                <p className="text-2xl font-bold text-primary">{stats.byCategory[cat.id]}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{cat.icon} {cat.label.split(' ')[0]}</p>
               </CardContent>
             </Card>
           ))}
@@ -110,14 +104,13 @@ const ClaudeSkills = () => {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
             <Input
-              placeholder="Search skills by name or description..."
+              placeholder="Search commands by name or description..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-10 rounded-xl border-border/30 bg-card/50"
             />
           </div>
 
-          {/* Category filters */}
           <div className="flex flex-wrap gap-2">
             <Button
               variant={selectedCategory === null ? 'default' : 'outline'}
@@ -141,60 +134,34 @@ const ClaudeSkills = () => {
               </Button>
             ))}
           </div>
-
-          {/* Status filters */}
-          <div className="flex gap-2">
-            <Button
-              variant={selectedStatus === null ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setSelectedStatus(null)}
-              className="rounded-xl text-xs"
-            >
-              All Status
-            </Button>
-            {Object.entries(statusConfig).map(([key, config]) => (
-              <Button
-                key={key}
-                variant={selectedStatus === key ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedStatus(selectedStatus === key ? null : key)}
-                className="rounded-xl text-xs gap-1.5"
-              >
-                <config.icon size={12} />
-                {config.label}
-              </Button>
-            ))}
-          </div>
         </motion.div>
 
-        {/* Results count */}
         <p className="text-sm text-muted-foreground mb-4">
-          Showing {filteredSkills.length} of {skills.length} skills
+          Showing {filteredCommands.length} of {commands.length} commands
         </p>
 
-        {/* Skills Grid */}
+        {/* Commands Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <AnimatePresence mode="popLayout">
-            {filteredSkills.map((skill, index) => (
-              <SkillCard key={skill.id} skill={skill} index={index} getCategoryInfo={getCategoryInfo} />
+            {filteredCommands.map((cmd, index) => (
+              <CommandCard key={cmd.id} command={cmd} index={index} getCategoryInfo={getCategoryInfo} />
             ))}
           </AnimatePresence>
         </div>
 
-        {filteredSkills.length === 0 && (
+        {filteredCommands.length === 0 && (
           <motion.div
             className="text-center py-16"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
           >
-            <p className="text-muted-foreground text-lg">No skills found matching your filters.</p>
+            <p className="text-muted-foreground text-lg">No commands found matching your filters.</p>
             <Button
               variant="outline"
               className="mt-4 rounded-xl"
               onClick={() => {
                 setSearch('');
                 setSelectedCategory(null);
-                setSelectedStatus(null);
               }}
             >
               Clear filters
@@ -209,11 +176,11 @@ const ClaudeSkills = () => {
           animate={{ opacity: 1 }}
           transition={{ delay: 0.5 }}
         >
+          <Button variant="outline" className="rounded-xl text-xs gap-2" onClick={() => navigate('/claude-skills')}>
+            View Skills Catalog
+          </Button>
           <Button variant="outline" className="rounded-xl text-xs gap-2" onClick={() => navigate('/claude-agents')}>
             View Agents
-          </Button>
-          <Button variant="outline" className="rounded-xl text-xs gap-2" onClick={() => navigate('/claude-commands')}>
-            View Slash Commands
           </Button>
         </motion.div>
       </main>
@@ -221,16 +188,21 @@ const ClaudeSkills = () => {
   );
 };
 
-interface SkillCardProps {
-  skill: ClaudeSkill;
+interface CommandCardProps {
+  command: ClaudeCommand;
   index: number;
-  getCategoryInfo: (id: string) => { id: string; label: string; icon: string; description: string } | undefined;
+  getCategoryInfo: (id: CommandCategory) => { id: string; label: string; icon: string; description: string } | undefined;
 }
 
-const SkillCard = ({ skill, index, getCategoryInfo }: SkillCardProps) => {
-  const status = statusConfig[skill.status];
-  const category = getCategoryInfo(skill.category);
-  const StatusIcon = status.icon;
+const CommandCard = ({ command, index, getCategoryInfo }: CommandCardProps) => {
+  const category = getCategoryInfo(command.category);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(command.name);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
 
   return (
     <motion.div
@@ -243,30 +215,37 @@ const SkillCard = ({ skill, index, getCategoryInfo }: SkillCardProps) => {
       <Card className="h-full border-border/30 bg-card/50 hover:bg-card/80 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group">
         <CardHeader className="pb-3">
           <div className="flex items-start justify-between gap-2">
-            <CardTitle className="text-sm font-mono font-bold text-foreground group-hover:text-primary transition-colors">
-              {skill.name}
-            </CardTitle>
-            <Badge variant="outline" className={`shrink-0 text-[10px] ${status.className}`}>
-              <StatusIcon size={10} className="mr-1" />
-              {status.label}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-sm font-mono font-bold text-emerald-500 group-hover:text-emerald-400 transition-colors">
+                {command.name}
+              </CardTitle>
+              <button
+                onClick={handleCopy}
+                className="opacity-0 group-hover:opacity-100 transition-opacity text-muted-foreground hover:text-primary"
+              >
+                {copied ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+              </button>
+            </div>
+            {category && (
+              <Badge variant="outline" className="shrink-0 text-[10px] bg-muted/30 text-muted-foreground border-border/30">
+                {category.icon} {category.label.split(' ')[0]}
+              </Badge>
+            )}
           </div>
         </CardHeader>
         <CardContent className="pt-0 space-y-3">
-          <p className="text-xs text-muted-foreground leading-relaxed">{skill.description}</p>
-          <div className="flex items-center justify-between">
-            {category && (
-              <span className="text-[10px] text-muted-foreground/70">
-                {category.icon} {category.label}
-              </span>
-            )}
+          <p className="text-xs text-muted-foreground leading-relaxed">{command.description}</p>
+          <div className="bg-muted/30 rounded-lg px-3 py-2 font-mono text-[11px] text-primary/80">
+            {command.usage}
+          </div>
+          <div className="flex items-center justify-end">
             <a
-              href={skill.sourceUrl}
+              href={command.sourceUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="text-[10px] text-primary/60 hover:text-primary flex items-center gap-1 transition-colors"
             >
-              {skill.source}
+              {command.source}
               <ExternalLink size={10} />
             </a>
           </div>
@@ -276,4 +255,4 @@ const SkillCard = ({ skill, index, getCategoryInfo }: SkillCardProps) => {
   );
 };
 
-export default ClaudeSkills;
+export default ClaudeCommands;
