@@ -1156,4 +1156,13 @@ export const claudeSkills: ClaudeSkill[] = [
     sourceUrl: 'https://github.com/joseedson18jc/ai-agents-monorepo',
     status: 'verified',
   },
+  {
+    id: 120,
+    name: 'session-start-hook',
+    description: 'Create SessionStart hooks for Claude Code on the web — auto-install dependencies so tests and linters work in every session',
+    category: 'meta',
+    source: 'claude-code',
+    sourceUrl: 'https://github.com/anthropics/claude-code',
+    status: 'verified',
+  },
 ];

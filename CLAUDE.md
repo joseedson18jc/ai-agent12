@@ -1,6 +1,6 @@
 # Project Configuration
 
-## Skills (119 installed)
+## Skills (120 installed)
 
 All skills are in `.claude/skills/` as portable markdown files.
 Copy this directory to any Claude Code project to enable all skills.

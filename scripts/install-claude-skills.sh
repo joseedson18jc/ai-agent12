@@ -1,7 +1,7 @@
 #!/bin/bash
 # ══════════════════════════════════════════════════════════════
 # Claude Code Skills Installer
-# Installs 108 skills, 14 agents, and 34 commands into any project
+# Installs 120 skills, 18 agents, and 39 commands into any project
 # ══════════════════════════════════════════════════════════════
 #
 # Usage:
@@ -29,6 +29,10 @@ if [ -d "$SOURCE_DIR/.claude" ]; then
   cp -r "$SOURCE_DIR/.claude/skills" "$TARGET_DIR/.claude/"
   cp -r "$SOURCE_DIR/.claude/agents" "$TARGET_DIR/.claude/"
   cp -r "$SOURCE_DIR/.claude/commands" "$TARGET_DIR/.claude/"
+  if [ -d "$SOURCE_DIR/.claude/hooks" ]; then
+    cp -r "$SOURCE_DIR/.claude/hooks" "$TARGET_DIR/.claude/"
+    chmod +x "$TARGET_DIR/.claude/hooks/"*.sh 2>/dev/null || true
+  fi
 else
   echo "Error: .claude directory not found in $SOURCE_DIR"
   exit 1
