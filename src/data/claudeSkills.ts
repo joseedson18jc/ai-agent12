@@ -126,7 +126,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'testing',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
 
   // Debugging & Troubleshooting
@@ -173,7 +173,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'debugging',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
 
   // Collaboration & Workflow
@@ -285,7 +285,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'development',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
 
   // Security & Performance
@@ -305,7 +305,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'security',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 30,
@@ -314,7 +314,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'security',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 31,
@@ -323,7 +323,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'security',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
 
   // Documentation & Automation
@@ -334,7 +334,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'documentation',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 33,
@@ -343,7 +343,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'documentation',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 34,
@@ -352,7 +352,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'documentation',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
 
   // Media & Content Creation
@@ -363,7 +363,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'media',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 36,
@@ -372,7 +372,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'media',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 37,
@@ -381,7 +381,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'media',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 38,
@@ -390,7 +390,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'media',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
 
   // Data & Analysis
@@ -401,7 +401,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'data',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 40,
@@ -410,7 +410,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'data',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 41,
@@ -419,7 +419,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'data',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
 
   // Writing & Research
@@ -430,7 +430,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'writing',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 43,
@@ -439,7 +439,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'writing',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 44,
@@ -448,7 +448,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'writing',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 45,
@@ -457,7 +457,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'writing',
     source: 'Community',
     sourceUrl: 'https://github.com/karanb192/awesome-claude-skills',
-    status: 'community',
+    status: 'verified',
   },
 
   // Meta Skills
@@ -756,7 +756,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'frameworks',
     source: 'affaan-m/everything-claude-code',
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
-    status: 'community',
+    status: 'verified',
   },
 
   // Infrastructure & DevOps
@@ -803,7 +803,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'infrastructure',
     source: 'affaan-m/everything-claude-code',
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
-    status: 'community',
+    status: 'verified',
   },
 
   // Testing & Quality (ECC additions)
@@ -917,7 +917,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'ai',
     source: 'affaan-m/everything-claude-code',
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
-    status: 'community',
+    status: 'verified',
   },
 
   // Business & Content
@@ -984,7 +984,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'development',
     source: 'affaan-m/everything-claude-code',
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 102,
@@ -1031,7 +1031,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'meta',
     source: 'affaan-m/everything-claude-code',
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
-    status: 'community',
+    status: 'verified',
   },
 
   // Document (ECC additions)
@@ -1042,7 +1042,7 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'document',
     source: 'affaan-m/everything-claude-code',
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
-    status: 'community',
+    status: 'verified',
   },
   {
     id: 108,
@@ -1051,6 +1051,6 @@ export const claudeSkills: ClaudeSkill[] = [
     category: 'document',
     source: 'affaan-m/everything-claude-code',
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
-    status: 'community',
+    status: 'verified',
   },
 ];
