@@ -350,4 +350,15 @@ export const claudeCommands: ClaudeCommand[] = [
     source: 'affaan-m/everything-claude-code',
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
   },
+
+  // Auto-Update & Maintenance
+  {
+    id: 35,
+    name: '/auto-update',
+    description: 'Discover, evaluate, and integrate new skills, agents, and commands from the community. Supports --scan-only and --full modes.',
+    category: 'workflow',
+    usage: '/auto-update [--full | --scan-only | --category <name>]',
+    source: 'ai-agent12',
+    sourceUrl: 'https://github.com/joseedson18jc/ai-agent12',
+  },
 ];

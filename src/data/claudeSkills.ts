@@ -1053,4 +1053,15 @@ export const claudeSkills: ClaudeSkill[] = [
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
     status: 'verified',
   },
+
+  // Auto-Update & Maintenance
+  {
+    id: 109,
+    name: 'auto-update-skills',
+    description: 'Automatically discover, evaluate, and integrate new Claude Code skills, agents, and commands from the community',
+    category: 'meta',
+    source: 'ai-agent12',
+    sourceUrl: 'https://github.com/joseedson18jc/ai-agent12',
+    status: 'verified',
+  },
 ];

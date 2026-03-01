@@ -176,4 +176,14 @@ export const claudeAgents: ClaudeAgent[] = [
     source: 'affaan-m/everything-claude-code',
     sourceUrl: 'https://github.com/affaan-m/everything-claude-code',
   },
+  {
+    id: 15,
+    name: 'update-scout',
+    role: 'Skills Ecosystem Researcher',
+    description: 'Discovers, evaluates, and integrates new Claude Code skills, agents, and commands from the open-source community. Runs weekly scans and quality audits.',
+    category: 'operations',
+    capabilities: ['GitHub repo scanning', 'Skill quality evaluation', 'Duplicate detection', 'Auto-integration', 'Ecosystem health reporting'],
+    source: 'ai-agent12',
+    sourceUrl: 'https://github.com/joseedson18jc/ai-agent12',
+  },
 ];

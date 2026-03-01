@@ -1,6 +1,6 @@
 # Project Configuration
 
-## Skills (108 installed)
+## Skills (109 installed)
 
 All skills are in `.claude/skills/` as portable markdown files.
 Copy this directory to any Claude Code project to enable all skills.
@@ -16,14 +16,14 @@ Copy this directory to any Claude Code project to enable all skills.
 - **Media & Content Creation** (4): canvas-design, slack-gif-creator, algorithmic-art, video-editing-helper
 - **Data & Analysis** (3): data-visualization, sql-query-builder, csv-processing
 - **Writing & Research** (4): brand-guidelines, internal-comms, research-assistant, technical-writing
-- **Meta Skills** (9): skill-creator, template-skill, writing-skills, sharing-skills, testing-skills-with-subagents, subagent-driven-development, configure-ecc, skill-stocktake, project-guidelines-example
+- **Meta Skills** (10): skill-creator, template-skill, writing-skills, sharing-skills, testing-skills-with-subagents, subagent-driven-development, configure-ecc, skill-stocktake, project-guidelines-example, auto-update-skills
 - **Language Patterns** (12): typescript-patterns, python-patterns, golang-patterns, java-coding-standards, cpp-coding-standards, cpp-testing, python-testing, golang-testing, swift-concurrency, swift-actor-persistence, swift-protocol-di-testing, coding-standards
 - **Infrastructure & DevOps** (5): docker-patterns, deployment-patterns, database-migrations, postgres-patterns, clickhouse-io
 - **Framework Patterns** (14): django-patterns, django-security, django-tdd, django-verification, springboot-patterns, springboot-security, springboot-tdd, springboot-verification, jpa-patterns, swiftui-patterns, frontend-patterns, backend-patterns, frontend-slides, liquid-glass-design
 - **Business & Content** (5): article-writing, content-engine, investor-materials, investor-outreach, market-research
 - **AI & ML Patterns** (6): cost-aware-llm-pipeline, foundation-models-on-device, iterative-retrieval, continuous-learning, continuous-learning-v2, regex-vs-llm-structured-text
 
-## Agents (14 installed)
+## Agents (15 installed)
 
 All agent configs are in `.claude/agents/`. Each agent has a specialized role.
 
@@ -41,8 +41,9 @@ All agent configs are in `.claude/agents/`. Each agent has a specialized role.
 - **go-reviewer** - Go language specialist
 - **go-build-resolver** - Go build issue resolution
 - **python-reviewer** - Python language specialist
+- **update-scout** - Skills ecosystem researcher: discovers, evaluates, and integrates new skills weekly
 
-## Commands (34 installed)
+## Commands (35 installed)
 
 All command configs are in `.claude/commands/`. Use as slash commands.
 
@@ -89,6 +90,7 @@ All command configs are in `.claude/commands/`. Use as slash commands.
 ### Workflow & Sessions
 - `/sessions` - Manage session states
 - `/pm2` - Process manager integration
+- `/auto-update` - Discover and integrate new skills from the community
 
 ### Language-Specific
 - `/go-build` - Go build with module resolution
