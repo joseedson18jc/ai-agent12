@@ -1,29 +1,29 @@
 # Project Configuration
 
-## Skills (109 installed)
+## Skills (120 installed)
 
 All skills are in `.claude/skills/` as portable markdown files.
 Copy this directory to any Claude Code project to enable all skills.
 
 ### Categories
-- **Document & File Processing** (6): pdf, docx, xlsx, pptx, nutrient-document-processing, visa-doc-translate
+- **Document & File Processing** (7): pdf, docx, xlsx, pptx, nutrient-document-processing, visa-doc-translate, pdf-excel-reports
 - **Testing & Quality** (10): test-driven-development, webapp-testing, condition-based-waiting, testing-anti-patterns, e2e-testing-skill, snapshot-testing, tdd-workflow, e2e-testing, verification-loop, eval-harness
 - **Debugging & Troubleshooting** (5): systematic-debugging, root-cause-tracing, verification-before-completion, defense-in-depth, performance-profiling
-- **Collaboration & Workflow** (7): requesting-code-review, receiving-code-review, using-git-worktrees, finishing-a-development-branch, brainstorming, writing-plans, executing-plans
-- **Development & Architecture** (9): mcp-builder, artifacts-builder, api-development, database-migration, refactoring-patterns, api-design, content-hash-cache-pattern, search-first, strategic-compact
+- **Collaboration & Workflow** (8): requesting-code-review, receiving-code-review, using-git-worktrees, finishing-a-development-branch, brainstorming, writing-plans, executing-plans, human-in-the-loop
+- **Development & Architecture** (10): mcp-builder, artifacts-builder, api-development, database-migration, refactoring-patterns, api-design, content-hash-cache-pattern, search-first, strategic-compact, github-automation
 - **Security & Performance** (6): security-review, dependency-audit, performance-optimization, load-testing, security-scan, security-review-ecc
 - **Documentation & Automation** (3): documentation-generator, changelog-automation, ci-cd-integration
 - **Media & Content Creation** (4): canvas-design, slack-gif-creator, algorithmic-art, video-editing-helper
-- **Data & Analysis** (3): data-visualization, sql-query-builder, csv-processing
+- **Data & Analysis** (4): data-visualization, sql-query-builder, csv-processing, structured-data-extraction
 - **Writing & Research** (4): brand-guidelines, internal-comms, research-assistant, technical-writing
 - **Meta Skills** (10): skill-creator, template-skill, writing-skills, sharing-skills, testing-skills-with-subagents, subagent-driven-development, configure-ecc, skill-stocktake, project-guidelines-example, auto-update-skills
 - **Language Patterns** (12): typescript-patterns, python-patterns, golang-patterns, java-coding-standards, cpp-coding-standards, cpp-testing, python-testing, golang-testing, swift-concurrency, swift-actor-persistence, swift-protocol-di-testing, coding-standards
-- **Infrastructure & DevOps** (5): docker-patterns, deployment-patterns, database-migrations, postgres-patterns, clickhouse-io
+- **Infrastructure & DevOps** (7): docker-patterns, deployment-patterns, database-migrations, postgres-patterns, clickhouse-io, self-healing-systems, graceful-degradation
 - **Framework Patterns** (14): django-patterns, django-security, django-tdd, django-verification, springboot-patterns, springboot-security, springboot-tdd, springboot-verification, jpa-patterns, swiftui-patterns, frontend-patterns, backend-patterns, frontend-slides, liquid-glass-design
 - **Business & Content** (5): article-writing, content-engine, investor-materials, investor-outreach, market-research
-- **AI & ML Patterns** (6): cost-aware-llm-pipeline, foundation-models-on-device, iterative-retrieval, continuous-learning, continuous-learning-v2, regex-vs-llm-structured-text
+- **AI & ML Patterns** (10): cost-aware-llm-pipeline, foundation-models-on-device, iterative-retrieval, continuous-learning, continuous-learning-v2, regex-vs-llm-structured-text, ai-sdk-patterns, hybrid-analysis, multi-agent-pipeline, nl-to-api
 
-## Agents (15 installed)
+## Agents (18 installed)
 
 All agent configs are in `.claude/agents/`. Each agent has a specialized role.
 
@@ -42,8 +42,11 @@ All agent configs are in `.claude/agents/`. Each agent has a specialized role.
 - **go-build-resolver** - Go build issue resolution
 - **python-reviewer** - Python language specialist
 - **update-scout** - Skills ecosystem researcher: discovers, evaluates, and integrates new skills weekly
+- **content-pipeline** - Multi-stage content producer (research→write→edit→SEO)
+- **data-extractor** - Structured data extraction from text, HTML, PDFs with schema validation
+- **github-automator** - GitHub PR review, issue triage, standards checking, and PR summaries
 
-## Commands (35 installed)
+## Commands (39 installed)
 
 All command configs are in `.claude/commands/`. Use as slash commands.
 
@@ -91,6 +94,10 @@ All command configs are in `.claude/commands/`. Use as slash commands.
 - `/sessions` - Manage session states
 - `/pm2` - Process manager integration
 - `/auto-update` - Discover and integrate new skills from the community
+- `/extract-data` - AI-powered structured data extraction from text/files/URLs
+- `/content-create` - Multi-stage content pipeline (research→write→edit→SEO)
+- `/github-triage` - AI classification of GitHub issues (bug/feature/question/docs)
+- `/health-check` - System health monitoring with AI root cause analysis
 
 ### Language-Specific
 - `/go-build` - Go build with module resolution

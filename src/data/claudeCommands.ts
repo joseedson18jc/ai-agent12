@@ -361,4 +361,42 @@ export const claudeCommands: ClaudeCommand[] = [
     source: 'ai-agent12',
     sourceUrl: 'https://github.com/joseedson18jc/ai-agent12',
   },
+
+  // From ai-agents-monorepo
+  {
+    id: 36,
+    name: '/extract-data',
+    description: 'Extract structured data from unstructured text, files, or URLs using AI with schema validation.',
+    category: 'workflow',
+    usage: '/extract-data <source> [--schema <fields>] [--format json|csv]',
+    source: 'ai-agents-monorepo',
+    sourceUrl: 'https://github.com/joseedson18jc/ai-agents-monorepo',
+  },
+  {
+    id: 37,
+    name: '/content-create',
+    description: 'Create content through a multi-stage AI pipeline: research, write, edit, SEO optimize.',
+    category: 'workflow',
+    usage: '/content-create <topic> [--type article|blog|social|newsletter] [--audience <target>]',
+    source: 'ai-agents-monorepo',
+    sourceUrl: 'https://github.com/joseedson18jc/ai-agents-monorepo',
+  },
+  {
+    id: 38,
+    name: '/github-triage',
+    description: 'AI-powered classification of open GitHub issues into bug/feature/question/docs categories.',
+    category: 'review',
+    usage: '/github-triage [--apply]',
+    source: 'ai-agents-monorepo',
+    sourceUrl: 'https://github.com/joseedson18jc/ai-agents-monorepo',
+  },
+  {
+    id: 39,
+    name: '/health-check',
+    description: 'Run system health checks with AI-powered root cause analysis for anomalies.',
+    category: 'workflow',
+    usage: '/health-check [--remote <host>]',
+    source: 'ai-agents-monorepo',
+    sourceUrl: 'https://github.com/joseedson18jc/ai-agents-monorepo',
+  },
 ];
