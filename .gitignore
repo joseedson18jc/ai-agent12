@@ -25,3 +25,6 @@ dist-ssr
 
 # Weekly analysis reports (generated, not tracked)
 reports/
+
+# Netlify
+.netlify/
