@@ -9,6 +9,7 @@ import ClaudeSkills from "./pages/ClaudeSkills";
 import ClaudeAgents from "./pages/ClaudeAgents";
 import ClaudeCommands from "./pages/ClaudeCommands";
 import NotFound from "./pages/NotFound";
+import YtdDashboard from "./pages/YtdDashboard";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/claude-skills" element={<ClaudeSkills />} />
           <Route path="/claude-agents" element={<ClaudeAgents />} />
           <Route path="/claude-commands" element={<ClaudeCommands />} />
+          <Route path="/ytd-dashboard" element={<YtdDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

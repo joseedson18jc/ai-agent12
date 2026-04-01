@@ -1,4 +1,4 @@
-import { Zap, Upload, Settings2, LayoutDashboard, TrendingUp, Crown, HelpCircle, Sparkles, Bot, Terminal } from 'lucide-react';
+import { Zap, Upload, Settings2, LayoutDashboard, TrendingUp, Crown, HelpCircle, Sparkles, Bot, Terminal, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
@@ -102,6 +102,22 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
         >
           <RealtimeKpiIndicator />
           
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/ytd-dashboard')}
+                className="rounded-xl text-muted-foreground hover:text-primary"
+              >
+                <BarChart3 size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Dashboard YTD</p>
+            </TooltipContent>
+          </Tooltip>
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
