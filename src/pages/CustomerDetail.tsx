@@ -31,8 +31,8 @@ export default function CustomerDetail() {
   const loadCustomer = async () => {
     setLoading(true);
     try {
-      const data = await customerService.getById(id!);
-      setCustomer(data);
+      const response = await customerService.getById(id!);
+      setCustomer(response.data);
     } catch {
       setError("Não foi possível carregar os dados do cliente.");
     } finally {
@@ -91,7 +91,7 @@ export default function CustomerDetail() {
         <div className="flex flex-col items-center justify-center py-20">
           <AlertTriangle className="w-12 h-12 text-red-400 mb-4" />
           <p className="text-gray-600 mb-4">{error || "Cliente não encontrado."}</p>
-          <Button onClick={() => navigate("/customers")}>Voltar para Clientes</Button>
+          <Button onClick={() => navigate("/clientes")}>Voltar para Clientes</Button>
         </div>
       </MainLayout>
     );
@@ -107,7 +107,7 @@ export default function CustomerDetail() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/customers")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/clientes")}>
               <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
             </Button>
             <h1 className="text-2xl font-bold text-gray-900">Detalhes do Cliente</h1>
@@ -123,9 +123,9 @@ export default function CustomerDetail() {
             <div className="flex flex-col sm:flex-row items-start gap-6">
               {/* Photo */}
               <div className="flex-shrink-0">
-                {customer.photoUrl ? (
+                {customer.photo ? (
                   <img
-                    src={customer.photoUrl}
+                    src={customer.photo}
                     alt={customer.name}
                     className="w-24 h-24 rounded-full object-cover border-4 border-gray-100"
                   />
@@ -212,7 +212,7 @@ export default function CustomerDetail() {
           <TabsContent value="purchases">
             <Card>
               <CardContent className="p-0">
-                {!customer.orders?.length ? (
+                {!customer.salesOrders?.length ? (
                   <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                     <ShoppingBag className="w-10 h-10 mb-2" />
                     <p className="text-sm">Nenhuma compra registrada.</p>
@@ -230,11 +230,11 @@ export default function CustomerDetail() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {customer.orders.map((order: any) => (
+                      {customer.salesOrders.map((order: any) => (
                         <TableRow key={order.id}>
-                          <TableCell className="font-mono text-sm">#{order.code || order.id}</TableCell>
+                          <TableCell className="font-mono text-sm">#{order.orderNumber || order.id}</TableCell>
                           <TableCell>{new Date(order.date).toLocaleDateString("pt-BR")}</TableCell>
-                          <TableCell>{order.itemCount || 0} item(ns)</TableCell>
+                          <TableCell>{order.items?.length || 0} item(ns)</TableCell>
                           <TableCell className="font-semibold">{formatCurrency(order.total)}</TableCell>
                           <TableCell>
                             <Badge
