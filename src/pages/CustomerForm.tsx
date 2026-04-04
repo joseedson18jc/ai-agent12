@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { CustomerService } from "@/services/customer.service";
+import customerService from "@/services/customer.service";
 import { maskCPF, maskPhone, maskCEP } from "@/utils/masks";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -99,7 +99,7 @@ export default function CustomerForm() {
   const loadCustomer = async () => {
     setInitialLoading(true);
     try {
-      const customer = await CustomerService.getById(id!);
+      const customer = await customerService.getById(id!);
       form.reset({
         name: customer.name || "",
         cpf: maskCPF(customer.cpf || ""),
@@ -182,10 +182,10 @@ export default function CustomerForm() {
       };
 
       if (isEditing) {
-        await CustomerService.update(id!, payload, photoFile || undefined);
+        await customerService.update(id!, payload, photoFile || undefined);
         toast({ title: "Sucesso", description: "Cliente atualizado com sucesso!" });
       } else {
-        await CustomerService.create(payload, photoFile || undefined);
+        await customerService.create(payload, photoFile || undefined);
         toast({ title: "Sucesso", description: "Cliente cadastrado com sucesso!" });
       }
       navigate("/customers");

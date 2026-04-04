@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { CustomerService } from "@/services/customer.service";
+import customerService from "@/services/customer.service";
 import { formatCPF, formatPhone, formatCurrency } from "@/utils/formatters";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,7 @@ export default function CustomerDetail() {
   const loadCustomer = async () => {
     setLoading(true);
     try {
-      const data = await CustomerService.getById(id!);
+      const data = await customerService.getById(id!);
       setCustomer(data);
     } catch {
       setError("Não foi possível carregar os dados do cliente.");

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { CustomerService } from "@/services/customer.service";
+import customerService from "@/services/customer.service";
 import { formatCPF, formatPhone } from "@/utils/formatters";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -41,7 +41,7 @@ export default function Customers() {
   const loadCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await CustomerService.list({
+      const result = await customerService.list({
         search,
         status: statusFilter === "all" ? undefined : statusFilter,
         page,
@@ -68,7 +68,7 @@ export default function Customers() {
     if (!deleteTarget) return;
     setDeleting(true);
     try {
-      await CustomerService.delete(deleteTarget.id);
+      await customerService.delete(deleteTarget.id);
       setDeleteTarget(null);
       loadCustomers();
     } catch {
