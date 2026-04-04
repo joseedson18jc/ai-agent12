@@ -26,5 +26,10 @@ npx prisma migrate deploy 2>&1 || {
   echo "WARNING: prisma migrate deploy failed, but continuing..."
 }
 
+echo "=== Running Seed ==="
+npx tsx prisma/seed.ts 2>&1 || {
+  echo "WARNING: seed failed, but continuing..."
+}
+
 echo "=== Starting Server ==="
 exec node dist/index.js
