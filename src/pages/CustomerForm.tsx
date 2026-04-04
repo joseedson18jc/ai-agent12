@@ -99,15 +99,16 @@ export default function CustomerForm() {
   const loadCustomer = async () => {
     setInitialLoading(true);
     try {
-      const customer = await customerService.getById(id!);
+      const response = await customerService.getById(id!);
+      const customer = response.data;
       form.reset({
         name: customer.name || "",
         cpf: maskCPF(customer.cpf || ""),
         email: customer.email || "",
         phone: maskPhone(customer.phone || ""),
-        birthDate: customer.birthDate || "",
-        gender: customer.gender || "",
-        cep: maskCEP(customer.cep || ""),
+        birthDate: customer.birthDate ? customer.birthDate.split("T")[0] : "",
+        gender: "",
+        cep: maskCEP(customer.zipCode || ""),
         street: customer.street || "",
         number: customer.number || "",
         complement: customer.complement || "",
@@ -115,10 +116,10 @@ export default function CustomerForm() {
         city: customer.city || "",
         state: customer.state || "",
         notes: customer.notes || "",
-        status: customer.status || "active",
+        status: customer.status || "ACTIVE",
       });
-      if (customer.photoUrl) {
-        setPhotoPreview(customer.photoUrl);
+      if (customer.photo) {
+        setPhotoPreview(customer.photo);
       }
     } catch {
       toast({
@@ -126,7 +127,7 @@ export default function CustomerForm() {
         description: "Não foi possível carregar os dados do cliente.",
         variant: "destructive",
       });
-      navigate("/customers");
+      navigate("/clientes");
     } finally {
       setInitialLoading(false);
     }
@@ -181,14 +182,19 @@ export default function CustomerForm() {
         cep: data.cep?.replace(/\D/g, "") || "",
       };
 
+      const apiPayload = {
+        ...payload,
+        zipCode: payload.cep,
+      };
+
       if (isEditing) {
-        await customerService.update(id!, payload, photoFile || undefined);
+        await customerService.update(id!, apiPayload);
         toast({ title: "Sucesso", description: "Cliente atualizado com sucesso!" });
       } else {
-        await customerService.create(payload, photoFile || undefined);
+        await customerService.create(apiPayload);
         toast({ title: "Sucesso", description: "Cliente cadastrado com sucesso!" });
       }
-      navigate("/customers");
+      navigate("/clientes");
     } catch (err: any) {
       toast({
         title: "Erro",
@@ -225,7 +231,7 @@ export default function CustomerForm() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/customers")}>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/clientes")}>
             <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
           </Button>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -552,7 +558,7 @@ export default function CustomerForm() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/customers")}
+                onClick={() => navigate("/clientes")}
                 disabled={loading}
               >
                 Cancelar

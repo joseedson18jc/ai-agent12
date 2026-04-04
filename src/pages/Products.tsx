@@ -77,13 +77,12 @@ export default function Products() {
   const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await productService.list({
+      const result = await productService.getAll({
         search,
-        category: category === "all" ? undefined : category,
-        brand: brand || undefined,
-        stockStatus: stockFilter === "all" ? undefined : stockFilter,
+        categoryId: category === "all" ? undefined : category,
+        lowStock: stockFilter === "low" ? true : undefined,
         page,
-        pageSize: PAGE_SIZE,
+        limit: PAGE_SIZE,
       });
       setProducts(result.data || []);
       setTotalPages(result.totalPages || 1);
@@ -111,7 +110,7 @@ export default function Products() {
             <h1 className="text-2xl font-bold text-gray-900">Produtos</h1>
             <p className="text-gray-500 text-sm">Gerencie seu catálogo de produtos</p>
           </div>
-          <Button onClick={() => navigate("/products/new")} className="bg-purple-600 hover:bg-purple-700">
+          <Button onClick={() => navigate("/produtos/novo")} className="bg-purple-600 hover:bg-purple-700">
             <Plus className="w-4 h-4 mr-2" /> Novo Produto
           </Button>
         </div>
@@ -224,7 +223,7 @@ export default function Products() {
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => navigate("/products/new")}
+                  onClick={() => navigate("/produtos/novo")}
                 >
                   <Plus className="w-4 h-4 mr-2" /> Cadastrar Produto
                 </Button>
@@ -238,12 +237,12 @@ export default function Products() {
               <Card
                 key={product.id}
                 className="cursor-pointer hover:shadow-md transition-shadow overflow-hidden"
-                onClick={() => navigate(`/products/${product.id}`)}
+                onClick={() => navigate(`/produtos/${product.id}`)}
               >
                 <div className="aspect-[4/3] bg-gray-100 relative">
-                  {product.photoUrl ? (
+                  {product.photo ? (
                     <img
-                      src={product.photoUrl}
+                      src={product.photo}
                       alt={product.name}
                       className="w-full h-full object-cover"
                     />
@@ -252,7 +251,7 @@ export default function Products() {
                       <Package className="w-12 h-12" />
                     </div>
                   )}
-                  {product.currentStock <= (product.minStock || 0) && (
+                  {product.stock <= (product.minStock || 0) && (
                     <div className="absolute top-2 right-2">
                       <Badge variant="destructive" className="text-xs">
                         <AlertTriangle className="w-3 h-3 mr-1" />
@@ -264,13 +263,13 @@ export default function Products() {
                 <CardContent className="p-4">
                   <h3 className="font-medium text-gray-900 truncate">{product.name}</h3>
                   <p className="text-xs text-gray-500 mt-0.5">
-                    {product.brand || "Sem marca"} - {product.categoryLabel || product.category}
+                    {product.brand || "Sem marca"} - {product.category?.name || "-"}
                   </p>
                   <div className="flex items-center justify-between mt-3">
                     <p className="text-lg font-bold text-gray-900">
                       {formatCurrency(product.sellingPrice)}
                     </p>
-                    <StockBadge current={product.currentStock} min={product.minStock || 0} />
+                    <StockBadge current={product.stock} min={product.minStock || 0} />
                   </div>
                   {product.marginPercent !== undefined && (
                     <div className="mt-2">
@@ -302,9 +301,9 @@ export default function Products() {
                     <TableRow key={product.id} className="hover:bg-gray-50">
                       <TableCell>
                         <div className="flex items-center gap-3">
-                          {product.photoUrl ? (
+                          {product.photo ? (
                             <img
-                              src={product.photoUrl}
+                              src={product.photo}
                               alt={product.name}
                               className="w-10 h-10 rounded-lg object-cover"
                             />
@@ -322,14 +321,14 @@ export default function Products() {
                         </div>
                       </TableCell>
                       <TableCell className="text-sm">
-                        {product.categoryLabel || product.category}
+                        {product.category?.name || "-"}
                       </TableCell>
                       <TableCell className="text-sm">{product.brand || "-"}</TableCell>
                       <TableCell className="font-semibold">
                         {formatCurrency(product.sellingPrice)}
                       </TableCell>
                       <TableCell>
-                        <StockBadge current={product.currentStock} min={product.minStock || 0} />
+                        <StockBadge current={product.stock} min={product.minStock || 0} />
                       </TableCell>
                       <TableCell>
                         {product.marginPercent !== undefined ? (
@@ -343,7 +342,7 @@ export default function Products() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => navigate(`/products/${product.id}`)}
+                            onClick={() => navigate(`/produtos/${product.id}`)}
                             title="Visualizar"
                           >
                             <Eye className="w-4 h-4" />
@@ -351,7 +350,7 @@ export default function Products() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            onClick={() => navigate(`/products/${product.id}/edit`)}
+                            onClick={() => navigate(`/produtos/${product.id}/editar`)}
                             title="Editar"
                           >
                             <Pencil className="w-4 h-4" />

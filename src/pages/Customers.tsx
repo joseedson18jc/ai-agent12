@@ -41,12 +41,7 @@ export default function Customers() {
   const loadCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await customerService.list({
-        search,
-        status: statusFilter === "all" ? undefined : statusFilter,
-        page,
-        pageSize: PAGE_SIZE,
-      });
+      const result = await customerService.getAll(search, page, PAGE_SIZE);
       setCustomers(result.data || []);
       setTotalPages(result.totalPages || 1);
     } catch {
@@ -93,7 +88,7 @@ export default function Customers() {
             <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
             <p className="text-gray-500 text-sm">Gerencie sua base de clientes</p>
           </div>
-          <Button onClick={() => navigate("/customers/new")} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => navigate("/clientes/novo")} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 mr-2" /> Novo Cliente
           </Button>
         </div>
@@ -154,7 +149,7 @@ export default function Customers() {
                   <Button
                     variant="outline"
                     className="mt-4"
-                    onClick={() => navigate("/customers/new")}
+                    onClick={() => navigate("/clientes/novo")}
                   >
                     <Plus className="w-4 h-4 mr-2" /> Cadastrar Cliente
                   </Button>
@@ -187,10 +182,10 @@ export default function Customers() {
                       </div>
                       <p className="text-sm text-gray-500">{formatPhone(customer.phone)}</p>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => navigate(`/customers/${customer.id}`)}>
+                        <Button size="sm" variant="outline" onClick={() => navigate(`/clientes/${customer.id}`)}>
                           <Eye className="w-3 h-3 mr-1" /> Ver
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => navigate(`/customers/${customer.id}/edit`)}>
+                        <Button size="sm" variant="outline" onClick={() => navigate(`/clientes/${customer.id}/editar`)}>
                           <Pencil className="w-3 h-3 mr-1" /> Editar
                         </Button>
                         <Button size="sm" variant="outline" onClick={() => openWhatsApp(customer.phone)} className="text-green-600">
@@ -242,7 +237,7 @@ export default function Customers() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => navigate(`/customers/${customer.id}`)}
+                                onClick={() => navigate(`/clientes/${customer.id}`)}
                                 title="Visualizar"
                               >
                                 <Eye className="w-4 h-4" />
@@ -250,7 +245,7 @@ export default function Customers() {
                               <Button
                                 size="sm"
                                 variant="ghost"
-                                onClick={() => navigate(`/customers/${customer.id}/edit`)}
+                                onClick={() => navigate(`/clientes/${customer.id}/editar`)}
                                 title="Editar"
                               >
                                 <Pencil className="w-4 h-4" />

@@ -316,7 +316,7 @@ export default function Dashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Vendas Recentes</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/sales")} className="text-xs">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/vendas")} className="text-xs">
                   Ver todas <ArrowRight className="w-3 h-3 ml-1" />
                 </Button>
               </div>

@@ -4,6 +4,7 @@ import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import productService from "@/services/product.service";
+import api from "@/services/api";
 import { formatCurrency } from "@/utils/formatters";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -134,8 +135,8 @@ export default function ProductForm() {
 
   const loadSuppliers = async () => {
     try {
-      const result = await productService.getSuppliers();
-      setSuppliers(result || []);
+      const result = await api.get<any>("/suppliers?limit=100");
+      setSuppliers(result.data || []);
     } catch {
       // suppliers optional
     }
@@ -144,28 +145,29 @@ export default function ProductForm() {
   const loadProduct = async () => {
     setInitialLoading(true);
     try {
-      const product = await productService.getById(id!);
+      const response = await productService.getById(id!);
+      const product = response.data;
       form.reset({
         name: product.name || "",
-        category: product.category || "",
+        category: product.categoryId || "",
         brand: product.brand || "",
-        supplier: product.supplier || "",
-        sku: product.sku || "",
+        supplier: product.supplierId || "",
+        sku: product.barcode || "",
         barcode: product.barcode || "",
-        description: product.description || "",
+        description: "",
         costPrice: product.costPrice || 0,
         taxFreight: product.taxFreight || 0,
         desiredMarkup: product.desiredMarkup || 100,
         sellingPrice: product.sellingPrice || 0,
         minimumPrice: product.minimumPrice || 0,
-        currentStock: product.currentStock || 0,
+        currentStock: product.stock || 0,
         minStock: product.minStock || 0,
-        location: product.location || "",
-        active: product.active !== false,
-        notes: product.notes || "",
+        location: "",
+        active: !product.isDeleted,
+        notes: "",
       });
-      if (product.photoUrl) {
-        setPhotoPreview(product.photoUrl);
+      if (product.photo) {
+        setPhotoPreview(product.photo);
       }
     } catch {
       toast({
@@ -173,7 +175,7 @@ export default function ProductForm() {
         description: "Não foi possível carregar os dados do produto.",
         variant: "destructive",
       });
-      navigate("/products");
+      navigate("/produtos");
     } finally {
       setInitialLoading(false);
     }
@@ -207,14 +209,29 @@ export default function ProductForm() {
   const onSubmit = async (data: ProductFormData) => {
     setLoading(true);
     try {
+      const payload: any = {
+        name: data.name,
+        categoryId: data.category,
+        brand: data.brand,
+        supplierId: data.supplier || undefined,
+        barcode: data.barcode || data.sku,
+        costPrice: data.costPrice,
+        taxFreight: data.taxFreight,
+        desiredMarkup: data.desiredMarkup,
+        sellingPrice: data.sellingPrice,
+        minimumPrice: data.minimumPrice,
+        stock: data.currentStock,
+        minStock: data.minStock,
+      };
+
       if (isEditing) {
-        await productService.update(id!, data, photoFile || undefined);
+        await productService.update(id!, payload);
         toast({ title: "Sucesso", description: "Produto atualizado com sucesso!" });
       } else {
-        await productService.create(data, photoFile || undefined);
+        await productService.create(payload);
         toast({ title: "Sucesso", description: "Produto cadastrado com sucesso!" });
       }
-      navigate("/products");
+      navigate("/produtos");
     } catch (err: any) {
       toast({
         title: "Erro",
@@ -251,7 +268,7 @@ export default function ProductForm() {
       <div className="max-w-3xl mx-auto space-y-6">
         {/* Header */}
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/products")}>
+          <Button variant="ghost" size="sm" onClick={() => navigate("/produtos")}>
             <ArrowLeft className="w-4 h-4 mr-1" /> Voltar
           </Button>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -694,7 +711,7 @@ export default function ProductForm() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => navigate("/products")}
+                onClick={() => navigate("/produtos")}
                 disabled={loading}
               >
                 Cancelar

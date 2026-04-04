@@ -1,69 +1,63 @@
 // =====================
-// Enums
+// Enums (matching Prisma schema)
 // =====================
 
 export enum UserRole {
   ADMIN = "ADMIN",
-  MANAGER = "MANAGER",
   SELLER = "SELLER",
-  CASHIER = "CASHIER",
+  VIEWER = "VIEWER",
 }
 
 export enum CustomerStatus {
   ACTIVE = "ACTIVE",
   INACTIVE = "INACTIVE",
-  BLOCKED = "BLOCKED",
 }
 
 export enum LensType {
   SINGLE_VISION = "SINGLE_VISION",
   BIFOCAL = "BIFOCAL",
-  PROGRESSIVE = "PROGRESSIVE",
-  OCCUPATIONAL = "OCCUPATIONAL",
+  MULTIFOCAL = "MULTIFOCAL",
 }
 
 export enum LensTreatment {
-  ANTI_REFLECTIVE = "ANTI_REFLECTIVE",
+  ANTIREFLECTIVE = "ANTIREFLECTIVE",
   PHOTOCHROMIC = "PHOTOCHROMIC",
   BLUE_LIGHT = "BLUE_LIGHT",
-  POLARIZED = "POLARIZED",
-  UV_PROTECTION = "UV_PROTECTION",
+  TRANSITIONS = "TRANSITIONS",
 }
 
 export enum ProductCategoryType {
-  FRAME = "FRAME",
-  LENS = "LENS",
-  CONTACT_LENS = "CONTACT_LENS",
-  SUNGLASSES = "SUNGLASSES",
-  ACCESSORY = "ACCESSORY",
-  SERVICE = "SERVICE",
+  FRAMES_PRESCRIPTION = "FRAMES_PRESCRIPTION",
+  FRAMES_SUN = "FRAMES_SUN",
+  OPHTHALMIC_LENSES = "OPHTHALMIC_LENSES",
+  CONTACT_LENSES = "CONTACT_LENSES",
+  SUNGLASSES_READY = "SUNGLASSES_READY",
+  ACCESSORIES = "ACCESSORIES",
 }
 
 export enum SalesOrderStatus {
-  QUOTE = "QUOTE",
-  PENDING = "PENDING",
+  AWAITING_LENS = "AWAITING_LENS",
   IN_PRODUCTION = "IN_PRODUCTION",
-  READY = "READY",
+  READY_FOR_PICKUP = "READY_FOR_PICKUP",
   DELIVERED = "DELIVERED",
   CANCELLED = "CANCELLED",
 }
 
 export enum PaymentMethod {
   CASH = "CASH",
+  PIX = "PIX",
   CREDIT_CARD = "CREDIT_CARD",
   DEBIT_CARD = "DEBIT_CARD",
-  PIX = "PIX",
-  BANK_SLIP = "BANK_SLIP",
-  CHECK = "CHECK",
-  PROMISSORY = "PROMISSORY",
-  INSTALLMENT = "INSTALLMENT",
+  STORE_CREDIT = "STORE_CREDIT",
+  INSURANCE = "INSURANCE",
+  EXCHANGE = "EXCHANGE",
 }
 
 export enum InstallmentStatus {
   PENDING = "PENDING",
   PAID = "PAID",
   OVERDUE = "OVERDUE",
-  CANCELLED = "CANCELLED",
+  RENEGOTIATED = "RENEGOTIATED",
 }
 
 export enum BillStatus {
@@ -74,25 +68,24 @@ export enum BillStatus {
 }
 
 export enum BillFrequency {
-  ONE_TIME = "ONE_TIME",
   WEEKLY = "WEEKLY",
   MONTHLY = "MONTHLY",
+  BIMONTHLY = "BIMONTHLY",
   QUARTERLY = "QUARTERLY",
-  YEARLY = "YEARLY",
+  SEMIANNUAL = "SEMIANNUAL",
+  ANNUAL = "ANNUAL",
 }
 
 export enum CashMovementType {
+  INFLOW = "INFLOW",
+  OUTFLOW = "OUTFLOW",
   OPENING = "OPENING",
-  SALE = "SALE",
   WITHDRAWAL = "WITHDRAWAL",
-  DEPOSIT = "DEPOSIT",
-  ADJUSTMENT = "ADJUSTMENT",
-  CLOSING = "CLOSING",
+  SUPPLEMENT = "SUPPLEMENT",
 }
 
 export enum LensOrderStatus {
-  PENDING = "PENDING",
-  SENT = "SENT",
+  ORDERED = "ORDERED",
   IN_PRODUCTION = "IN_PRODUCTION",
   READY = "READY",
   RECEIVED = "RECEIVED",
@@ -100,19 +93,16 @@ export enum LensOrderStatus {
 }
 
 // =====================
-// Models
+// Models (matching Prisma schema field names)
 // =====================
 
 export interface User {
   id: string;
-  email: string;
   name: string;
+  email: string;
   role: UserRole;
-  phone?: string;
-  avatarUrl?: string;
   isActive: boolean;
-  storeId: string;
-  store?: Store;
+  lastLogin?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -120,15 +110,19 @@ export interface User {
 export interface Store {
   id: string;
   name: string;
-  cnpj: string;
-  email?: string;
+  cnpj?: string;
   phone?: string;
+  email?: string;
   address?: string;
   city?: string;
   state?: string;
   zipCode?: string;
-  logoUrl?: string;
-  isActive: boolean;
+  logo?: string;
+  defaultMarkup: number;
+  billAlertDays: number;
+  prescriptionAlertDays: number;
+  defaultMinStock: number;
+  printerType: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -137,21 +131,21 @@ export interface Customer {
   id: string;
   name: string;
   cpf?: string;
-  rg?: string;
+  phone: string;
+  whatsapp?: string;
   email?: string;
-  phone?: string;
-  mobilePhone?: string;
   birthDate?: string;
-  address?: string;
-  addressNumber?: string;
+  zipCode?: string;
+  street?: string;
+  number?: string;
   complement?: string;
   neighborhood?: string;
   city?: string;
   state?: string;
-  zipCode?: string;
+  photo?: string;
   notes?: string;
   status: CustomerStatus;
-  storeId: string;
+  isDeleted: boolean;
   prescriptions?: Prescription[];
   salesOrders?: SalesOrder[];
   createdAt: string;
@@ -161,26 +155,29 @@ export interface Customer {
 export interface Prescription {
   id: string;
   customerId: string;
-  customer?: Customer;
-  doctorName?: string;
-  doctorCRM?: string;
-  prescriptionDate: string;
-  expirationDate?: string;
-  // Olho direito (OD)
+  customer?: { id: string; name: string };
+  date: string;
+  doctor?: string;
+  doctorCrm?: string;
+  validity: string;
+  file?: string;
   odSpherical?: number;
   odCylindrical?: number;
   odAxis?: number;
-  odAddition?: number;
-  odPd?: number;
+  odDnp?: number;
   odHeight?: number;
-  // Olho esquerdo (OE)
-  oeSpherical?: number;
+  odAddition?: number;
+  oeSphrical?: number;
   oeCylindrical?: number;
   oeAxis?: number;
-  oeAddition?: number;
-  oePd?: number;
+  oeDnp?: number;
   oeHeight?: number;
+  oeAddition?: number;
+  lensType?: LensType;
+  treatments?: LensTreatment[];
   notes?: string;
+  isExpired: boolean;
+  isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -190,15 +187,21 @@ export interface Supplier {
   name: string;
   cnpj?: string;
   contactName?: string;
-  email?: string;
+  contactRole?: string;
   phone?: string;
-  address?: string;
+  whatsapp?: string;
+  email?: string;
+  zipCode?: string;
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
   city?: string;
   state?: string;
-  zipCode?: string;
+  category?: string;
+  paymentTerms?: string;
   notes?: string;
-  isActive: boolean;
-  storeId: string;
+  isDeleted: boolean;
   products?: Product[];
   createdAt: string;
   updatedAt: string;
@@ -208,8 +211,8 @@ export interface ProductCategory {
   id: string;
   name: string;
   type: ProductCategoryType;
-  description?: string;
-  storeId: string;
+  defaultMarkup: number;
+  isDeleted: boolean;
   products?: Product[];
   createdAt: string;
   updatedAt: string;
@@ -218,49 +221,55 @@ export interface ProductCategory {
 export interface Product {
   id: string;
   name: string;
-  sku?: string;
-  barcode?: string;
-  description?: string;
   categoryId: string;
   category?: ProductCategory;
-  supplierId?: string;
-  supplier?: Supplier;
   brand?: string;
   model?: string;
   color?: string;
   size?: string;
   material?: string;
-  costPrice: number;
-  salePrice: number;
+  supplierId?: string;
+  supplier?: Supplier;
+  barcode?: string;
+  photo?: string;
+  stock: number;
   minStock: number;
-  currentStock: number;
-  isActive: boolean;
-  storeId: string;
-  imageUrl?: string;
+  costPrice: number;
+  taxFreight: number;
+  totalCost: number;
+  desiredMarkup: number;
+  suggestedPrice: number;
+  minimumPrice: number;
+  sellingPrice: number;
+  marginPercent: number;
+  profitAmount: number;
+  isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface SalesOrder {
   id: string;
-  orderNumber: string;
+  orderNumber: number;
   customerId: string;
   customer?: Customer;
-  sellerId: string;
-  seller?: User;
   prescriptionId?: string;
   prescription?: Prescription;
-  status: SalesOrderStatus;
+  sellerId: string;
+  seller?: User;
+  date: string;
   subtotal: number;
-  discount: number;
+  discountPercent?: number;
+  discountAmount: number;
   total: number;
-  notes?: string;
-  deliveryDate?: string;
+  estimatedProfit: number;
+  status: SalesOrderStatus;
   cancelReason?: string;
+  notes?: string;
   items?: SalesOrderItem[];
   payments?: Payment[];
   lensOrders?: LensOrder[];
-  storeId: string;
+  isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -268,16 +277,13 @@ export interface SalesOrder {
 export interface SalesOrderItem {
   id: string;
   salesOrderId: string;
-  salesOrder?: SalesOrder;
-  productId: string;
+  productId?: string;
   product?: Product;
-  quantity: number;
+  description?: string;
   unitPrice: number;
-  discount: number;
+  quantity: number;
+  discountPercent?: number;
   total: number;
-  lensType?: LensType;
-  lensTreatments?: LensTreatment[];
-  notes?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -285,29 +291,27 @@ export interface SalesOrderItem {
 export interface Payment {
   id: string;
   salesOrderId: string;
-  salesOrder?: SalesOrder;
   method: PaymentMethod;
   amount: number;
-  paidAt?: string;
-  installmentCount?: number;
-  installments?: Installment[];
+  installmentCount: number;
   notes?: string;
-  storeId: string;
   createdAt: string;
   updatedAt: string;
+  installments?: Installment[];
 }
 
 export interface Installment {
   id: string;
   paymentId: string;
-  payment?: Payment;
-  installmentNumber: number;
+  number: number;
   amount: number;
   dueDate: string;
-  paidAt?: string;
+  paidDate?: string;
   paidAmount?: number;
   status: InstallmentStatus;
   notes?: string;
+  // Joined fields (from backend queries)
+  customerName?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -316,8 +320,6 @@ export interface BillCategory {
   id: string;
   name: string;
   description?: string;
-  storeId: string;
-  bills?: BillToPay[];
   createdAt: string;
   updatedAt: string;
 }
@@ -331,14 +333,14 @@ export interface BillToPay {
   supplier?: Supplier;
   amount: number;
   dueDate: string;
-  paidAt?: string;
+  paidDate?: string;
   paidAmount?: number;
   status: BillStatus;
-  frequency: BillFrequency;
+  isRecurring: boolean;
+  frequency?: BillFrequency;
+  parentBillId?: string;
   notes?: string;
-  documentNumber?: string;
-  barcode?: string;
-  storeId: string;
+  isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -349,15 +351,14 @@ export interface CashRegister {
   openedBy?: User;
   closedById?: string;
   closedBy?: User;
+  date: string;
   openingBalance: number;
   closingBalance?: number;
   expectedBalance?: number;
   difference?: number;
-  openedAt: string;
-  closedAt?: string;
+  isClosed: boolean;
   notes?: string;
   movements?: CashMovement[];
-  storeId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -365,12 +366,10 @@ export interface CashRegister {
 export interface CashMovement {
   id: string;
   cashRegisterId: string;
-  cashRegister?: CashRegister;
   type: CashMovementType;
   amount: number;
-  description: string;
+  description?: string;
   salesOrderId?: string;
-  salesOrder?: SalesOrder;
   userId: string;
   user?: User;
   createdAt: string;
@@ -382,13 +381,14 @@ export interface Laboratory {
   name: string;
   cnpj?: string;
   contactName?: string;
-  email?: string;
   phone?: string;
+  whatsapp?: string;
+  email?: string;
   address?: string;
   city?: string;
   state?: string;
-  isActive: boolean;
-  storeId: string;
+  terms?: string;
+  isDeleted: boolean;
   lensOrders?: LensOrder[];
   createdAt: string;
   updatedAt: string;
@@ -401,27 +401,24 @@ export interface LensOrder {
   laboratoryId: string;
   laboratory?: Laboratory;
   status: LensOrderStatus;
-  lensType: LensType;
+  lensType?: LensType;
   treatments?: LensTreatment[];
-  // OD
   odSpherical?: number;
   odCylindrical?: number;
   odAxis?: number;
-  odAddition?: number;
-  odPd?: number;
+  odDnp?: number;
   odHeight?: number;
-  // OE
-  oeSpherical?: number;
+  odAddition?: number;
+  oeSphrical?: number;
   oeCylindrical?: number;
   oeAxis?: number;
-  oeAddition?: number;
-  oePd?: number;
+  oeDnp?: number;
   oeHeight?: number;
+  oeAddition?: number;
   notes?: string;
   sentAt?: string;
   receivedAt?: string;
   estimatedDelivery?: string;
-  storeId: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -433,10 +430,8 @@ export interface AuditLog {
   action: string;
   entity: string;
   entityId: string;
-  oldData?: Record<string, unknown>;
-  newData?: Record<string, unknown>;
+  details?: Record<string, unknown>;
   ipAddress?: string;
-  storeId: string;
   createdAt: string;
 }
 
@@ -464,20 +459,22 @@ export interface PaginatedResponse<T> {
 // =====================
 
 export interface DashboardKPIs {
-  totalSalesToday: number;
-  totalSalesMonth: number;
-  totalCustomers: number;
-  pendingOrders: number;
-  overdueBills: number;
-  overdueInstallments: number;
-  lowStockProducts: number;
-  pendingLensOrders: number;
+  dailySales: number;
+  monthlySales: number;
+  monthlyProfit: number;
+  totalOrders: number;
   averageTicket: number;
-  conversionRate: number;
+  lowStockCount: number;
+  upcomingBills: number;
+  overdueInstallments: number;
+  salesCount?: number;
+  estimatedProfit?: number;
+  upcomingPayables?: number;
 }
 
 export interface SalesChartData {
   date: string;
+  label?: string;
   total: number;
   count: number;
 }
@@ -485,6 +482,7 @@ export interface SalesChartData {
 export interface TopProduct {
   productId: string;
   productName: string;
+  name?: string;
   category: string;
   totalSold: number;
   totalRevenue: number;
@@ -507,11 +505,15 @@ export interface SalesFilters {
 export interface ProductFilters {
   search?: string;
   categoryId?: string;
+  category?: string;
+  brand?: string;
   supplierId?: string;
   isActive?: boolean;
   lowStock?: boolean;
+  stockStatus?: string;
   page?: number;
   limit?: number;
+  pageSize?: number;
 }
 
 export interface BillFilters {
@@ -541,6 +543,5 @@ export interface RegisterData {
   name: string;
   email: string;
   password: string;
-  storeName: string;
-  storeCnpj: string;
+  role: string;
 }
