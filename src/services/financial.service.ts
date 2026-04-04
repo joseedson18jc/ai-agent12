@@ -45,7 +45,7 @@ export const financialService = {
     id: string,
     data: any
   ): Promise<ApiResponse<BillToPay>> {
-    return api.post<ApiResponse<BillToPay>>(`/bills/${id}/pay`, data);
+    return api.put<ApiResponse<BillToPay>>(`/bills/${id}/pay`, data);
   },
 
   async getUpcomingBills(): Promise<ApiResponse<BillToPay[]>> {
@@ -75,7 +75,7 @@ export const financialService = {
     id: string,
     data: any
   ): Promise<ApiResponse<Installment>> {
-    return api.post<ApiResponse<Installment>>(
+    return api.put<ApiResponse<Installment>>(
       `/payments/installments/${id}/pay`,
       data
     );
@@ -91,7 +91,11 @@ export const financialService = {
   async closeCashRegister(
     data: { reportedBalance: number; notes?: string }
   ): Promise<ApiResponse<CashRegister>> {
-    return api.post<ApiResponse<CashRegister>>("/cash/close", data);
+    // Get current register ID first
+    const current = await api.get<ApiResponse<CashRegister>>("/cash/current");
+    const registerId = current?.data?.id;
+    if (!registerId) throw new Error("Nenhum caixa aberto");
+    return api.post<ApiResponse<CashRegister>>(`/cash/close/${registerId}`, data);
   },
 
   async addMovement(data: {

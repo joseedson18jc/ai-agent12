@@ -28,6 +28,18 @@ const createSchema = z.object({
 
 const updateSchema = createSchema.partial();
 
+export async function list(req: Request, res: Response, next: NextFunction) {
+  try {
+    const search = req.query.search as string | undefined;
+    const expiring = req.query.expiring === 'true';
+    const expired = req.query.expired === 'true';
+    const prescriptions = await prescriptionService.list(search, expiring, expired);
+    res.json({ success: true, data: prescriptions });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function listByCustomer(req: Request, res: Response, next: NextFunction) {
   try {
     const prescriptions = await prescriptionService.listByCustomer(req.params.customerId);

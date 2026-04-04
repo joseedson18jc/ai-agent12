@@ -2,6 +2,33 @@ import prisma from '../utils/prisma.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { createAuditLog } from './auditService.js';
 
+export async function list(search?: string, expiring?: boolean, expired?: boolean) {
+  const where: any = { isDeleted: false };
+
+  if (search) {
+    where.OR = [
+      { customer: { name: { contains: search, mode: 'insensitive' } } },
+      { doctor: { contains: search, mode: 'insensitive' } },
+    ];
+  }
+
+  if (expired) {
+    where.isExpired = true;
+  } else if (expiring) {
+    const now = new Date();
+    const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+    where.isExpired = false;
+    where.validity = { lte: thirtyDaysFromNow, gte: now };
+  }
+
+  return prisma.prescription.findMany({
+    where,
+    orderBy: { date: 'desc' },
+    include: { customer: { select: { id: true, name: true } } },
+    take: 100,
+  });
+}
+
 export async function listByCustomer(customerId: string) {
   return prisma.prescription.findMany({
     where: { customerId, isDeleted: false },
