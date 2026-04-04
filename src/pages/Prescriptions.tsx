@@ -32,7 +32,7 @@ export default function Prescriptions() {
       if (search) params.set("search", search);
       if (filter === "expiring") params.set("expiring", "true");
       if (filter === "expired") params.set("expired", "true");
-      const res = await api.get<any>(`/api/prescriptions?${params}`);
+      const res = await api.get<any>(`/prescriptions?${params}`);
       if (res.success) setPrescriptions(res.data || []);
     } catch {
       toast({ title: "Erro", description: "Erro ao carregar receitas", variant: "destructive" });

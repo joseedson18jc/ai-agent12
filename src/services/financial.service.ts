@@ -12,7 +12,7 @@ import type {
 
 export const financialService = {
   // === Contas a Pagar ===
-  async getBills(
+  async getAllBills(
     filters?: BillFilters
   ): Promise<PaginatedResponse<BillToPay>> {
     const params = new URLSearchParams();
@@ -26,79 +26,72 @@ export const financialService = {
       if (filters.limit) params.set("limit", String(filters.limit));
     }
     return api.get<PaginatedResponse<BillToPay>>(
-      `/financial/bills?${params.toString()}`
+      `/bills?${params.toString()}`
     );
   },
 
-  async createBill(data: Partial<BillToPay>): Promise<ApiResponse<BillToPay>> {
-    return api.post<ApiResponse<BillToPay>>("/financial/bills", data);
+  async createBill(data: any): Promise<ApiResponse<BillToPay>> {
+    return api.post<ApiResponse<BillToPay>>("/bills", data);
   },
 
   async updateBill(
     id: string,
     data: Partial<BillToPay>
   ): Promise<ApiResponse<BillToPay>> {
-    return api.put<ApiResponse<BillToPay>>(`/financial/bills/${id}`, data);
+    return api.put<ApiResponse<BillToPay>>(`/bills/${id}`, data);
   },
 
   async payBill(
     id: string,
-    paidAmount: number,
-    paidAt?: string
+    data: any
   ): Promise<ApiResponse<BillToPay>> {
-    return api.post<ApiResponse<BillToPay>>(`/financial/bills/${id}/pay`, {
-      paidAmount,
-      paidAt,
-    });
+    return api.post<ApiResponse<BillToPay>>(`/bills/${id}/pay`, data);
   },
 
   async getUpcomingBills(): Promise<ApiResponse<BillToPay[]>> {
-    return api.get<ApiResponse<BillToPay[]>>("/financial/bills/upcoming");
+    return api.get<ApiResponse<BillToPay[]>>("/bills/upcoming");
   },
 
   async getOverdueBills(): Promise<ApiResponse<BillToPay[]>> {
-    return api.get<ApiResponse<BillToPay[]>>("/financial/bills/overdue");
+    return api.get<ApiResponse<BillToPay[]>>("/bills/overdue");
   },
 
   // === Contas a Receber (Parcelas) ===
   async getReceivables(
-    page: number = 1,
-    limit: number = 20
-  ): Promise<PaginatedResponse<Installment>> {
-    const params = new URLSearchParams();
-    params.set("page", String(page));
-    params.set("limit", String(limit));
+    params?: any
+  ): Promise<any> {
+    const searchParams = new URLSearchParams();
+    if (params) {
+      if (params.status) searchParams.set("status", params.status);
+      if (params.page) searchParams.set("page", String(params.page));
+      if (params.limit) searchParams.set("limit", String(params.limit));
+    }
     return api.get<PaginatedResponse<Installment>>(
-      `/financial/receivables?${params.toString()}`
+      `/payments/receivables?${searchParams.toString()}`
     );
   },
 
   async payInstallment(
     id: string,
-    paidAmount: number,
-    paidAt?: string
+    data: any
   ): Promise<ApiResponse<Installment>> {
     return api.post<ApiResponse<Installment>>(
-      `/financial/installments/${id}/pay`,
-      { paidAmount, paidAt }
+      `/payments/installments/${id}/pay`,
+      data
     );
   },
 
   // === Caixa ===
-  async openRegister(
-    openingBalance: number
+  async openCashRegister(
+    data: { openingBalance: number }
   ): Promise<ApiResponse<CashRegister>> {
-    return api.post<ApiResponse<CashRegister>>("/financial/cash/open", {
-      openingBalance,
-    });
+    return api.post<ApiResponse<CashRegister>>("/cash/open", data);
   },
 
-  async closeRegister(
-    notes?: string
+  async closeCashRegister(
+    data: { reportedBalance: number; notes?: string }
   ): Promise<ApiResponse<CashRegister>> {
-    return api.post<ApiResponse<CashRegister>>("/financial/cash/close", {
-      notes,
-    });
+    return api.post<ApiResponse<CashRegister>>("/cash/close", data);
   },
 
   async addMovement(data: {
@@ -107,13 +100,13 @@ export const financialService = {
     description: string;
   }): Promise<ApiResponse<CashMovement>> {
     return api.post<ApiResponse<CashMovement>>(
-      "/financial/cash/movement",
+      "/cash/movement",
       data
     );
   },
 
-  async getCurrentRegister(): Promise<ApiResponse<CashRegister>> {
-    return api.get<ApiResponse<CashRegister>>("/financial/cash/current");
+  async getCurrentCash(): Promise<ApiResponse<CashRegister>> {
+    return api.get<ApiResponse<CashRegister>>("/cash/current");
   },
 
   async getCashHistory(
@@ -124,7 +117,7 @@ export const financialService = {
     params.set("page", String(page));
     params.set("limit", String(limit));
     return api.get<PaginatedResponse<CashRegister>>(
-      `/financial/cash/history?${params.toString()}`
+      `/cash/history?${params.toString()}`
     );
   },
 };

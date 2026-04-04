@@ -51,7 +51,7 @@ export default function SalesDetail() {
   const fetchOrder = async () => {
     setLoading(true);
     try {
-      const res = await api.get<any>(`/api/sales/${id}`);
+      const res = await api.get<any>(`/sales/${id}`);
       if (res.success) setOrder(res.data);
     } catch {
       toast({ title: "Erro", description: "Erro ao carregar venda", variant: "destructive" });
@@ -64,7 +64,7 @@ export default function SalesDetail() {
 
   const updateStatus = async (status: string) => {
     try {
-      await api.put(`/api/sales/${id}/status`, { status });
+      await api.put(`/sales/${id}/status`, { status });
       toast({ title: "Sucesso", description: "Status atualizado" });
       fetchOrder();
     } catch {
@@ -79,7 +79,7 @@ export default function SalesDetail() {
     }
     setCancelling(true);
     try {
-      await api.put(`/api/sales/${id}/cancel`, { reason: cancelReason });
+      await api.put(`/sales/${id}/cancel`, { reason: cancelReason });
       toast({ title: "Sucesso", description: "Venda cancelada" });
       setCancelDialogOpen(false);
       fetchOrder();
