@@ -95,7 +95,7 @@ app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`[ÓticaGestão] Servidor rodando na porta ${PORT}`);
+  console.log(`[Ótica Império] Servidor rodando na porta ${PORT}`);
   startScheduler();
 });
 

@@ -121,7 +121,7 @@ export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
             <Eye className="h-5 w-5 text-white" />
           </div>
           <h1 className="text-lg font-bold text-gray-900">
-            Ótica<span className="text-blue-600">Gestão</span>
+            Ótica <span className="text-blue-600">Império</span>
           </h1>
         </div>
 

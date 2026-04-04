@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-echo "=== ÓticaGestão Start ==="
+echo "=== Ótica Império Start ==="
 echo "NODE_ENV: $NODE_ENV"
 echo "PORT: $PORT"
 echo "Working directory: $(pwd)"

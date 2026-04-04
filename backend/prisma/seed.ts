@@ -29,10 +29,10 @@ async function main() {
   // ===== STORE CONFIG =====
   const store = await prisma.store.create({
     data: {
-      name: 'ÓticaGestão - Centro',
+      name: 'Ótica Império - Centro',
       cnpj: '12345678000190',
       phone: '11987654321',
-      email: 'contato@oticagestao.com.br',
+      email: 'contato@oticaimperio.com.br',
       address: 'Rua das Flores, 123 - Centro',
       city: 'São Paulo',
       state: 'SP',
@@ -53,7 +53,7 @@ async function main() {
   const admin = await prisma.user.create({
     data: {
       name: 'Maria Silva',
-      email: 'maria@oticagestao.com.br',
+      email: 'maria@oticaimperio.com.br',
       password: adminPassword,
       role: 'ADMIN',
     },
@@ -62,7 +62,7 @@ async function main() {
   const seller = await prisma.user.create({
     data: {
       name: 'João Santos',
-      email: 'joao@oticagestao.com.br',
+      email: 'joao@oticaimperio.com.br',
       password: sellerPassword,
       role: 'SELLER',
     },
@@ -314,9 +314,9 @@ async function main() {
     { name: 'Acuvue Oasys (caixa 6)', categoryId: catContato.id, brand: 'Johnson & Johnson', model: 'Acuvue Oasys', supplierId: suppliers[1].id, stock: 20, minStock: 5, costPrice: 90, taxFreight: 5, desiredMarkup: 80, sellingPrice: 175, minimumPrice: 130 },
     { name: 'Air Optix Aqua (caixa 6)', categoryId: catContato.id, brand: 'Alcon', model: 'Air Optix Aqua', supplierId: suppliers[1].id, stock: 15, minStock: 5, costPrice: 85, taxFreight: 5, desiredMarkup: 80, sellingPrice: 165, minimumPrice: 120 },
     // Acessórios
-    { name: 'Estojo Rígido Premium', categoryId: catAcessorios.id, brand: 'ÓticaGestão', stock: 30, minStock: 10, costPrice: 8, taxFreight: 1, desiredMarkup: 200, sellingPrice: 30, minimumPrice: 15 },
+    { name: 'Estojo Rígido Premium', categoryId: catAcessorios.id, brand: 'Ótica Império', stock: 30, minStock: 10, costPrice: 8, taxFreight: 1, desiredMarkup: 200, sellingPrice: 30, minimumPrice: 15 },
     { name: 'Spray Limpa Lentes 120ml', categoryId: catAcessorios.id, brand: 'Clean Vision', stock: 25, minStock: 10, costPrice: 5, taxFreight: 1, desiredMarkup: 200, sellingPrice: 20, minimumPrice: 12 },
-    { name: 'Cordão Salva Óculos', categoryId: catAcessorios.id, brand: 'ÓticaGestão', stock: 20, minStock: 5, costPrice: 3, taxFreight: 0.5, desiredMarkup: 250, sellingPrice: 15, minimumPrice: 8 },
+    { name: 'Cordão Salva Óculos', categoryId: catAcessorios.id, brand: 'Ótica Império', stock: 20, minStock: 5, costPrice: 3, taxFreight: 0.5, desiredMarkup: 250, sellingPrice: 15, minimumPrice: 8 },
   ];
 
   const products = [];
@@ -836,8 +836,8 @@ async function main() {
   console.log('\nSeed concluído com sucesso!');
   console.log('========================================');
   console.log('Credenciais de acesso:');
-  console.log('  Admin: maria@oticagestao.com.br / admin123');
-  console.log('  Vendedor: joao@oticagestao.com.br / vendedor123');
+  console.log('  Admin: maria@oticaimperio.com.br / admin123');
+  console.log('  Vendedor: joao@oticaimperio.com.br / vendedor123');
   console.log('========================================');
 }
 
