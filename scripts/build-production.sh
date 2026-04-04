@@ -1,13 +1,13 @@
 #!/bin/bash
 # ============================================================
-# ÓticaGestão — Build de Produção
+# Ótica Império — Build de Produção
 # Compila frontend + backend em um único pacote
 # ============================================================
 
 set -e
 
 echo "=========================================="
-echo "  ÓticaGestão — Build de Produção"
+echo "  Ótica Império — Build de Produção"
 echo "=========================================="
 
 # 1. Build Frontend

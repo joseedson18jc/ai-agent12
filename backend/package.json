@@ -1,7 +1,7 @@
 {
   "name": "otica-gestao-backend",
   "version": "1.0.0",
-  "description": "Backend CRM para varejo óptico brasileiro - ÓticaGestão",
+  "description": "Backend CRM para varejo óptico brasileiro - Ótica Império",
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",

@@ -1,5 +1,5 @@
 # ============================================================
-# ÓticaGestão — Dockerfile de Produção (Monolito)
+# Ótica Império — Dockerfile de Produção (Monolito)
 # Frontend (Vite build) + Backend (Express) em uma única imagem
 # ============================================================
 

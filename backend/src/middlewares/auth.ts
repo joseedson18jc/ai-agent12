@@ -17,7 +17,7 @@ declare global {
   }
 }
 
-const JWT_SECRET = process.env.JWT_SECRET || 'otica-gestao-secret-key-change-in-production';
+const JWT_SECRET = process.env.JWT_SECRET || 'otica-imperio-secret-key-change-in-production';
 
 export function authenticate(req: Request, _res: Response, next: NextFunction): void {
   try {
