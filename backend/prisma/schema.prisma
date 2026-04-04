@@ -1,0 +1,606 @@
+// ============================================================
+// ÓticaGestão — Schema do Banco de Dados (PostgreSQL + Prisma)
+// CRM completo para varejo óptico brasileiro
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum UserRole {
+  ADMIN
+  SELLER
+  VIEWER
+}
+
+enum CustomerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LensType {
+  SINGLE_VISION    // Visão simples
+  BIFOCAL          // Bifocal
+  MULTIFOCAL       // Multifocal/Progressiva
+}
+
+enum LensTreatment {
+  ANTIREFLECTIVE   // Antirreflexo
+  PHOTOCHROMIC     // Fotossensível
+  BLUE_LIGHT       // Blue Light / Filtro de Luz Azul
+  TRANSITIONS      // Transitions
+}
+
+enum ProductCategoryType {
+  FRAMES_PRESCRIPTION  // Armações de grau
+  FRAMES_SUN           // Armações de sol
+  OPHTHALMIC_LENSES    // Lentes oftálmicas
+  CONTACT_LENSES       // Lentes de contato
+  SUNGLASSES_READY     // Óculos de sol prontos
+  ACCESSORIES          // Acessórios
+}
+
+enum SalesOrderStatus {
+  AWAITING_LENS       // Aguardando lente
+  IN_PRODUCTION       // Em produção
+  READY_FOR_PICKUP    // Pronta para retirada
+  DELIVERED           // Entregue
+  CANCELLED           // Cancelada
+}
+
+enum PaymentMethod {
+  CASH               // Dinheiro
+  PIX                // PIX
+  CREDIT_CARD        // Cartão de crédito
+  DEBIT_CARD         // Cartão de débito
+  STORE_CREDIT       // Fiado / Crediário da loja
+  INSURANCE          // Convênio / Plano de saúde
+  EXCHANGE           // Troca / Cortesia
+}
+
+enum InstallmentStatus {
+  PENDING            // Pendente
+  PAID               // Paga
+  OVERDUE            // Atrasada
+  RENEGOTIATED       // Renegociada
+}
+
+enum BillStatus {
+  PENDING            // Pendente
+  PAID               // Paga
+  OVERDUE            // Atrasada
+  CANCELLED          // Cancelada
+}
+
+enum BillFrequency {
+  WEEKLY             // Semanal
+  MONTHLY            // Mensal
+  BIMONTHLY          // Bimestral
+  QUARTERLY          // Trimestral
+  SEMIANNUAL         // Semestral
+  ANNUAL             // Anual
+}
+
+enum CashMovementType {
+  INFLOW             // Entrada
+  OUTFLOW            // Saída
+  OPENING            // Abertura
+  WITHDRAWAL         // Sangria
+  SUPPLEMENT         // Suprimento
+}
+
+enum LensOrderStatus {
+  ORDERED            // Pedido enviado
+  IN_PRODUCTION      // Em produção
+  READY              // Pronta
+  RECEIVED           // Recebida
+  CANCELLED          // Cancelada
+}
+
+// ============================================================
+// TABELAS
+// ============================================================
+
+// --- Configurações da Loja ---
+model Store {
+  id        String   @id @default(uuid())
+  name      String   // Nome da loja
+  cnpj      String?  @unique
+  phone     String?
+  email     String?
+  address   String?
+  city      String?
+  state     String?
+  zipCode   String?
+  logo      String?  // URL da imagem
+  // Configurações
+  defaultMarkup        Float    @default(100) // Markup padrão (%)
+  billAlertDays        Int      @default(5)   // Dias de alerta para contas a pagar
+  prescriptionAlertDays Int     @default(30)  // Dias de alerta para vencimento de receita
+  defaultMinStock      Int      @default(2)   // Estoque mínimo padrão
+  printerType          String   @default("A4") // Tipo de impressora: "58mm", "80mm", "A4"
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("stores")
+}
+
+// --- Usuários ---
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // Hash bcrypt
+  role      UserRole @default(SELLER)
+  isActive  Boolean  @default(true)
+  lastLogin DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  salesOrders   SalesOrder[]   @relation("seller")
+  cashRegisters CashRegister[]
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+// --- Clientes ---
+model Customer {
+  id          String         @id @default(uuid())
+  name        String
+  cpf         String?        @unique
+  phone       String
+  whatsapp    String?
+  email       String?
+  birthDate   DateTime?
+  // Endereço
+  zipCode     String?
+  street      String?
+  number      String?
+  complement  String?
+  neighborhood String?
+  city        String?
+  state       String?
+  // Extras
+  photo       String?        // URL da foto
+  notes       String?        // Observações
+  status      CustomerStatus @default(ACTIVE)
+  isDeleted   Boolean        @default(false) // Soft delete
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relações
+  prescriptions Prescription[]
+  salesOrders   SalesOrder[]
+
+  @@index([name])
+  @@index([cpf])
+  @@index([phone])
+  @@index([birthDate])
+  @@map("customers")
+}
+
+// --- Receitas / Prescrições Ópticas ---
+model Prescription {
+  id          String   @id @default(uuid())
+  customerId  String
+  date        DateTime // Data da receita
+  doctor      String?  // Nome do médico
+  doctorCrm   String?  // CRM do médico
+  validity    DateTime // Validade da receita
+  file        String?  // URL do arquivo (foto/PDF)
+
+  // Olho Direito (OD)
+  odSpherical    Float?   // Esférico
+  odCylindrical  Float?   // Cilíndrico
+  odAxis         Int?     // Eixo (0-180)
+  odDnp          Float?   // DNP (mm)
+  odHeight       Float?   // Altura (multifocal)
+  odAddition     Float?   // Adição (multifocal)
+
+  // Olho Esquerdo (OE)
+  oeSphrical     Float?   // Esférico
+  oeCylindrical  Float?   // Cilíndrico
+  oeAxis         Int?     // Eixo (0-180)
+  oeDnp          Float?   // DNP (mm)
+  oeHeight       Float?   // Altura (multifocal)
+  oeAddition     Float?   // Adição (multifocal)
+
+  // Tipo e tratamentos
+  lensType       LensType?
+  treatments     LensTreatment[]
+  notes          String?
+
+  isExpired   Boolean  @default(false)
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relações
+  customer    Customer     @relation(fields: [customerId], references: [id])
+  salesOrders SalesOrder[]
+
+  @@index([customerId])
+  @@index([validity])
+  @@map("prescriptions")
+}
+
+// --- Fornecedores ---
+model Supplier {
+  id              String  @id @default(uuid())
+  name            String  // Razão social / Nome fantasia
+  cnpj            String? @unique
+  contactName     String? // Nome do contato principal
+  contactRole     String? // Cargo do contato
+  phone           String?
+  whatsapp        String?
+  email           String?
+  // Endereço
+  zipCode         String?
+  street          String?
+  number          String?
+  complement      String?
+  neighborhood    String?
+  city            String?
+  state           String?
+  // Extras
+  category        String?  // Categoria de produtos fornecidos
+  paymentTerms    String?  // Condições de pagamento (ex: "30/60/90")
+  notes           String?
+  isDeleted       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relações
+  products   Product[]
+  billsToPay BillToPay[]
+
+  @@index([name])
+  @@index([cnpj])
+  @@map("suppliers")
+}
+
+// --- Categorias de Produto ---
+model ProductCategory {
+  id            String              @id @default(uuid())
+  name          String              @unique
+  type          ProductCategoryType
+  defaultMarkup Float               @default(100) // Markup padrão (%)
+  isDeleted     Boolean             @default(false)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  // Relações
+  products Product[]
+
+  @@map("product_categories")
+}
+
+// --- Produtos ---
+model Product {
+  id          String  @id @default(uuid())
+  name        String  // Nome/Descrição
+  categoryId  String
+  brand       String? // Marca
+  model       String? // Modelo / Referência
+  color       String?
+  size        String? // Tamanho/Aro (ex: 52-18-140)
+  material    String? // Material (acetato, metal, etc.)
+  supplierId  String?
+  barcode     String? @unique // Código de barras / SKU
+  photo       String? // URL da foto
+
+  // Estoque
+  stock       Int     @default(0)
+  minStock    Int     @default(2)
+
+  // Financeiro
+  costPrice      Float   // Preço de custo
+  taxFreight     Float   @default(0) // Impostos/frete rateado
+  totalCost      Float   // Custo total real = costPrice + taxFreight
+  desiredMarkup  Float   @default(100) // Markup desejado (%)
+  suggestedPrice Float   // Preço de venda sugerido (calculado)
+  minimumPrice   Float   // Preço mínimo de venda
+  sellingPrice   Float   // Preço de venda praticado
+  marginPercent  Float   // Margem (%)
+  profitAmount   Float   // Lucro bruto (R$)
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  category       ProductCategory  @relation(fields: [categoryId], references: [id])
+  supplier       Supplier?        @relation(fields: [supplierId], references: [id])
+  salesOrderItems SalesOrderItem[]
+
+  @@index([name])
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([barcode])
+  @@index([stock])
+  @@map("products")
+}
+
+// --- Ordens de Serviço / Vendas ---
+model SalesOrder {
+  id              String           @id @default(uuid())
+  orderNumber     Int              @unique @default(autoincrement())
+  customerId      String
+  prescriptionId  String?
+  sellerId        String
+  date            DateTime         @default(now())
+  // Valores
+  subtotal        Float            @default(0)
+  discountPercent Float?           // Desconto geral (%)
+  discountAmount  Float            @default(0) // Desconto geral (R$)
+  total           Float            @default(0)
+  estimatedProfit Float            @default(0) // Lucro bruto estimado (admin only)
+  // Status e notas
+  status          SalesOrderStatus @default(AWAITING_LENS)
+  cancelReason    String?          // Motivo de cancelamento (obrigatório se cancelada)
+  notes           String?
+  isDeleted       Boolean          @default(false)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  // Relações
+  customer     Customer         @relation(fields: [customerId], references: [id])
+  prescription Prescription?    @relation(fields: [prescriptionId], references: [id])
+  seller       User             @relation("seller", fields: [sellerId], references: [id])
+  items        SalesOrderItem[]
+  payments     Payment[]
+  lensOrders   LensOrder[]
+  cashMovements CashMovement[]
+
+  @@index([customerId])
+  @@index([sellerId])
+  @@index([date])
+  @@index([status])
+  @@index([orderNumber])
+  @@map("sales_orders")
+}
+
+// --- Itens da Ordem de Serviço ---
+model SalesOrderItem {
+  id           String  @id @default(uuid())
+  salesOrderId String
+  productId    String?
+  // Caso seja serviço manual (ajuste, conserto)
+  description  String?
+  unitPrice    Float
+  quantity     Int     @default(1)
+  discountPercent Float?
+  discountAmount  Float  @default(0)
+  subtotal     Float
+  costPrice    Float   @default(0) // Custo unitário no momento da venda (para cálculo de lucro)
+  createdAt    DateTime @default(now())
+
+  // Relações
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+  product    Product?   @relation(fields: [productId], references: [id])
+
+  @@index([salesOrderId])
+  @@index([productId])
+  @@map("sales_order_items")
+}
+
+// --- Pagamentos ---
+model Payment {
+  id           String        @id @default(uuid())
+  salesOrderId String
+  method       PaymentMethod
+  amount       Float
+  // Detalhes de cartão
+  cardBrand    String?       // Bandeira (Visa, Master, etc.)
+  cardInstallments Int?      // Número de parcelas no cartão
+  // Detalhes de fiado/crediário
+  interestRate Float?        // Taxa de juros (% ao mês)
+  // Para troca/cortesia
+  justification String?      // Justificativa obrigatória
+  createdAt    DateTime      @default(now())
+
+  // Relações
+  salesOrder   SalesOrder    @relation(fields: [salesOrderId], references: [id])
+  installments Installment[]
+
+  @@index([salesOrderId])
+  @@index([method])
+  @@map("payments")
+}
+
+// --- Parcelas (Fiado/Crediário) ---
+model Installment {
+  id            String            @id @default(uuid())
+  paymentId     String
+  number        Int               // Número da parcela (1, 2, 3...)
+  amount        Float             // Valor da parcela
+  dueDate       DateTime          // Data de vencimento
+  paidDate      DateTime?         // Data do pagamento efetivo
+  paidAmount    Float?            // Valor efetivamente pago
+  status        InstallmentStatus @default(PENDING)
+  paymentMethod PaymentMethod?    // Forma de pagamento da parcela
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  // Relações
+  payment Payment @relation(fields: [paymentId], references: [id])
+
+  @@index([paymentId])
+  @@index([dueDate])
+  @@index([status])
+  @@map("installments")
+}
+
+// --- Categorias de Contas a Pagar ---
+model BillCategory {
+  id        String  @id @default(uuid())
+  name      String  @unique // Aluguel, Energia, Salários, etc.
+  isDeleted Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  // Relações
+  bills BillToPay[]
+
+  @@map("bill_categories")
+}
+
+// --- Contas a Pagar ---
+model BillToPay {
+  id            String        @id @default(uuid())
+  description   String
+  categoryId    String
+  supplierId    String?       // Vinculado ao fornecedor (se aplicável)
+  amount        Float
+  dueDate       DateTime
+  paidDate      DateTime?
+  status        BillStatus    @default(PENDING)
+  paymentMethod PaymentMethod?
+  receipt       String?       // URL do comprovante
+  isRecurring   Boolean       @default(false)
+  frequency     BillFrequency?
+  parentBillId  String?       // Referência à conta original (para recorrentes geradas)
+  notes         String?
+  isDeleted     Boolean       @default(false)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relações
+  category      BillCategory  @relation(fields: [categoryId], references: [id])
+  supplier      Supplier?     @relation(fields: [supplierId], references: [id])
+  parentBill    BillToPay?    @relation("RecurringBills", fields: [parentBillId], references: [id])
+  childBills    BillToPay[]   @relation("RecurringBills")
+  cashMovements CashMovement[]
+
+  @@index([categoryId])
+  @@index([supplierId])
+  @@index([dueDate])
+  @@index([status])
+  @@map("bills_to_pay")
+}
+
+// --- Caixa ---
+model CashRegister {
+  id              String   @id @default(uuid())
+  date            DateTime @default(now())
+  openingBalance  Float    // Valor de abertura
+  closingBalance  Float?   // Total calculado pelo sistema
+  reportedBalance Float?   // Total informado manualmente
+  difference      Float?   // Diferença (sobra/falta)
+  isClosed        Boolean  @default(false)
+  userId          String   // Quem abriu/fechou
+  notes           String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relações
+  user      User           @relation(fields: [userId], references: [id])
+  movements CashMovement[]
+
+  @@index([date])
+  @@index([userId])
+  @@map("cash_registers")
+}
+
+// --- Movimentações de Caixa ---
+model CashMovement {
+  id              String           @id @default(uuid())
+  cashRegisterId  String
+  type            CashMovementType
+  amount          Float
+  description     String?
+  salesOrderId    String?          // Vinculado a venda (se entrada)
+  billToPayId     String?          // Vinculado a conta (se saída)
+  createdAt       DateTime         @default(now())
+
+  // Relações
+  cashRegister CashRegister @relation(fields: [cashRegisterId], references: [id])
+  salesOrder   SalesOrder?  @relation(fields: [salesOrderId], references: [id])
+  billToPay    BillToPay?   @relation(fields: [billToPayId], references: [id])
+
+  @@index([cashRegisterId])
+  @@index([type])
+  @@map("cash_movements")
+}
+
+// --- Laboratórios ---
+model Laboratory {
+  id        String  @id @default(uuid())
+  name      String
+  phone     String?
+  whatsapp  String?
+  email     String?
+  contactName String?
+  terms     String? // Condições comerciais
+  notes     String?
+  isDeleted Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relações
+  lensOrders LensOrder[]
+
+  @@map("laboratories")
+}
+
+// --- Pedidos de Lente ao Laboratório ---
+model LensOrder {
+  id               String          @id @default(uuid())
+  salesOrderId     String
+  laboratoryId     String
+  // Dados da receita (copiados no momento do pedido para histórico)
+  prescriptionData Json?           // JSON com os dados completos da receita
+  lensType         String?
+  treatments       String?
+  orderDate        DateTime        @default(now())
+  expectedDelivery DateTime?
+  receivedDate     DateTime?
+  status           LensOrderStatus @default(ORDERED)
+  cost             Float           @default(0) // Custo cobrado pelo laboratório
+  notes            String?
+  isDeleted        Boolean         @default(false)
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  // Relações
+  salesOrder SalesOrder @relation(fields: [salesOrderId], references: [id])
+  laboratory Laboratory @relation(fields: [laboratoryId], references: [id])
+
+  @@index([salesOrderId])
+  @@index([laboratoryId])
+  @@index([status])
+  @@index([expectedDelivery])
+  @@map("lens_orders")
+}
+
+// --- Log de Auditoria ---
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  action    String   // CREATE, UPDATE, DELETE, LOGIN, FORCE_SELL_BELOW_MIN, etc.
+  entity    String   // Nome da entidade (Customer, Product, SalesOrder, etc.)
+  entityId  String?  // ID do registro afetado
+  details   Json?    // Detalhes adicionais (valores antigos/novos, justificativa, etc.)
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  // Relações
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entity])
+  @@index([entityId])
+  @@index([timestamp])
+  @@map("audit_logs")
+}
