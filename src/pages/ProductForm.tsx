@@ -22,8 +22,23 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import {
+  Collapsible, CollapsibleContent, CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
   ArrowLeft, Loader2, Upload, X, Calculator, AlertTriangle, Package,
+  ChevronDown, ChevronRight, Sparkles, Info, Building2, CreditCard,
+  Receipt, Users, Percent, Truck, Scale,
 } from "lucide-react";
+
+// ── AI-estimated defaults for a small Brazilian optical shop (Simples Nacional) ──
+const AI_DEFAULTS = {
+  taxPercent: 10.0,        // Simples Nacional average ~6-15.5%
+  cardFeePercent: 3.5,     // Credit/debit card processing fee
+  commissionPercent: 5.0,  // Sales commission
+  operationalPercent: 20.0,// Rent, utilities, salaries, insurance (~15-30%)
+  otherPercent: 2.0,       // Packaging, losses, shrinkage
+};
+const AI_TOTAL = Object.values(AI_DEFAULTS).reduce((a, b) => a + b, 0); // ~40.5%
 
 const CATEGORIES = [
   { value: "frames", label: "Armações" },
@@ -68,6 +83,14 @@ export default function ProductForm() {
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [suppliers, setSuppliers] = useState<any[]>([]);
   const [autoSKU, setAutoSKU] = useState(false);
+  const [costsOpen, setCostsOpen] = useState(false);
+
+  // Business cost breakdown — null means "use AI estimate"
+  const [taxPercent, setTaxPercent] = useState<number | null>(null);
+  const [cardFeePercent, setCardFeePercent] = useState<number | null>(null);
+  const [commissionPercent, setCommissionPercent] = useState<number | null>(null);
+  const [operationalPercent, setOperationalPercent] = useState<number | null>(null);
+  const [otherPercent, setOtherPercent] = useState<number | null>(null);
 
   const form = useForm<ProductFormData>({
     resolver: zodResolver(productSchema),
@@ -98,71 +121,101 @@ export default function ProductForm() {
   const sellingPrice = useWatch({ control: form.control, name: "sellingPrice" });
   const minimumPrice = useWatch({ control: form.control, name: "minimumPrice" });
 
+  // ── Cost calculations ──
   const totalCost = useMemo(() => (costPrice || 0) + (taxFreight || 0), [costPrice, taxFreight]);
+
+  // Effective percentages (user value or AI default)
+  const eTax = taxPercent ?? AI_DEFAULTS.taxPercent;
+  const eCard = cardFeePercent ?? AI_DEFAULTS.cardFeePercent;
+  const eComm = commissionPercent ?? AI_DEFAULTS.commissionPercent;
+  const eOps = operationalPercent ?? AI_DEFAULTS.operationalPercent;
+  const eOther = otherPercent ?? AI_DEFAULTS.otherPercent;
+  const totalOverheadPercent = eTax + eCard + eComm + eOps + eOther;
+  const usingAnyEstimate = taxPercent === null || cardFeePercent === null || commissionPercent === null || operationalPercent === null || otherPercent === null;
+
+  // The TRUE minimum price = cost / (1 - overhead%)
+  // This is the breakeven price where selling = all costs combined
+  const trueMinimumPrice = useMemo(() => {
+    if (totalCost <= 0) return 0;
+    const divisor = 1 - totalOverheadPercent / 100;
+    if (divisor <= 0) return totalCost * 10; // absurd overhead, cap it
+    return totalCost / divisor;
+  }, [totalCost, totalOverheadPercent]);
+
+  // Overhead cost in R$ at selling price
+  const overheadAtSellingPrice = useMemo(() => {
+    return (sellingPrice || 0) * totalOverheadPercent / 100;
+  }, [sellingPrice, totalOverheadPercent]);
 
   const suggestedPrice = useMemo(() => {
     if (totalCost <= 0 || !desiredMarkup) return 0;
     return totalCost * (1 + desiredMarkup / 100);
   }, [totalCost, desiredMarkup]);
 
+  // Real margin = (selling - cost - overhead%) / selling
+  const realProfitAmount = useMemo(() => {
+    return (sellingPrice || 0) - totalCost - overheadAtSellingPrice;
+  }, [sellingPrice, totalCost, overheadAtSellingPrice]);
+
+  const realMarginPercent = useMemo(() => {
+    if (!sellingPrice || sellingPrice <= 0) return 0;
+    return (realProfitAmount / sellingPrice) * 100;
+  }, [realProfitAmount, sellingPrice]);
+
+  // Simple margin (without overhead) for backward compat
   const marginPercent = useMemo(() => {
     if (!sellingPrice || sellingPrice <= 0) return 0;
     return ((sellingPrice - totalCost) / sellingPrice) * 100;
   }, [sellingPrice, totalCost]);
 
-  const profitAmount = useMemo(() => {
-    return (sellingPrice || 0) - totalCost;
-  }, [sellingPrice, totalCost]);
+  const profitAmount = useMemo(() => (sellingPrice || 0) - totalCost, [sellingPrice, totalCost]);
 
-  // Auto-calculate minimum price = total cost (never sell below what you paid)
-  const autoMinimumPrice = useMemo(() => totalCost, [totalCost]);
-
-  // The effective minimum: use manual override if set, otherwise auto
+  // effectiveMinimum = trueMinimumPrice (includes overhead)
   const effectiveMinimum = useMemo(() => {
-    return minimumPrice && minimumPrice > 0 ? minimumPrice : autoMinimumPrice;
-  }, [minimumPrice, autoMinimumPrice]);
+    if (minimumPrice && minimumPrice > trueMinimumPrice) return minimumPrice;
+    return Math.round(trueMinimumPrice * 100) / 100;
+  }, [minimumPrice, trueMinimumPrice]);
 
-  // Max discount % from selling price without going below total cost
-  const maxDiscountPercent = useMemo(() => {
-    if (!sellingPrice || sellingPrice <= 0 || totalCost <= 0) return 0;
-    if (sellingPrice <= totalCost) return 0;
-    return ((sellingPrice - totalCost) / sellingPrice) * 100;
-  }, [sellingPrice, totalCost]);
-
-  // Max discount % from selling price down to the minimum price
+  // Max discount from selling price to minimum
   const maxDiscountToMinimum = useMemo(() => {
     if (!sellingPrice || sellingPrice <= 0 || effectiveMinimum <= 0) return 0;
     if (sellingPrice <= effectiveMinimum) return 0;
     return ((sellingPrice - effectiveMinimum) / sellingPrice) * 100;
   }, [sellingPrice, effectiveMinimum]);
 
-  // Max discount amount in R$
   const maxDiscountAmount = useMemo(() => {
     if (!sellingPrice || sellingPrice <= 0) return 0;
     return Math.max(0, sellingPrice - effectiveMinimum);
   }, [sellingPrice, effectiveMinimum]);
 
+  // Max discount to pure cost (zero margin, zero overhead coverage)
+  const maxDiscountPercent = useMemo(() => {
+    if (!sellingPrice || sellingPrice <= 0 || totalCost <= 0) return 0;
+    if (sellingPrice <= totalCost) return 0;
+    return ((sellingPrice - totalCost) / sellingPrice) * 100;
+  }, [sellingPrice, totalCost]);
+
   const marginColor = useMemo(() => {
-    if (marginPercent > 40) return "text-green-600";
-    if (marginPercent >= 15) return "text-yellow-600";
+    if (realMarginPercent > 25) return "text-green-600";
+    if (realMarginPercent >= 10) return "text-yellow-600";
     return "text-red-600";
-  }, [marginPercent]);
+  }, [realMarginPercent]);
 
   const marginBg = useMemo(() => {
-    if (marginPercent > 40) return "bg-green-50 border-green-200";
-    if (marginPercent >= 15) return "bg-yellow-50 border-yellow-200";
+    if (realMarginPercent > 25) return "bg-green-50 border-green-200";
+    if (realMarginPercent >= 10) return "bg-yellow-50 border-yellow-200";
     return "bg-red-50 border-red-200";
-  }, [marginPercent]);
+  }, [realMarginPercent]);
 
   const isBelowMinimum = sellingPrice > 0 && effectiveMinimum > 0 && sellingPrice < effectiveMinimum;
   const isBelowCost = sellingPrice > 0 && totalCost > 0 && sellingPrice < totalCost;
 
-  // Auto-set minimum price when cost changes and no manual override
+  // Auto-set minimum price when cost/overhead changes
   useEffect(() => {
-    if (totalCost > 0 && (!minimumPrice || minimumPrice === 0)) {
-      form.setValue("minimumPrice", Math.round(totalCost * 100) / 100);
+    if (trueMinimumPrice > 0) {
+      form.setValue("minimumPrice", Math.round(trueMinimumPrice * 100) / 100);
     }
-  }, [totalCost]);
+  }, [trueMinimumPrice]);
 
   useEffect(() => {
     loadSuppliers();
@@ -496,7 +549,7 @@ export default function ProductForm() {
               </CardContent>
             </Card>
 
-            {/* Pricing */}
+            {/* Pricing — Step 1: Product cost */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-lg flex items-center gap-2">
@@ -504,20 +557,22 @@ export default function ProductForm() {
                   Precificação
                 </CardTitle>
                 <CardDescription>
-                  Defina custos e preço de venda. Os cálculos são atualizados em tempo real.
+                  Informe os custos e o sistema calcula automaticamente preço mínimo e desconto máximo.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-5">
+                {/* Row 1: Cost inputs */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="costPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Preço de Custo (R$) *</FormLabel>
+                        <FormLabel>Quanto pagou pelo produto? (R$) *</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" min="0" placeholder="0,00" {...field} />
                         </FormControl>
+                        <FormDescription className="text-xs">Preço de custo/compra</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -527,27 +582,125 @@ export default function ProductForm() {
                     name="taxFreight"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Impostos + Frete (R$)</FormLabel>
+                        <FormLabel>Frete da compra (R$)</FormLabel>
                         <FormControl>
                           <Input type="number" step="0.01" min="0" placeholder="0,00" {...field} />
                         </FormControl>
+                        <FormDescription className="text-xs">Frete/transporte pago na compra</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                  <div className="flex flex-col justify-end">
-                    <p className="text-xs text-gray-500 mb-1">Custo Total</p>
-                    <p className="text-lg font-bold text-gray-900">{formatCurrency(totalCost)}</p>
+                  <div className="flex flex-col justify-center rounded-xl bg-gray-50 border border-gray-200 p-3">
+                    <p className="text-xs text-gray-500">Custo do Produto</p>
+                    <p className="text-xl font-bold text-gray-900">{formatCurrency(totalCost)}</p>
                   </div>
                 </div>
 
+                {/* Business Costs Breakdown */}
+                <Collapsible open={costsOpen} onOpenChange={setCostsOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      type="button"
+                      className="flex items-center justify-between w-full rounded-xl border border-indigo-200 bg-indigo-50 p-4 hover:bg-indigo-100 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Building2 className="w-4 h-4 text-indigo-600" />
+                        <div className="text-left">
+                          <p className="text-sm font-semibold text-indigo-800">Custos do Negócio</p>
+                          <p className="text-xs text-indigo-500">
+                            {usingAnyEstimate
+                              ? `Usando estimativas inteligentes para ${[taxPercent === null && "impostos", cardFeePercent === null && "cartão", commissionPercent === null && "comissão", operationalPercent === null && "operacional", otherPercent === null && "outros"].filter(Boolean).join(", ")}`
+                              : `Todos os custos informados manualmente — Total: ${totalOverheadPercent.toFixed(1)}%`
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-indigo-200 text-indigo-800 border-0 text-xs">{totalOverheadPercent.toFixed(1)}%</Badge>
+                        {costsOpen ? <ChevronDown className="w-4 h-4 text-indigo-600" /> : <ChevronRight className="w-4 h-4 text-indigo-600" />}
+                      </div>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent className="mt-3 space-y-3">
+                    {usingAnyEstimate && (
+                      <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                        <Sparkles className="w-4 h-4 flex-shrink-0 mt-0.5 text-amber-600" />
+                        <div>
+                          <p className="font-medium">Estimativas inteligentes ativadas</p>
+                          <p className="text-xs text-amber-600 mt-0.5">
+                            Valores estimados para uma ótica de pequeno/médio porte no Simples Nacional.
+                            Preencha os campos para usar seus valores reais.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {/* Tax */}
+                      <CostField
+                        icon={<Receipt className="w-4 h-4" />}
+                        label="Impostos sobre venda"
+                        hint="ICMS, Simples Nacional, ISS..."
+                        value={taxPercent}
+                        aiDefault={AI_DEFAULTS.taxPercent}
+                        onChange={setTaxPercent}
+                      />
+                      {/* Card fees */}
+                      <CostField
+                        icon={<CreditCard className="w-4 h-4" />}
+                        label="Taxa do cartão"
+                        hint="Crédito/débito/Pix via maquininha"
+                        value={cardFeePercent}
+                        aiDefault={AI_DEFAULTS.cardFeePercent}
+                        onChange={setCardFeePercent}
+                      />
+                      {/* Commission */}
+                      <CostField
+                        icon={<Users className="w-4 h-4" />}
+                        label="Comissão do vendedor"
+                        hint="% pago por venda ao funcionário"
+                        value={commissionPercent}
+                        aiDefault={AI_DEFAULTS.commissionPercent}
+                        onChange={setCommissionPercent}
+                      />
+                      {/* Operational */}
+                      <CostField
+                        icon={<Building2 className="w-4 h-4" />}
+                        label="Custo operacional"
+                        hint="Aluguel, luz, água, salários, seguro"
+                        value={operationalPercent}
+                        aiDefault={AI_DEFAULTS.operationalPercent}
+                        onChange={setOperationalPercent}
+                      />
+                      {/* Other */}
+                      <CostField
+                        icon={<Package className="w-4 h-4" />}
+                        label="Outros custos"
+                        hint="Embalagem, perdas, marketing"
+                        value={otherPercent}
+                        aiDefault={AI_DEFAULTS.otherPercent}
+                        onChange={setOtherPercent}
+                      />
+                      {/* Total summary */}
+                      <div className="flex flex-col justify-center rounded-xl bg-indigo-100 border border-indigo-300 p-3">
+                        <p className="text-xs text-indigo-600 font-medium">Total de custos (%)</p>
+                        <p className="text-2xl font-bold text-indigo-800">{totalOverheadPercent.toFixed(1)}%</p>
+                        {sellingPrice > 0 && (
+                          <p className="text-xs text-indigo-500 mt-1">= {formatCurrency(overheadAtSellingPrice)} por venda</p>
+                        )}
+                      </div>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                {/* Row 2: Markup + Suggested */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <FormField
                     control={form.control}
                     name="desiredMarkup"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Markup Desejado (%)</FormLabel>
+                        <FormLabel>Markup desejado (%)</FormLabel>
                         <FormControl>
                           <Input type="number" step="1" min="0" placeholder="100" {...field} />
                         </FormControl>
@@ -555,36 +708,37 @@ export default function ProductForm() {
                       </FormItem>
                     )}
                   />
-                  <div className="flex flex-col justify-end">
-                    <p className="text-xs text-gray-500 mb-1">Preço Sugerido</p>
-                    <div className="flex items-center gap-2">
-                      <p className="text-lg font-bold text-blue-600">
-                        {formatCurrency(suggestedPrice)}
-                      </p>
+                  <div className="flex flex-col justify-center rounded-xl bg-blue-50 border border-blue-200 p-3">
+                    <p className="text-xs text-blue-600">Preço Sugerido (com markup)</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-xl font-bold text-blue-700">{formatCurrency(suggestedPrice)}</p>
                       {suggestedPrice > 0 && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={applySuggestedPrice}
-                          className="text-xs h-7"
-                        >
+                        <Button type="button" variant="outline" size="sm" onClick={applySuggestedPrice} className="text-xs h-7 border-blue-300 text-blue-700">
                           Aplicar
                         </Button>
                       )}
                     </div>
                   </div>
+                  <div className="flex flex-col justify-center rounded-xl bg-red-50 border border-red-200 p-3">
+                    <div className="flex items-center gap-1">
+                      <Scale className="w-3.5 h-3.5 text-red-600" />
+                      <p className="text-xs text-red-600 font-medium">Preço Mínimo (ponto de equilíbrio)</p>
+                    </div>
+                    <p className="text-xl font-bold text-red-700 mt-1">{formatCurrency(effectiveMinimum)}</p>
+                    <p className="text-[10px] text-red-500">Abaixo disso = PREJUÍZO</p>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Row 3: Selling price + minimum */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
                     name="sellingPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Preço de Venda (R$) *</FormLabel>
+                        <FormLabel>Preço de Venda Final (R$) *</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" min="0" placeholder="0,00" {...field} />
+                          <Input type="number" step="0.01" min="0" placeholder="0,00" className="text-lg font-semibold h-12" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -595,105 +749,94 @@ export default function ProductForm() {
                     name="minimumPrice"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Preço Mínimo (R$)</FormLabel>
+                        <FormLabel>Preço Mínimo (R$) — calculado automaticamente</FormLabel>
                         <FormControl>
-                          <Input type="number" step="0.01" min="0" placeholder="0,00" {...field} />
+                          <Input type="number" step="0.01" min="0" placeholder="Automático" className="h-12" {...field} />
                         </FormControl>
+                        <FormDescription className="text-xs">Inclui custo do produto + todos os custos do negócio</FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
                 </div>
 
-                {/* Pricing Summary Dashboard */}
+                {/* Result panels */}
                 {sellingPrice > 0 && totalCost > 0 && (
                   <div className="space-y-3">
-                    {/* Main metrics */}
+                    {/* Profit summary */}
                     <div className={`rounded-xl border p-4 ${marginBg}`}>
-                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Resumo da Precificação</p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Lucro Real por Venda</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                         <div>
-                          <p className="text-xs text-gray-500">Custo Total</p>
-                          <p className="text-lg font-bold text-gray-800">{formatCurrency(totalCost)}</p>
+                          <p className="text-[10px] text-gray-500">Preço de Venda</p>
+                          <p className="text-base font-bold text-gray-800">{formatCurrency(sellingPrice)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Lucro por Unidade</p>
-                          <p className={`text-lg font-bold ${marginColor}`}>{formatCurrency(profitAmount)}</p>
+                          <p className="text-[10px] text-gray-500">Custo Produto</p>
+                          <p className="text-base font-bold text-gray-800">-{formatCurrency(totalCost)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Margem de Lucro</p>
-                          <p className={`text-lg font-bold ${marginColor}`}>{marginPercent.toFixed(1)}%</p>
+                          <p className="text-[10px] text-gray-500">Custos Negócio ({totalOverheadPercent.toFixed(0)}%)</p>
+                          <p className="text-base font-bold text-gray-800">-{formatCurrency(overheadAtSellingPrice)}</p>
+                        </div>
+                        <div className="border-l-2 border-gray-300 pl-3">
+                          <p className="text-[10px] text-gray-500">Lucro Líquido</p>
+                          <p className={`text-lg font-bold ${marginColor}`}>{formatCurrency(realProfitAmount)}</p>
                         </div>
                         <div>
-                          <p className="text-xs text-gray-500">Classificação</p>
-                          <Badge className={`mt-1 ${
-                            marginPercent > 40 ? "bg-green-100 text-green-700 border-green-300" :
-                            marginPercent >= 15 ? "bg-yellow-100 text-yellow-700 border-yellow-300" :
+                          <p className="text-[10px] text-gray-500">Margem Real</p>
+                          <p className={`text-lg font-bold ${marginColor}`}>{realMarginPercent.toFixed(1)}%</p>
+                          <Badge className={`mt-0.5 ${
+                            realMarginPercent > 25 ? "bg-green-100 text-green-700 border-green-300" :
+                            realMarginPercent >= 10 ? "bg-yellow-100 text-yellow-700 border-yellow-300" :
                             "bg-red-100 text-red-700 border-red-300"
-                          } border text-xs`}>
-                            {marginPercent > 40 ? "Boa margem" : marginPercent >= 15 ? "Margem moderada" : "Margem baixa"}
+                          } border text-[10px]`}>
+                            {realMarginPercent > 25 ? "Boa" : realMarginPercent >= 10 ? "Moderada" : "Baixa"}
                           </Badge>
                         </div>
                       </div>
                     </div>
 
-                    {/* Discount limits panel */}
+                    {/* Discount limits */}
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
                       <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
-                        <Calculator className="w-3.5 h-3.5" />
+                        <Percent className="w-3.5 h-3.5" />
                         Limites de Desconto
                       </p>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
                         <div>
-                          <p className="text-xs text-blue-600">Preço Mínimo</p>
-                          <p className="text-lg font-bold text-blue-800">{formatCurrency(effectiveMinimum)}</p>
-                          <p className="text-[10px] text-blue-500">Não vender abaixo</p>
+                          <p className="text-xs text-blue-600">Desconto Máximo (R$)</p>
+                          <p className="text-xl font-bold text-blue-800">{formatCurrency(maxDiscountAmount)}</p>
+                          <p className="text-[10px] text-blue-500">Quanto pode abaixar do preço</p>
                         </div>
                         <div>
-                          <p className="text-xs text-blue-600">Desconto Máximo</p>
-                          <p className="text-lg font-bold text-blue-800">{formatCurrency(maxDiscountAmount)}</p>
-                          <p className="text-[10px] text-blue-500">Valor que pode abaixar</p>
+                          <p className="text-xs text-blue-600">Desconto Máximo (%)</p>
+                          <p className="text-xl font-bold text-blue-800">{maxDiscountToMinimum.toFixed(1)}%</p>
+                          <p className="text-[10px] text-blue-500">Sem ficar no prejuízo</p>
                         </div>
                         <div>
-                          <p className="text-xs text-blue-600">% Desconto Máximo</p>
-                          <p className="text-lg font-bold text-blue-800">{maxDiscountToMinimum.toFixed(1)}%</p>
-                          <p className="text-[10px] text-blue-500">Até o preço mínimo</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-blue-600">% Até Custo Zero</p>
-                          <p className="text-lg font-bold text-orange-600">{maxDiscountPercent.toFixed(1)}%</p>
-                          <p className="text-[10px] text-blue-500">Sem lucro nenhum</p>
+                          <p className="text-xs text-blue-600">Se der {maxDiscountToMinimum > 0 ? Math.floor(maxDiscountToMinimum) : 0}% de desconto</p>
+                          <p className="text-xl font-bold text-blue-800">{formatCurrency(effectiveMinimum)}</p>
+                          <p className="text-[10px] text-blue-500">Preço final para o cliente</p>
                         </div>
                       </div>
 
-                      {/* Visual discount bar */}
+                      {/* Visual bar */}
                       <div className="mt-4">
                         <div className="flex justify-between text-[10px] text-blue-500 mb-1">
                           <span>Custo ({formatCurrency(totalCost)})</span>
                           <span>Mínimo ({formatCurrency(effectiveMinimum)})</span>
                           <span>Venda ({formatCurrency(sellingPrice)})</span>
                         </div>
-                        <div className="w-full h-3 bg-red-200 rounded-full overflow-hidden flex">
-                          {/* Cost portion (red) */}
-                          <div
-                            className="h-full bg-red-400"
-                            style={{ width: `${Math.min(100, (totalCost / sellingPrice) * 100)}%` }}
-                          />
-                          {/* Buffer to minimum (yellow) */}
-                          <div
-                            className="h-full bg-yellow-400"
-                            style={{ width: `${Math.max(0, ((effectiveMinimum - totalCost) / sellingPrice) * 100)}%` }}
-                          />
-                          {/* Profit/discount room (green) */}
-                          <div
-                            className="h-full bg-green-400"
-                            style={{ width: `${Math.max(0, ((sellingPrice - effectiveMinimum) / sellingPrice) * 100)}%` }}
-                          />
+                        <div className="w-full h-4 bg-red-200 rounded-full overflow-hidden flex">
+                          <div className="h-full bg-red-400" style={{ width: `${Math.min(100, (totalCost / sellingPrice) * 100)}%` }} />
+                          <div className="h-full bg-amber-400" style={{ width: `${Math.max(0, ((effectiveMinimum - totalCost) / sellingPrice) * 100)}%` }} />
+                          <div className="h-full bg-green-400" style={{ width: `${Math.max(0, ((sellingPrice - effectiveMinimum) / sellingPrice) * 100)}%` }} />
                         </div>
-                        <div className="flex justify-between text-[10px] mt-1">
-                          <span className="text-red-600 font-medium">Custo</span>
-                          <span className="text-yellow-600 font-medium">Reserva</span>
-                          <span className="text-green-600 font-medium">Margem p/ desconto</span>
+                        <div className="flex justify-between text-[10px] mt-1 font-medium">
+                          <span className="text-red-600">Custo produto</span>
+                          <span className="text-amber-600">Custos negócio</span>
+                          <span className="text-green-600">Lucro (margem p/ desconto)</span>
                         </div>
                       </div>
                     </div>
@@ -713,7 +856,7 @@ export default function ProductForm() {
                   <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-300 rounded-xl text-sm text-yellow-800">
                     <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                     <span>
-                      Atenção: o preço de venda ({formatCurrency(sellingPrice)}) está abaixo do preço mínimo ({formatCurrency(effectiveMinimum)}).
+                      Atenção: o preço de venda ({formatCurrency(sellingPrice)}) está abaixo do mínimo ({formatCurrency(effectiveMinimum)}). Considerando todos os custos do negócio, você terá prejuízo de {formatCurrency(effectiveMinimum - sellingPrice)} por venda.
                     </span>
                   </div>
                 )}
@@ -843,5 +986,57 @@ export default function ProductForm() {
         </Form>
       </div>
     </MainLayout>
+  );
+}
+
+// ── Reusable cost field component ──
+function CostField({
+  icon, label, hint, value, aiDefault, onChange,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  hint: string;
+  value: number | null;
+  aiDefault: number;
+  onChange: (v: number | null) => void;
+}) {
+  const isAI = value === null;
+  const display = value ?? aiDefault;
+
+  return (
+    <div className={`rounded-xl border p-3 ${isAI ? "bg-amber-50/50 border-amber-200" : "bg-white border-gray-200"}`}>
+      <div className="flex items-center gap-1.5 mb-2">
+        <span className={isAI ? "text-amber-600" : "text-gray-600"}>{icon}</span>
+        <p className="text-xs font-medium text-gray-700">{label}</p>
+        {isAI && <Sparkles className="w-3 h-3 text-amber-500 ml-auto" title="Estimativa IA" />}
+      </div>
+      <div className="flex items-center gap-2">
+        <Input
+          type="number"
+          step="0.1"
+          min="0"
+          max="100"
+          value={isAI ? "" : display}
+          placeholder={`~${aiDefault}% (estimado)`}
+          onChange={(e) => {
+            const val = e.target.value;
+            if (val === "" || val === undefined) { onChange(null); return; }
+            onChange(parseFloat(val));
+          }}
+          className="h-8 text-sm"
+        />
+        <span className="text-xs text-gray-500 flex-shrink-0">%</span>
+      </div>
+      <p className="text-[10px] text-gray-400 mt-1">{hint}</p>
+      {!isAI && (
+        <button
+          type="button"
+          onClick={() => onChange(null)}
+          className="text-[10px] text-amber-600 hover:text-amber-700 mt-1 underline"
+        >
+          Usar estimativa ({aiDefault}%)
+        </button>
+      )}
+    </div>
   );
 }
