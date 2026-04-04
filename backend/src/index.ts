@@ -71,10 +71,20 @@ app.use('/api/users', userRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/audit', auditRoutes);
 
-// 404 handler
-app.use((_req, res) => {
-  res.status(404).json({ success: false, error: 'Rota não encontrada' });
-});
+// Serve frontend static files in production
+if (process.env.NODE_ENV === 'production') {
+  const frontendPath = path.join(process.cwd(), 'public');
+  app.use(express.static(frontendPath));
+  // SPA fallback: any non-API route serves index.html
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
+} else {
+  // 404 handler (dev only — frontend runs on its own server)
+  app.use((_req, res) => {
+    res.status(404).json({ success: false, error: 'Rota não encontrada' });
+  });
+}
 
 // Global error handler
 app.use(errorHandler);

@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001/api";
+// In production, frontend is served by the backend on the same origin
+const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? "/api" : "http://localhost:3001/api");
 
 class ApiError extends Error {
   status: number;
