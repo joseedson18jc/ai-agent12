@@ -1,74 +1,103 @@
-# Welcome to your Lovable project
+# ÓticaGestão — CRM para Óticas
 
-## Project info
+Sistema completo de gestão para óticas brasileiras. Controle de clientes, vendas, estoque, financeiro, receitas ópticas e relatórios.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+## Credenciais de Acesso (Demo)
 
-## How can I edit this code?
+| Perfil | E-mail | Senha |
+|--------|--------|-------|
+| Admin | `maria@oticagestao.com.br` | `admin123` |
+| Vendedor | `joao@oticagestao.com.br` | `vendedor123` |
 
-There are several ways of editing your application.
+## Stack
 
-**Use Lovable**
+- **Frontend**: React 18 + TypeScript + Tailwind CSS + shadcn/ui + Recharts
+- **Backend**: Node.js + Express + Prisma ORM
+- **Banco**: PostgreSQL 15
+- **Auth**: JWT + bcrypt
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+## Deploy no Railway (Recomendado)
 
-Changes made via Lovable will be committed automatically to this repo.
+### 1. Criar conta no Railway
+Acesse [railway.app](https://railway.app) e faça login com GitHub.
 
-**Use your preferred IDE**
+### 2. Criar novo projeto
+- Clique em **"New Project"** → **"Deploy from GitHub Repo"**
+- Selecione o repositório `joseedson18jc/ai-agent12`
+- Branch: `claude/optical-shop-crm-XLbEP`
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### 3. Adicionar PostgreSQL
+- No projeto, clique em **"+ New"** → **"Database"** → **"PostgreSQL"**
+- O Railway criará o banco e a variável `DATABASE_URL` automaticamente
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 4. Configurar variáveis de ambiente
+No serviço do app, vá em **Variables** e adicione:
 
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```
+JWT_SECRET=sua-chave-secreta-forte-aqui
+NODE_ENV=production
+PORT=3001
 ```
 
-**Edit a file directly in GitHub**
+A variável `DATABASE_URL` já é configurada automaticamente pelo Railway.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+### 5. Deploy
+O Railway detecta o `nixpacks.toml` e faz o build automaticamente:
+- Instala dependências do frontend e backend
+- Compila o frontend (Vite)
+- Compila o backend (TypeScript)
+- Copia o frontend para ser servido pelo backend
+- Roda migrações do Prisma
+- Inicia o servidor
 
-**Use GitHub Codespaces**
+### 6. Seed (dados iniciais)
+Após o primeiro deploy, no terminal do Railway, execute:
+```bash
+cd backend && npx tsx prisma/seed.ts
+```
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Desenvolvimento Local
 
-## What technologies are used for this project?
+### Pré-requisitos
+- Node.js 20+
+- PostgreSQL 15+
 
-This project is built with:
+### Setup
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+```bash
+# Clone
+git clone https://github.com/joseedson18jc/ai-agent12.git
+cd ai-agent12
+git checkout claude/optical-shop-crm-XLbEP
 
-## How can I deploy this project?
+# Frontend
+npm install
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+# Backend
+cd backend
+npm install
+cp .env.example .env  # Edite DATABASE_URL se necessário
 
-## Can I connect a custom domain to my Lovable project?
+# Banco de dados
+npx prisma migrate dev
+npx tsx prisma/seed.ts
 
-Yes, you can!
+# Rodar
+npx tsx src/index.ts &  # Backend na porta 3001
+cd .. && npx vite       # Frontend na porta 5173
+```
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+Acesse: http://localhost:5173
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
-# ai-agent12
+## Módulos
+
+- **Dashboard** — KPIs, gráficos, ações rápidas
+- **Clientes** — Cadastro com CPF, endereço via CEP, WhatsApp
+- **Receitas Ópticas** — OD/OE, validade, upload de foto/PDF
+- **Produtos** — Estoque, margem em tempo real, preço mínimo
+- **Vendas / OS** — Wizard 4 etapas, multi-pagamento, fiado
+- **Financeiro** — Contas a pagar/receber, caixa diário
+- **Fornecedores** — CRUD com contato WhatsApp
+- **Laboratórios** — Pedidos de lente vinculados à OS
+- **Relatórios** — Vendas, financeiro, estoque, clientes
+- **Configurações** — Loja, sistema, usuários

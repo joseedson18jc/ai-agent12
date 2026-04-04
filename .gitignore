@@ -28,3 +28,10 @@ reports/
 
 # Netlify
 .netlify/
+
+# Backend
+backend/node_modules
+backend/dist
+backend/public
+backend/uploads
+backend/.env
