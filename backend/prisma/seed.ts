@@ -48,7 +48,6 @@ async function main() {
 
   // ===== USERS =====
   const adminPassword = await bcrypt.hash('admin123', 12);
-  const sellerPassword = await bcrypt.hash('vendedor123', 12);
 
   const admin = await prisma.user.create({
     data: {
@@ -58,16 +57,7 @@ async function main() {
       role: 'ADMIN',
     },
   });
-
-  const seller = await prisma.user.create({
-    data: {
-      name: 'João Santos',
-      email: 'joao@oticaimperio.com.br',
-      password: sellerPassword,
-      role: 'SELLER',
-    },
-  });
-  console.log('Usuários criados: Maria Silva (admin), João Santos (vendedor)');
+  console.log('Usuário criado: Priscila (admin)');
 
   // ===== CUSTOMERS =====
   const customers = await Promise.all([
@@ -494,7 +484,7 @@ async function main() {
     data: {
       customerId: customers[0].id,
       prescriptionId: prescriptions[0].id,
-      sellerId: seller.id,
+      sellerId: admin.id,
       date: new Date('2026-03-15'),
       subtotal: 870,
       discountAmount: 50,
@@ -585,7 +575,7 @@ async function main() {
   const sale3 = await prisma.salesOrder.create({
     data: {
       customerId: customers[2].id,
-      sellerId: seller.id,
+      sellerId: admin.id,
       date: new Date('2026-03-25'),
       subtotal: 580,
       discountAmount: 0,
@@ -630,7 +620,7 @@ async function main() {
     data: {
       customerId: customers[4].id,
       prescriptionId: prescriptions[4].id,
-      sellerId: seller.id,
+      sellerId: admin.id,
       date: new Date('2026-03-28'),
       subtotal: 705,
       discountAmount: 30,
@@ -691,7 +681,7 @@ async function main() {
   const sale5 = await prisma.salesOrder.create({
     data: {
       customerId: customers[9].id,
-      sellerId: seller.id,
+      sellerId: admin.id,
       date: new Date('2026-04-01'),
       subtotal: 265,
       discountPercent: 5,
@@ -837,7 +827,6 @@ async function main() {
   console.log('========================================');
   console.log('Credenciais de acesso:');
   console.log('  Admin: priscila@oticaimperio.com.br / admin123');
-  console.log('  Vendedor: joao@oticaimperio.com.br / vendedor123');
   console.log('========================================');
 }
 
