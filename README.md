@@ -2,6 +2,12 @@
 
 Sistema completo de gestão para óticas brasileiras. Controle de clientes, vendas, estoque, financeiro, receitas ópticas e relatórios.
 
+## Deploy com 1 Clique
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/joseedson18jc/ai-agent12&branch=claude/optical-shop-crm-XLbEP)
+
+> Clique no botão acima, crie uma conta gratuita no Render, e o sistema será instalado automaticamente com banco de dados PostgreSQL.
+
 ## Credenciais de Acesso (Demo)
 
 | Perfil | E-mail | Senha |
