@@ -15,7 +15,8 @@ import {
 import {
   DollarSign, TrendingUp, ShoppingCart, BarChart3, Package,
   AlertTriangle, Clock, CreditCard, Plus, Users, BoxIcon,
-  CalendarClock, ArrowRight, ShoppingBag,
+  CalendarClock, ArrowRight, ShoppingBag, Sparkles, Lightbulb,
+  TrendingDown, Target, Zap, RefreshCw, Star,
 } from "lucide-react";
 
 type Period = "7d" | "30d" | "12m";
@@ -427,6 +428,9 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        {/* AI Insights */}
+        {!loading && data && <AIInsights data={data} navigate={navigate} />}
+
         {/* Mobile Quick Actions */}
         <div className="grid grid-cols-3 gap-3 sm:hidden">
           <button
@@ -453,5 +457,235 @@ export default function Dashboard() {
         </div>
       </div>
     </MainLayout>
+  );
+}
+
+// ── AI Insights Component ──
+interface Insight {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  type: "success" | "warning" | "tip" | "action";
+  action?: { label: string; path: string };
+}
+
+function generateInsights(data: any): Insight[] {
+  const insights: Insight[] = [];
+  const dailySales = data.dailySales ?? 0;
+  const monthlySales = data.monthlySales ?? 0;
+  const salesCount = data.salesCount ?? 0;
+  const averageTicket = data.averageTicket ?? 0;
+  const lowStockCount = data.lowStockCount ?? 0;
+  const overdueInstallments = data.overdueInstallments ?? 0;
+  const upcomingPayables = data.upcomingPayables ?? 0;
+  const estimatedProfit = data.estimatedProfit ?? 0;
+
+  // Calculate day of month and projected monthly
+  const today = new Date();
+  const dayOfMonth = today.getDate();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const projectedMonthly = dayOfMonth > 1 ? (monthlySales / dayOfMonth) * daysInMonth : 0;
+  const dailyAverage = dayOfMonth > 1 ? monthlySales / dayOfMonth : 0;
+
+  // 1. Daily performance vs average
+  if (dailyAverage > 0 && dailySales > 0) {
+    if (dailySales > dailyAverage * 1.3) {
+      insights.push({
+        icon: TrendingUp,
+        title: "Dia acima da média!",
+        description: `Hoje você vendeu ${formatCurrency(dailySales)}, que é ${((dailySales / dailyAverage - 1) * 100).toFixed(0)}% acima da sua média diária de ${formatCurrency(dailyAverage)}.`,
+        type: "success",
+      });
+    } else if (dailySales < dailyAverage * 0.5) {
+      insights.push({
+        icon: TrendingDown,
+        title: "Vendas abaixo do esperado hoje",
+        description: `A média diária é ${formatCurrency(dailyAverage)}, mas hoje só foi vendido ${formatCurrency(dailySales)}. Considere promoções relâmpago ou contato com clientes que têm receitas vencendo.`,
+        type: "warning",
+        action: { label: "Ver clientes", path: "/clientes" },
+      });
+    }
+  }
+
+  // 2. Ticket médio insights
+  if (averageTicket > 0) {
+    if (averageTicket < 200) {
+      insights.push({
+        icon: Target,
+        title: "Oportunidade: aumentar o ticket médio",
+        description: `Seu ticket médio é ${formatCurrency(averageTicket)}. Ofereça lentes com tratamento premium ou acessórios no momento da venda. Óticas que fazem cross-sell aumentam o ticket em até 40%.`,
+        type: "tip",
+        action: { label: "Ver produtos", path: "/produtos" },
+      });
+    } else if (averageTicket > 500) {
+      insights.push({
+        icon: Star,
+        title: "Excelente ticket médio!",
+        description: `Com ${formatCurrency(averageTicket)} de ticket médio, você está vendendo bem produtos de valor agregado. Continue oferecendo lentes multifocais e armações premium.`,
+        type: "success",
+      });
+    }
+  }
+
+  // 3. Stock alerts
+  if (lowStockCount > 0) {
+    insights.push({
+      icon: Package,
+      title: `${lowStockCount} produto(s) com estoque baixo`,
+      description: `Repor estoque evita perder vendas. Produtos sem estoque = clientes comprando na concorrência. Verifique os itens e faça pedidos aos fornecedores.`,
+      type: "warning",
+      action: { label: "Ver estoque", path: "/produtos" },
+    });
+  }
+
+  // 4. Overdue installments
+  if (overdueInstallments > 0) {
+    insights.push({
+      icon: AlertTriangle,
+      title: `${overdueInstallments} parcela(s) em atraso`,
+      description: `Parcelas atrasadas afetam seu fluxo de caixa. Entre em contato com os clientes via WhatsApp — cobranças amigáveis recuperam até 70% dos valores.`,
+      type: "action",
+      action: { label: "Ver financeiro", path: "/financeiro/contas-receber" },
+    });
+  }
+
+  // 5. Bills to pay
+  if (upcomingPayables > 0) {
+    insights.push({
+      icon: CalendarClock,
+      title: `${formatCurrency(upcomingPayables)} em contas nos próximos 7 dias`,
+      description: `Planeje seu fluxo de caixa para cobrir essas despesas. Se necessário, priorize cobranças de parcelas atrasadas para equilibrar as contas.`,
+      type: "warning",
+      action: { label: "Ver contas", path: "/financeiro/contas-pagar" },
+    });
+  }
+
+  // 6. Monthly projection
+  if (projectedMonthly > 0 && dayOfMonth >= 5) {
+    const projText = formatCurrency(projectedMonthly);
+    if (projectedMonthly > monthlySales * 1.1) {
+      insights.push({
+        icon: Zap,
+        title: `Projeção mensal: ${projText}`,
+        description: `No ritmo atual, você pode fechar o mês com ${projText}. Para atingir esse resultado, mantenha a média de ${formatCurrency(dailyAverage)} por dia nos próximos ${daysInMonth - dayOfMonth} dias.`,
+        type: "tip",
+      });
+    }
+  }
+
+  // 7. Sales count insights
+  if (salesCount === 0 && dayOfMonth > 1) {
+    insights.push({
+      icon: ShoppingBag,
+      title: "Nenhuma venda registrada este mês",
+      description: "Comece a registrar suas vendas no sistema para ter insights mais precisos. Quanto mais dados, melhores as recomendações.",
+      type: "action",
+      action: { label: "Nova venda", path: "/vendas/nova" },
+    });
+  }
+
+  // 8. Profit margin tip
+  if (estimatedProfit > 0 && monthlySales > 0) {
+    const profitMargin = (estimatedProfit / monthlySales) * 100;
+    if (profitMargin < 20) {
+      insights.push({
+        icon: Lightbulb,
+        title: "Margem de lucro pode melhorar",
+        description: `Sua margem está em ${profitMargin.toFixed(1)}%. Revise a precificação dos produtos com markup abaixo de 80%. Lentes com tratamento anti-reflexo têm margem até 3x maior que armações básicas.`,
+        type: "tip",
+        action: { label: "Ver produtos", path: "/produtos" },
+      });
+    }
+  }
+
+  // 9. General tips (always show at least one)
+  if (insights.length < 2) {
+    const generalTips: Insight[] = [
+      {
+        icon: Lightbulb,
+        title: "Dica: Cadastre receitas dos clientes",
+        description: "Clientes com receita próxima do vencimento recebem lembretes automáticos. Isso gera retorno garantido — 60% dos clientes renovam na mesma ótica.",
+        type: "tip",
+        action: { label: "Ver clientes", path: "/clientes" },
+      },
+      {
+        icon: RefreshCw,
+        title: "Dica: Diversifique formas de pagamento",
+        description: "Ofereça parcelamento em até 10x. Clientes que parcelam gastam em média 35% a mais por compra. Configure as opções nas configurações.",
+        type: "tip",
+        action: { label: "Configurações", path: "/configuracoes" },
+      },
+      {
+        icon: Users,
+        title: "Dica: Pós-venda aumenta a fidelização",
+        description: "Envie mensagem via WhatsApp 30 dias após a entrega para saber se o cliente está satisfeito. Isso aumenta a taxa de retorno em até 45%.",
+        type: "tip",
+      },
+    ];
+    // Pick one based on day of month
+    const tipIdx = dayOfMonth % generalTips.length;
+    insights.push(generalTips[tipIdx]);
+  }
+
+  return insights.slice(0, 5); // max 5 insights
+}
+
+const INSIGHT_STYLES: Record<string, { bg: string; border: string; icon: string; badge: string }> = {
+  success: { bg: "bg-emerald-50", border: "border-emerald-200", icon: "text-emerald-600 bg-emerald-100", badge: "bg-emerald-100 text-emerald-700" },
+  warning: { bg: "bg-amber-50", border: "border-amber-200", icon: "text-amber-600 bg-amber-100", badge: "bg-amber-100 text-amber-700" },
+  tip:     { bg: "bg-blue-50", border: "border-blue-200", icon: "text-blue-600 bg-blue-100", badge: "bg-blue-100 text-blue-700" },
+  action:  { bg: "bg-rose-50", border: "border-rose-200", icon: "text-rose-600 bg-rose-100", badge: "bg-rose-100 text-rose-700" },
+};
+
+function AIInsights({ data, navigate }: { data: any; navigate: (path: string) => void }) {
+  const insights = useMemo(() => generateInsights(data), [data]);
+
+  if (insights.length === 0) return null;
+
+  return (
+    <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50/50 to-white overflow-hidden relative">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-100/30 rounded-full -translate-y-1/2 translate-x-1/2" />
+      <CardHeader className="pb-3 px-4 pt-4">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center">
+            <Sparkles className="w-4 h-4 text-white" />
+          </div>
+          <div>
+            <CardTitle className="text-base font-semibold">Insights Inteligentes</CardTitle>
+            <CardDescription className="text-xs">Dicas baseadas nos seus números reais</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="px-4 pb-4">
+        <div className="space-y-2.5">
+          {insights.map((insight, idx) => {
+            const style = INSIGHT_STYLES[insight.type];
+            return (
+              <div
+                key={idx}
+                className={`rounded-xl border ${style.border} ${style.bg} p-3 flex items-start gap-3 transition-colors`}
+              >
+                <div className={`w-8 h-8 rounded-lg ${style.icon} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                  <insight.icon className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{insight.title}</p>
+                  <p className="text-xs text-gray-600 mt-0.5 leading-relaxed">{insight.description}</p>
+                  {insight.action && (
+                    <button
+                      onClick={() => navigate(insight.action!.path)}
+                      className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 transition-colors"
+                    >
+                      {insight.action.label}
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
