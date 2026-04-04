@@ -29,9 +29,15 @@ reports/
 # Netlify
 .netlify/
 
+# Environment files
+.env
+.env.local
+.env.production
+
 # Backend
 backend/node_modules
 backend/dist
 backend/public
 backend/uploads
 backend/.env
+backend/.env.*
