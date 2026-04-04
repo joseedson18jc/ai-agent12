@@ -42,44 +42,62 @@ const App = () => (
             {/* Dashboard */}
             <Route path="/dashboard" element={<Dashboard />} />
 
-            {/* Clientes */}
+            {/* Clientes (PT + EN) */}
             <Route path="/clientes" element={<Customers />} />
             <Route path="/clientes/novo" element={<CustomerForm />} />
             <Route path="/clientes/:id" element={<CustomerDetail />} />
             <Route path="/clientes/:id/editar" element={<CustomerForm />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/customers/new" element={<CustomerForm />} />
+            <Route path="/customers/:id" element={<CustomerDetail />} />
+            <Route path="/customers/:id/edit" element={<CustomerForm />} />
 
-            {/* Produtos */}
+            {/* Produtos (PT + EN) */}
             <Route path="/produtos" element={<Products />} />
             <Route path="/produtos/novo" element={<ProductForm />} />
             <Route path="/produtos/:id/editar" element={<ProductForm />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/products/new" element={<ProductForm />} />
+            <Route path="/products/:id/edit" element={<ProductForm />} />
 
-            {/* Vendas / OS */}
+            {/* Vendas / OS (PT + EN) */}
             <Route path="/vendas" element={<Sales />} />
             <Route path="/vendas/nova" element={<SalesForm />} />
             <Route path="/vendas/:id" element={<SalesDetail />} />
+            <Route path="/sales" element={<Sales />} />
+            <Route path="/sales/new" element={<SalesForm />} />
+            <Route path="/sales/:id" element={<SalesDetail />} />
 
-            {/* Financeiro */}
+            {/* Financeiro (PT + EN) */}
             <Route path="/financeiro" element={<Financial />} />
             <Route path="/financeiro/contas-pagar" element={<Financial />} />
             <Route path="/financeiro/contas-receber" element={<Financial />} />
             <Route path="/financeiro/caixa" element={<Financial />} />
+            <Route path="/financial" element={<Financial />} />
 
-            {/* Fornecedores */}
+            {/* Fornecedores (PT + EN) */}
             <Route path="/fornecedores" element={<Suppliers />} />
             <Route path="/fornecedores/novo" element={<SupplierForm />} />
             <Route path="/fornecedores/:id/editar" element={<SupplierForm />} />
+            <Route path="/suppliers" element={<Suppliers />} />
+            <Route path="/suppliers/new" element={<SupplierForm />} />
+            <Route path="/suppliers/:id/edit" element={<SupplierForm />} />
 
-            {/* Laboratórios */}
+            {/* Laboratórios (PT + EN) */}
             <Route path="/laboratorios" element={<Laboratories />} />
+            <Route path="/laboratories" element={<Laboratories />} />
 
-            {/* Receitas */}
+            {/* Receitas (PT + EN) */}
             <Route path="/receitas" element={<Prescriptions />} />
+            <Route path="/prescriptions" element={<Prescriptions />} />
 
-            {/* Relatórios */}
+            {/* Relatórios (PT + EN) */}
             <Route path="/relatorios" element={<Reports />} />
+            <Route path="/reports" element={<Reports />} />
 
-            {/* Configurações */}
+            {/* Configurações (PT + EN) */}
             <Route path="/configuracoes" element={<Settings />} />
+            <Route path="/settings" element={<Settings />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
