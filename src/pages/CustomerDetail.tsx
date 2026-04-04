@@ -112,7 +112,7 @@ export default function CustomerDetail() {
             </Button>
             <h1 className="text-2xl font-bold text-gray-900">Detalhes do Cliente</h1>
           </div>
-          <Button onClick={() => navigate(`/customers/${id}/edit`)}>
+          <Button onClick={() => navigate(`/clientes/${id}/editar`)}>
             <Pencil className="w-4 h-4 mr-2" /> Editar
           </Button>
         </div>

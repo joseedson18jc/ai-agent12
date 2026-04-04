@@ -158,13 +158,13 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => navigate("/sales/new")} className="bg-green-600 hover:bg-green-700">
+            <Button onClick={() => navigate("/vendas/nova")} className="bg-green-600 hover:bg-green-700">
               <Plus className="w-4 h-4 mr-2" /> Nova Venda
             </Button>
-            <Button onClick={() => navigate("/customers/new")} className="bg-blue-600 hover:bg-blue-700">
+            <Button onClick={() => navigate("/clientes/novo")} className="bg-blue-600 hover:bg-blue-700">
               <Plus className="w-4 h-4 mr-2" /> Novo Cliente
             </Button>
-            <Button onClick={() => navigate("/products/new")} className="bg-purple-600 hover:bg-purple-700">
+            <Button onClick={() => navigate("/produtos/novo")} className="bg-purple-600 hover:bg-purple-700">
               <Plus className="w-4 h-4 mr-2" /> Novo Produto
             </Button>
           </div>
@@ -343,7 +343,7 @@ export default function Dashboard() {
                     variant="outline"
                     size="sm"
                     className="mt-3"
-                    onClick={() => navigate("/sales/new")}
+                    onClick={() => navigate("/vendas/nova")}
                   >
                     Registrar primeira venda
                   </Button>
@@ -380,7 +380,7 @@ export default function Dashboard() {
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-lg">Lembretes</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/reminders")} className="text-xs">
+                <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-xs">
                   Ver todos <ArrowRight className="w-3 h-3 ml-1" />
                 </Button>
               </div>
@@ -441,21 +441,21 @@ export default function Dashboard() {
         {/* Quick Actions (Mobile) */}
         <div className="grid grid-cols-3 gap-3 sm:hidden">
           <Button
-            onClick={() => navigate("/sales/new")}
+            onClick={() => navigate("/vendas/nova")}
             className="h-20 flex-col gap-1 bg-green-600 hover:bg-green-700"
           >
             <ShoppingCart className="w-6 h-6" />
             <span className="text-xs">Nova Venda</span>
           </Button>
           <Button
-            onClick={() => navigate("/customers/new")}
+            onClick={() => navigate("/clientes/novo")}
             className="h-20 flex-col gap-1 bg-blue-600 hover:bg-blue-700"
           >
             <Users className="w-6 h-6" />
             <span className="text-xs">Novo Cliente</span>
           </Button>
           <Button
-            onClick={() => navigate("/products/new")}
+            onClick={() => navigate("/produtos/novo")}
             className="h-20 flex-col gap-1 bg-purple-600 hover:bg-purple-700"
           >
             <BoxIcon className="w-6 h-6" />
