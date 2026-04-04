@@ -10,7 +10,7 @@ const createSchema = z.object({
   color: z.string().optional(),
   size: z.string().optional(),
   material: z.string().optional(),
-  supplierId: z.string().uuid().optional(),
+  supplierId: z.string().uuid().optional().or(z.literal('').transform(() => undefined)),
   barcode: z.string().optional(),
   photo: z.string().optional(),
   stock: z.number().int().min(0).optional(),

@@ -40,14 +40,7 @@ const AI_DEFAULTS = {
 };
 const AI_TOTAL = Object.values(AI_DEFAULTS).reduce((a, b) => a + b, 0); // ~40.5%
 
-const CATEGORIES = [
-  { value: "frames", label: "Armações" },
-  { value: "lenses", label: "Lentes" },
-  { value: "sunglasses", label: "Óculos de Sol" },
-  { value: "contact_lenses", label: "Lentes de Contato" },
-  { value: "accessories", label: "Acessórios" },
-  { value: "cleaning", label: "Limpeza" },
-];
+// Categories loaded from API (database UUIDs)
 
 const productSchema = z.object({
   name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -82,6 +75,7 @@ export default function ProductForm() {
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [photoFile, setPhotoFile] = useState<File | null>(null);
   const [suppliers, setSuppliers] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [autoSKU, setAutoSKU] = useState(false);
   const [costsOpen, setCostsOpen] = useState(false);
 
@@ -218,9 +212,20 @@ export default function ProductForm() {
   }, [trueMinimumPrice]);
 
   useEffect(() => {
+    loadCategories();
     loadSuppliers();
     if (isEditing) loadProduct();
   }, [id]);
+
+  const loadCategories = async () => {
+    try {
+      const result = await api.get<any>("/categories");
+      setCategories(result.data || []);
+    } catch {
+      // fallback if API fails
+      setCategories([]);
+    }
+  };
 
   const loadSuppliers = async () => {
     try {
@@ -300,10 +305,10 @@ export default function ProductForm() {
     try {
       const payload: any = {
         name: data.name,
-        categoryId: data.category,
-        brand: data.brand,
-        supplierId: data.supplier || undefined,
-        barcode: data.barcode || data.sku,
+        categoryId: data.category, // UUID from categories API
+        brand: data.brand || undefined,
+        supplierId: data.supplier && data.supplier.length > 0 ? data.supplier : undefined,
+        barcode: data.barcode || data.sku || undefined,
         costPrice: data.costPrice,
         taxFreight: data.taxFreight,
         desiredMarkup: data.desiredMarkup,
@@ -445,9 +450,9 @@ export default function ProductForm() {
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            {CATEGORIES.map((c) => (
-                              <SelectItem key={c.value} value={c.value}>
-                                {c.label}
+                            {categories.map((c: any) => (
+                              <SelectItem key={c.id} value={c.id}>
+                                {c.name}
                               </SelectItem>
                             ))}
                           </SelectContent>

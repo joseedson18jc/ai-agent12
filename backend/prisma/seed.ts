@@ -255,23 +255,35 @@ async function main() {
 
   // ===== PRODUCT CATEGORIES =====
   const categories = await Promise.all([
-    prisma.productCategory.create({
-      data: { name: 'Armações de Grau', type: 'FRAMES_PRESCRIPTION', defaultMarkup: 120 },
+    prisma.productCategory.upsert({
+      where: { name: 'Armações de Grau' },
+      update: { type: 'FRAMES_PRESCRIPTION', defaultMarkup: 120 },
+      create: { name: 'Armações de Grau', type: 'FRAMES_PRESCRIPTION', defaultMarkup: 120 },
     }),
-    prisma.productCategory.create({
-      data: { name: 'Armações de Sol', type: 'FRAMES_SUN', defaultMarkup: 100 },
+    prisma.productCategory.upsert({
+      where: { name: 'Armações de Sol' },
+      update: { type: 'FRAMES_SUN', defaultMarkup: 100 },
+      create: { name: 'Armações de Sol', type: 'FRAMES_SUN', defaultMarkup: 100 },
     }),
-    prisma.productCategory.create({
-      data: { name: 'Lentes Oftálmicas', type: 'OPHTHALMIC_LENSES', defaultMarkup: 150 },
+    prisma.productCategory.upsert({
+      where: { name: 'Lentes Oftálmicas' },
+      update: { type: 'OPHTHALMIC_LENSES', defaultMarkup: 150 },
+      create: { name: 'Lentes Oftálmicas', type: 'OPHTHALMIC_LENSES', defaultMarkup: 150 },
     }),
-    prisma.productCategory.create({
-      data: { name: 'Lentes de Contato', type: 'CONTACT_LENSES', defaultMarkup: 80 },
+    prisma.productCategory.upsert({
+      where: { name: 'Lentes de Contato' },
+      update: { type: 'CONTACT_LENSES', defaultMarkup: 80 },
+      create: { name: 'Lentes de Contato', type: 'CONTACT_LENSES', defaultMarkup: 80 },
     }),
-    prisma.productCategory.create({
-      data: { name: 'Óculos de Sol Prontos', type: 'SUNGLASSES_READY', defaultMarkup: 100 },
+    prisma.productCategory.upsert({
+      where: { name: 'Óculos de Sol Prontos' },
+      update: { type: 'SUNGLASSES_READY', defaultMarkup: 100 },
+      create: { name: 'Óculos de Sol Prontos', type: 'SUNGLASSES_READY', defaultMarkup: 100 },
     }),
-    prisma.productCategory.create({
-      data: { name: 'Acessórios', type: 'ACCESSORIES', defaultMarkup: 200 },
+    prisma.productCategory.upsert({
+      where: { name: 'Acessórios' },
+      update: { type: 'ACCESSORIES', defaultMarkup: 200 },
+      create: { name: 'Acessórios', type: 'ACCESSORIES', defaultMarkup: 200 },
     }),
   ]);
   console.log(`${categories.length} categorias de produto criadas`);
