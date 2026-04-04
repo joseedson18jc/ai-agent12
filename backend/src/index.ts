@@ -1,4 +1,8 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+// Only load .env file in development — in production, env vars come from the platform
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config();
+}
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
