@@ -22,8 +22,11 @@ import {
   PaginationNext, PaginationPrevious,
 } from "@/components/ui/pagination";
 import {
-  Search, Plus, Eye, Pencil, Trash2, MessageCircle, Users, Loader2,
+  Search, Plus, Eye, Pencil, Trash2, MessageCircle, Users, Loader2, UserCircle2,
 } from "lucide-react";
+
+const getInitials = (name: string) =>
+  name.split(" ").slice(0, 2).map((n) => n[0]).join("").toUpperCase();
 
 const PAGE_SIZE = 10;
 
@@ -83,12 +86,12 @@ export default function Customers() {
     <MainLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Clientes</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Clientes</h1>
             <p className="text-gray-500 text-sm">Gerencie sua base de clientes</p>
           </div>
-          <Button onClick={() => navigate("/clientes/novo")} className="bg-blue-600 hover:bg-blue-700">
+          <Button onClick={() => navigate("/clientes/novo")} className="bg-blue-600 hover:bg-blue-700 shrink-0">
             <Plus className="w-4 h-4 mr-2" /> Novo Cliente
           </Button>
         </div>
@@ -158,41 +161,38 @@ export default function Customers() {
             ) : (
               <>
                 {/* Mobile Cards */}
-                <div className="sm:hidden divide-y">
+                <div className="sm:hidden divide-y divide-gray-50">
                   {customers.map((customer) => (
-                    <div key={customer.id} className="p-4 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900">{customer.name}</p>
-                          <p className="text-xs text-gray-500">{formatCPF(customer.cpf)}</p>
+                    <div key={customer.id} className="p-4 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-sm font-bold flex-shrink-0">
+                          {customer.name ? getInitials(customer.name) : <UserCircle2 className="w-5 h-5" />}
                         </div>
-                        <div className="flex items-center gap-1">
-                          <Badge
-                            variant={customer.status === "active" ? "default" : "secondary"}
-                            className="text-xs"
-                          >
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-900 truncate">{customer.name}</p>
+                          <p className="text-xs text-gray-400">{formatCPF(customer.cpf)} · {formatPhone(customer.phone)}</p>
+                        </div>
+                        <div className="flex flex-col items-end gap-1">
+                          <Badge variant={customer.status === "active" ? "default" : "secondary"} className="text-xs">
                             {customer.status === "active" ? "Ativo" : "Inativo"}
                           </Badge>
                           {customer.overdueCount > 0 && (
-                            <Badge variant="destructive" className="text-xs">
-                              {customer.overdueCount} pendência(s)
-                            </Badge>
+                            <Badge variant="destructive" className="text-xs">{customer.overdueCount} pendência(s)</Badge>
                           )}
                         </div>
                       </div>
-                      <p className="text-sm text-gray-500">{formatPhone(customer.phone)}</p>
                       <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => navigate(`/clientes/${customer.id}`)}>
+                        <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => navigate(`/clientes/${customer.id}`)}>
                           <Eye className="w-3 h-3 mr-1" /> Ver
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => navigate(`/clientes/${customer.id}/editar`)}>
+                        <Button size="sm" variant="outline" className="flex-1 h-8 text-xs" onClick={() => navigate(`/clientes/${customer.id}/editar`)}>
                           <Pencil className="w-3 h-3 mr-1" /> Editar
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => openWhatsApp(customer.phone)} className="text-green-600">
-                          <MessageCircle className="w-3 h-3" />
+                        <Button size="sm" variant="outline" className="h-8 px-2 text-green-600 hover:text-green-700" onClick={() => openWhatsApp(customer.phone)}>
+                          <MessageCircle className="w-3.5 h-3.5" />
                         </Button>
-                        <Button size="sm" variant="outline" onClick={() => setDeleteTarget(customer)} className="text-red-600">
-                          <Trash2 className="w-3 h-3" />
+                        <Button size="sm" variant="outline" className="h-8 px-2 text-red-600 hover:text-red-700" onClick={() => setDeleteTarget(customer)}>
+                          <Trash2 className="w-3.5 h-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -214,8 +214,15 @@ export default function Customers() {
                     </TableHeader>
                     <TableBody>
                       {customers.map((customer) => (
-                        <TableRow key={customer.id} className="cursor-pointer hover:bg-gray-50">
-                          <TableCell className="font-medium">{customer.name}</TableCell>
+                        <TableRow key={customer.id} className="cursor-pointer hover:bg-gray-50 transition-colors">
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-xs font-bold flex-shrink-0">
+                                {customer.name ? getInitials(customer.name) : "?"}
+                              </div>
+                              <span className="font-medium text-gray-900">{customer.name}</span>
+                            </div>
+                          </TableCell>
                           <TableCell>{formatCPF(customer.cpf)}</TableCell>
                           <TableCell>{formatPhone(customer.phone)}</TableCell>
                           <TableCell>
