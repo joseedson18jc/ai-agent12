@@ -52,8 +52,8 @@ async function main() {
 
   const admin = await prisma.user.create({
     data: {
-      name: 'Maria Silva',
-      email: 'maria@oticaimperio.com.br',
+      name: 'Priscila',
+      email: 'priscila@oticaimperio.com.br',
       password: adminPassword,
       role: 'ADMIN',
     },
@@ -836,7 +836,7 @@ async function main() {
   console.log('\nSeed concluído com sucesso!');
   console.log('========================================');
   console.log('Credenciais de acesso:');
-  console.log('  Admin: maria@oticaimperio.com.br / admin123');
+  console.log('  Admin: priscila@oticaimperio.com.br / admin123');
   console.log('  Vendedor: joao@oticaimperio.com.br / vendedor123');
   console.log('========================================');
 }
