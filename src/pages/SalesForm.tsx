@@ -79,7 +79,7 @@ export default function SalesForm() {
     if (!customerSearch.trim()) return;
     setSearchingCustomers(true);
     try {
-      const res = await api.get<any>(`/api/customers?search=${encodeURIComponent(customerSearch)}&limit=10`);
+      const res = await api.get<any>(`/customers?search=${encodeURIComponent(customerSearch)}&limit=10`);
       if (res.success) setCustomers(res.data || []);
     } catch { /* ignore */ }
     finally { setSearchingCustomers(false); }
@@ -93,7 +93,7 @@ export default function SalesForm() {
   // Load prescriptions when customer selected
   useEffect(() => {
     if (selectedCustomer) {
-      api.get<any>(`/api/prescriptions/customer/${selectedCustomer.id}`).then((res) => {
+      api.get<any>(`/prescriptions/customer/${selectedCustomer.id}`).then((res) => {
         if (res.success) setPrescriptions(res.data || []);
       });
     }
@@ -103,7 +103,7 @@ export default function SalesForm() {
   const searchProducts = async () => {
     if (!productSearch.trim()) return;
     try {
-      const res = await api.get<any>(`/api/products?search=${encodeURIComponent(productSearch)}&limit=10`);
+      const res = await api.get<any>(`/products?search=${encodeURIComponent(productSearch)}&limit=10`);
       if (res.success) setProducts(res.data || []);
     } catch { /* ignore */ }
   };
@@ -208,7 +208,7 @@ export default function SalesForm() {
         total: cartTotal,
         estimatedProfit: cartProfit,
       };
-      const res = await api.post<any>("/api/sales", payload);
+      const res = await api.post<any>("/sales", payload);
       if (res.success) {
         toast({ title: "Sucesso", description: "Venda registrada com sucesso!" });
         navigate(`/vendas/${res.data?.id || ""}`);

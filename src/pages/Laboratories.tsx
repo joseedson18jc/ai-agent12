@@ -30,7 +30,7 @@ export default function Laboratories() {
   const fetchLabs = async () => {
     setLoading(true);
     try {
-      const res = await api.get<any>("/api/laboratories");
+      const res = await api.get<any>("/laboratories");
       if (res.success) setLabs(res.data || []);
     } catch {
       toast({ title: "Erro", description: "Erro ao carregar laboratórios", variant: "destructive" });
@@ -80,10 +80,10 @@ export default function Laboratories() {
         whatsapp: form.whatsapp.replace(/\D/g, "") || null,
       };
       if (editId) {
-        await api.put(`/api/laboratories/${editId}`, payload);
+        await api.put(`/laboratories/${editId}`, payload);
         toast({ title: "Sucesso", description: "Laboratório atualizado" });
       } else {
-        await api.post("/api/laboratories", payload);
+        await api.post("/laboratories", payload);
         toast({ title: "Sucesso", description: "Laboratório cadastrado" });
       }
       setDialogOpen(false);
@@ -97,7 +97,7 @@ export default function Laboratories() {
 
   const handleDelete = async (id: string) => {
     try {
-      await api.delete(`/api/laboratories/${id}`);
+      await api.delete(`/laboratories/${id}`);
       toast({ title: "Sucesso", description: "Laboratório removido" });
       fetchLabs();
     } catch {

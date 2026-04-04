@@ -46,7 +46,7 @@ export default function Settings() {
   const fetchSettings = async () => {
     setLoading(true);
     try {
-      const res = await api.get<any>("/api/settings");
+      const res = await api.get<any>("/settings");
       if (res.success && res.data) {
         const s = res.data;
         setStore({
@@ -65,7 +65,7 @@ export default function Settings() {
 
   const fetchUsers = async () => {
     try {
-      const res = await api.get<any>("/api/users");
+      const res = await api.get<any>("/users");
       if (res.success) setUsers(res.data || []);
     } catch { /* ignore */ }
   };
@@ -81,7 +81,7 @@ export default function Settings() {
   const saveStore = async () => {
     setSaving(true);
     try {
-      await api.put("/api/settings", {
+      await api.put("/settings", {
         ...store,
         cnpj: store.cnpj.replace(/\D/g, "") || null,
         phone: store.phone.replace(/\D/g, "") || null,
@@ -116,14 +116,14 @@ export default function Settings() {
       if (editUser) {
         const payload: any = { name: userForm.name, email: userForm.email, role: userForm.role };
         if (userForm.password) payload.password = userForm.password;
-        await api.put(`/api/users/${editUser.id}`, payload);
+        await api.put(`/users/${editUser.id}`, payload);
         toast({ title: "Sucesso", description: "Usuário atualizado" });
       } else {
         if (!userForm.password) {
           toast({ title: "Erro", description: "Senha é obrigatória para novos usuários", variant: "destructive" });
           return;
         }
-        await api.post("/api/users", userForm);
+        await api.post("/users", userForm);
         toast({ title: "Sucesso", description: "Usuário criado" });
       }
       setUserDialogOpen(false);
@@ -135,7 +135,7 @@ export default function Settings() {
 
   const toggleUserActive = async (u: User) => {
     try {
-      await api.put(`/api/users/${u.id}`, { isActive: !u.isActive });
+      await api.put(`/users/${u.id}`, { isActive: !u.isActive });
       fetchUsers();
     } catch {
       toast({ title: "Erro", description: "Erro ao alterar status", variant: "destructive" });

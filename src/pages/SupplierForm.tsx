@@ -34,7 +34,7 @@ export default function SupplierForm() {
   useEffect(() => {
     if (isEdit) {
       setLoading(true);
-      api.get<any>(`/api/suppliers/${id}`).then((res) => {
+      api.get<any>(`/suppliers/${id}`).then((res) => {
         if (res.success && res.data) {
           const s = res.data;
           setForm({
@@ -101,10 +101,10 @@ export default function SupplierForm() {
         zipCode: form.zipCode.replace(/\D/g, "") || null,
       };
       if (isEdit) {
-        await api.put(`/api/suppliers/${id}`, payload);
+        await api.put(`/suppliers/${id}`, payload);
         toast({ title: "Sucesso", description: "Fornecedor atualizado" });
       } else {
-        await api.post("/api/suppliers", payload);
+        await api.post("/suppliers", payload);
         toast({ title: "Sucesso", description: "Fornecedor cadastrado" });
       }
       navigate("/fornecedores");

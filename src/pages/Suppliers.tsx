@@ -30,7 +30,7 @@ export default function Suppliers() {
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit) });
       if (search) params.set("search", search);
-      const res = await api.get<any>(`/api/suppliers?${params}`);
+      const res = await api.get<any>(`/suppliers?${params}`);
       if (res.success) {
         setSuppliers(res.data || []);
         setTotal(res.pagination?.total || 0);
@@ -47,7 +47,7 @@ export default function Suppliers() {
   const handleDelete = async () => {
     if (!deleteId) return;
     try {
-      await api.delete(`/api/suppliers/${deleteId}`);
+      await api.delete(`/suppliers/${deleteId}`);
       toast({ title: "Sucesso", description: "Fornecedor removido" });
       fetchSuppliers();
     } catch {

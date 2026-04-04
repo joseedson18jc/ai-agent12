@@ -60,6 +60,9 @@ const App = () => (
 
             {/* Financeiro */}
             <Route path="/financeiro" element={<Financial />} />
+            <Route path="/financeiro/contas-pagar" element={<Financial />} />
+            <Route path="/financeiro/contas-receber" element={<Financial />} />
+            <Route path="/financeiro/caixa" element={<Financial />} />
 
             {/* Fornecedores */}
             <Route path="/fornecedores" element={<Suppliers />} />
