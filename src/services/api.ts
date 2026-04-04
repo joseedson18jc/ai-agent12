@@ -50,7 +50,8 @@ async function request<T>(
       errorData = { message: response.statusText };
     }
     const message =
-      (errorData as { message?: string })?.message ||
+      (errorData as { message?: string; error?: string })?.message ||
+      (errorData as { error?: string })?.error ||
       `Erro na requisição: ${response.status}`;
     throw new ApiError(message, response.status, errorData);
   }

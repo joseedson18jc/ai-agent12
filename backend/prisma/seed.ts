@@ -46,18 +46,21 @@ async function main() {
   });
   console.log('Loja criada:', store.name);
 
-  // ===== USERS =====
+  // ===== USERS (upsert to guarantee admin always exists) =====
   const adminPassword = await bcrypt.hash('admin123', 12);
 
-  const admin = await prisma.user.create({
-    data: {
+  const admin = await prisma.user.upsert({
+    where: { email: 'priscila@oticaimperio.com.br' },
+    update: { password: adminPassword, role: 'ADMIN', isActive: true, name: 'Priscila' },
+    create: {
       name: 'Priscila',
       email: 'priscila@oticaimperio.com.br',
       password: adminPassword,
       role: 'ADMIN',
+      isActive: true,
     },
   });
-  console.log('Usuário criado: Priscila (admin)');
+  console.log('Usuário admin pronto:', admin.email);
 
   // ===== CUSTOMERS =====
   const customers = await Promise.all([
