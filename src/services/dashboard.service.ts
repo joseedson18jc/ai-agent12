@@ -42,6 +42,37 @@ export const dashboardService = {
       "/dashboard/reminders"
     );
   },
+
+  async getData(): Promise<any> {
+    const [kpis, sales7d, sales30d, sales12m, topProducts, recentSales, reminders] = await Promise.allSettled([
+      api.get<any>("/dashboard/kpis"),
+      api.get<any>("/dashboard/sales-chart?period=7d"),
+      api.get<any>("/dashboard/sales-chart?period=30d"),
+      api.get<any>("/dashboard/sales-chart?period=12m"),
+      api.get<any>("/dashboard/top-products"),
+      api.get<any>("/dashboard/recent-sales"),
+      api.get<any>("/dashboard/reminders"),
+    ]);
+    const kpiData = kpis.status === "fulfilled" ? kpis.value?.data || kpis.value : {};
+    return {
+      dailySales: kpiData.dailySales ?? 0,
+      monthlySales: kpiData.monthlySales ?? 0,
+      monthlyProfit: kpiData.monthlyProfit ?? 0,
+      totalOrders: kpiData.totalOrders ?? 0,
+      averageTicket: kpiData.averageTicket ?? 0,
+      lowStockCount: kpiData.lowStockCount ?? 0,
+      upcomingBills: kpiData.upcomingBills ?? 0,
+      overdueInstallments: kpiData.overdueInstallments ?? 0,
+      salesChart: {
+        "7d": sales7d.status === "fulfilled" ? sales7d.value?.data || [] : [],
+        "30d": sales30d.status === "fulfilled" ? sales30d.value?.data || [] : [],
+        "12m": sales12m.status === "fulfilled" ? sales12m.value?.data || [] : [],
+      },
+      topProducts: topProducts.status === "fulfilled" ? topProducts.value?.data || [] : [],
+      recentSales: recentSales.status === "fulfilled" ? recentSales.value?.data || [] : [],
+      reminders: reminders.status === "fulfilled" ? reminders.value?.data || [] : [],
+    };
+  },
 };
 
 export type { UpcomingReminder };

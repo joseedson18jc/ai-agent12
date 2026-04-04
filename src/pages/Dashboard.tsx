@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { DashboardService } from "@/services/dashboard.service";
+import dashboardService from "@/services/dashboard.service";
 import { formatCurrency } from "@/utils/formatters";
 import MainLayout from "@/components/layout/MainLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -42,7 +42,7 @@ export default function Dashboard() {
   const loadDashboard = async () => {
     setLoading(true);
     try {
-      const result = await DashboardService.getData();
+      const result = await dashboardService.getData();
       setData(result);
     } catch (err: any) {
       setError("Não foi possível carregar o dashboard. Tente novamente.");

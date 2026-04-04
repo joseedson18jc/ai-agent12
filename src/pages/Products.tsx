@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { ProductService } from "@/services/product.service";
+import productService from "@/services/product.service";
 import { formatCurrency } from "@/utils/formatters";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -77,7 +77,7 @@ export default function Products() {
   const loadProducts = useCallback(async () => {
     setLoading(true);
     try {
-      const result = await ProductService.list({
+      const result = await productService.list({
         search,
         category: category === "all" ? undefined : category,
         brand: brand || undefined,

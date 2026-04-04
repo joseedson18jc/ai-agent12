@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { ProductService } from "@/services/product.service";
+import productService from "@/services/product.service";
 import { formatCurrency } from "@/utils/formatters";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -134,7 +134,7 @@ export default function ProductForm() {
 
   const loadSuppliers = async () => {
     try {
-      const result = await ProductService.getSuppliers();
+      const result = await productService.getSuppliers();
       setSuppliers(result || []);
     } catch {
       // suppliers optional
@@ -144,7 +144,7 @@ export default function ProductForm() {
   const loadProduct = async () => {
     setInitialLoading(true);
     try {
-      const product = await ProductService.getById(id!);
+      const product = await productService.getById(id!);
       form.reset({
         name: product.name || "",
         category: product.category || "",
@@ -208,10 +208,10 @@ export default function ProductForm() {
     setLoading(true);
     try {
       if (isEditing) {
-        await ProductService.update(id!, data, photoFile || undefined);
+        await productService.update(id!, data, photoFile || undefined);
         toast({ title: "Sucesso", description: "Produto atualizado com sucesso!" });
       } else {
-        await ProductService.create(data, photoFile || undefined);
+        await productService.create(data, photoFile || undefined);
         toast({ title: "Sucesso", description: "Produto cadastrado com sucesso!" });
       }
       navigate("/products");
