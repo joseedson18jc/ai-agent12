@@ -3,7 +3,7 @@ nixPkgs = ["nodejs_20", "openssl"]
 
 [phases.install]
 cmds = [
-  "npm ci",
+  "npm ci --include=dev",
   "cd backend && npm ci --include=dev"
 ]
 
@@ -15,4 +15,4 @@ cmds = [
 ]
 
 [start]
-cmd = "cd backend && npx prisma migrate deploy && (npx tsx prisma/seed.ts || true) && node dist/index.js"
+cmd = "cd backend && sh start.sh"
