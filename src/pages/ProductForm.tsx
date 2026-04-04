@@ -114,6 +114,34 @@ export default function ProductForm() {
     return (sellingPrice || 0) - totalCost;
   }, [sellingPrice, totalCost]);
 
+  // Auto-calculate minimum price = total cost (never sell below what you paid)
+  const autoMinimumPrice = useMemo(() => totalCost, [totalCost]);
+
+  // The effective minimum: use manual override if set, otherwise auto
+  const effectiveMinimum = useMemo(() => {
+    return minimumPrice && minimumPrice > 0 ? minimumPrice : autoMinimumPrice;
+  }, [minimumPrice, autoMinimumPrice]);
+
+  // Max discount % from selling price without going below total cost
+  const maxDiscountPercent = useMemo(() => {
+    if (!sellingPrice || sellingPrice <= 0 || totalCost <= 0) return 0;
+    if (sellingPrice <= totalCost) return 0;
+    return ((sellingPrice - totalCost) / sellingPrice) * 100;
+  }, [sellingPrice, totalCost]);
+
+  // Max discount % from selling price down to the minimum price
+  const maxDiscountToMinimum = useMemo(() => {
+    if (!sellingPrice || sellingPrice <= 0 || effectiveMinimum <= 0) return 0;
+    if (sellingPrice <= effectiveMinimum) return 0;
+    return ((sellingPrice - effectiveMinimum) / sellingPrice) * 100;
+  }, [sellingPrice, effectiveMinimum]);
+
+  // Max discount amount in R$
+  const maxDiscountAmount = useMemo(() => {
+    if (!sellingPrice || sellingPrice <= 0) return 0;
+    return Math.max(0, sellingPrice - effectiveMinimum);
+  }, [sellingPrice, effectiveMinimum]);
+
   const marginColor = useMemo(() => {
     if (marginPercent > 40) return "text-green-600";
     if (marginPercent >= 15) return "text-yellow-600";
@@ -126,7 +154,15 @@ export default function ProductForm() {
     return "bg-red-50 border-red-200";
   }, [marginPercent]);
 
-  const isBelowMinimum = sellingPrice > 0 && minimumPrice > 0 && sellingPrice < minimumPrice;
+  const isBelowMinimum = sellingPrice > 0 && effectiveMinimum > 0 && sellingPrice < effectiveMinimum;
+  const isBelowCost = sellingPrice > 0 && totalCost > 0 && sellingPrice < totalCost;
+
+  // Auto-set minimum price when cost changes and no manual override
+  useEffect(() => {
+    if (totalCost > 0 && (!minimumPrice || minimumPrice === 0)) {
+      form.setValue("minimumPrice", Math.round(totalCost * 100) / 100);
+    }
+  }, [totalCost]);
 
   useEffect(() => {
     loadSuppliers();
@@ -569,41 +605,115 @@ export default function ProductForm() {
                   />
                 </div>
 
-                {/* Margin Summary */}
-                {sellingPrice > 0 && (
-                  <div className={`rounded-lg border p-4 ${marginBg}`}>
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <p className="text-xs text-gray-500">Margem</p>
-                        <p className={`text-xl font-bold ${marginColor}`}>
-                          {marginPercent.toFixed(1)}%
-                        </p>
+                {/* Pricing Summary Dashboard */}
+                {sellingPrice > 0 && totalCost > 0 && (
+                  <div className="space-y-3">
+                    {/* Main metrics */}
+                    <div className={`rounded-xl border p-4 ${marginBg}`}>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Resumo da Precificação</p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-500">Custo Total</p>
+                          <p className="text-lg font-bold text-gray-800">{formatCurrency(totalCost)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Lucro por Unidade</p>
+                          <p className={`text-lg font-bold ${marginColor}`}>{formatCurrency(profitAmount)}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Margem de Lucro</p>
+                          <p className={`text-lg font-bold ${marginColor}`}>{marginPercent.toFixed(1)}%</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500">Classificação</p>
+                          <Badge className={`mt-1 ${
+                            marginPercent > 40 ? "bg-green-100 text-green-700 border-green-300" :
+                            marginPercent >= 15 ? "bg-yellow-100 text-yellow-700 border-yellow-300" :
+                            "bg-red-100 text-red-700 border-red-300"
+                          } border text-xs`}>
+                            {marginPercent > 40 ? "Boa margem" : marginPercent >= 15 ? "Margem moderada" : "Margem baixa"}
+                          </Badge>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Lucro por Unidade</p>
-                        <p className={`text-xl font-bold ${marginColor}`}>
-                          {formatCurrency(profitAmount)}
-                        </p>
+                    </div>
+
+                    {/* Discount limits panel */}
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                      <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-3 flex items-center gap-1.5">
+                        <Calculator className="w-3.5 h-3.5" />
+                        Limites de Desconto
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                        <div>
+                          <p className="text-xs text-blue-600">Preço Mínimo</p>
+                          <p className="text-lg font-bold text-blue-800">{formatCurrency(effectiveMinimum)}</p>
+                          <p className="text-[10px] text-blue-500">Não vender abaixo</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-blue-600">Desconto Máximo</p>
+                          <p className="text-lg font-bold text-blue-800">{formatCurrency(maxDiscountAmount)}</p>
+                          <p className="text-[10px] text-blue-500">Valor que pode abaixar</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-blue-600">% Desconto Máximo</p>
+                          <p className="text-lg font-bold text-blue-800">{maxDiscountToMinimum.toFixed(1)}%</p>
+                          <p className="text-[10px] text-blue-500">Até o preço mínimo</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-blue-600">% Até Custo Zero</p>
+                          <p className="text-lg font-bold text-orange-600">{maxDiscountPercent.toFixed(1)}%</p>
+                          <p className="text-[10px] text-blue-500">Sem lucro nenhum</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs text-gray-500">Classificação</p>
-                        <p className={`text-sm font-semibold mt-1 ${marginColor}`}>
-                          {marginPercent > 40
-                            ? "Boa margem"
-                            : marginPercent >= 15
-                            ? "Margem moderada"
-                            : "Margem baixa"}
-                        </p>
+
+                      {/* Visual discount bar */}
+                      <div className="mt-4">
+                        <div className="flex justify-between text-[10px] text-blue-500 mb-1">
+                          <span>Custo ({formatCurrency(totalCost)})</span>
+                          <span>Mínimo ({formatCurrency(effectiveMinimum)})</span>
+                          <span>Venda ({formatCurrency(sellingPrice)})</span>
+                        </div>
+                        <div className="w-full h-3 bg-red-200 rounded-full overflow-hidden flex">
+                          {/* Cost portion (red) */}
+                          <div
+                            className="h-full bg-red-400"
+                            style={{ width: `${Math.min(100, (totalCost / sellingPrice) * 100)}%` }}
+                          />
+                          {/* Buffer to minimum (yellow) */}
+                          <div
+                            className="h-full bg-yellow-400"
+                            style={{ width: `${Math.max(0, ((effectiveMinimum - totalCost) / sellingPrice) * 100)}%` }}
+                          />
+                          {/* Profit/discount room (green) */}
+                          <div
+                            className="h-full bg-green-400"
+                            style={{ width: `${Math.max(0, ((sellingPrice - effectiveMinimum) / sellingPrice) * 100)}%` }}
+                          />
+                        </div>
+                        <div className="flex justify-between text-[10px] mt-1">
+                          <span className="text-red-600 font-medium">Custo</span>
+                          <span className="text-yellow-600 font-medium">Reserva</span>
+                          <span className="text-green-600 font-medium">Margem p/ desconto</span>
+                        </div>
                       </div>
                     </div>
                   </div>
                 )}
 
-                {isBelowMinimum && (
-                  <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                {isBelowCost && (
+                  <div className="flex items-center gap-2 p-3 bg-red-100 border border-red-300 rounded-xl text-sm text-red-800 font-medium">
+                    <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                    <span>
+                      PREJUÍZO: o preço de venda ({formatCurrency(sellingPrice)}) está abaixo do custo total ({formatCurrency(totalCost)}). Você vai perder {formatCurrency(totalCost - sellingPrice)} por unidade!
+                    </span>
+                  </div>
+                )}
+
+                {isBelowMinimum && !isBelowCost && (
+                  <div className="flex items-center gap-2 p-3 bg-yellow-50 border border-yellow-300 rounded-xl text-sm text-yellow-800">
                     <AlertTriangle className="w-4 h-4 flex-shrink-0" />
                     <span>
-                      Atenção: o preço de venda ({formatCurrency(sellingPrice)}) está abaixo do preço mínimo ({formatCurrency(minimumPrice)}).
+                      Atenção: o preço de venda ({formatCurrency(sellingPrice)}) está abaixo do preço mínimo ({formatCurrency(effectiveMinimum)}).
                     </span>
                   </div>
                 )}
