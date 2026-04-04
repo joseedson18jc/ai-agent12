@@ -28,7 +28,22 @@ npx prisma migrate deploy 2>&1 || {
 
 echo "=== Running Seed ==="
 npx tsx prisma/seed.ts 2>&1 || {
-  echo "WARNING: seed failed, but continuing..."
+  echo "WARNING: Full seed failed. Ensuring admin user exists..."
+  npx tsx -e "
+    const { PrismaClient } = require('@prisma/client');
+    const bcrypt = require('bcryptjs');
+    const prisma = new PrismaClient();
+    (async () => {
+      const pw = await bcrypt.hash('admin123', 12);
+      await prisma.user.upsert({
+        where: { email: 'priscila@oticaimperio.com.br' },
+        update: { password: pw, role: 'ADMIN', isActive: true },
+        create: { name: 'Priscila', email: 'priscila@oticaimperio.com.br', password: pw, role: 'ADMIN', isActive: true },
+      });
+      console.log('Admin user ensured: priscila@oticaimperio.com.br');
+      await prisma.\$disconnect();
+    })();
+  " 2>&1 || echo "WARNING: Admin user fallback also failed"
 }
 
 echo "=== Starting Server ==="
