@@ -38,7 +38,7 @@ export const customerService = {
   },
 
   async getBirthdays(): Promise<ApiResponse<Customer[]>> {
-    return api.get<ApiResponse<Customer[]>>("/customers/birthdays");
+    return api.get<ApiResponse<Customer[]>>("/customers/birthdays/month");
   },
 };
 

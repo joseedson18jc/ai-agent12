@@ -53,7 +53,7 @@ export const productService = {
   ): Promise<ApiResponse<{ valid: boolean; minPrice: number; margin: number }>> {
     return api.post<
       ApiResponse<{ valid: boolean; minPrice: number; margin: number }>
-    >(`/products/${productId}/validate-price`, { price });
+    >(`/products/validate-price`, { productId, price });
   },
 };
 

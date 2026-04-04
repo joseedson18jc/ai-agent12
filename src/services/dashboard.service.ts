@@ -39,7 +39,7 @@ export const dashboardService = {
 
   async getUpcomingReminders(): Promise<ApiResponse<UpcomingReminder[]>> {
     return api.get<ApiResponse<UpcomingReminder[]>>(
-      "/dashboard/reminders"
+      "/dashboard/upcoming-reminders"
     );
   },
 
@@ -51,7 +51,7 @@ export const dashboardService = {
       api.get<any>("/dashboard/sales-chart?period=12m"),
       api.get<any>("/dashboard/top-products"),
       api.get<any>("/dashboard/recent-sales"),
-      api.get<any>("/dashboard/reminders"),
+      api.get<any>("/dashboard/upcoming-reminders"),
     ]);
     const kpiData = kpis.status === "fulfilled" ? kpis.value?.data || kpis.value : {};
     return {

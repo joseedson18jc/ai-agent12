@@ -6,6 +6,7 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get('/', prescriptionController.list);
 router.get('/customer/:customerId', prescriptionController.listByCustomer);
 router.get('/:id', prescriptionController.getById);
 router.post('/', prescriptionController.create);
