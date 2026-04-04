@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  Tooltip, ResponsiveContainer,
 } from "recharts";
 import {
   DollarSign, TrendingUp, ShoppingCart, BarChart3, Package,
@@ -63,17 +63,15 @@ export default function Dashboard() {
         title: "Vendas do Dia",
         value: formatCurrency(data.dailySales ?? 0),
         icon: DollarSign,
-        color: "text-blue-600",
-        bg: "bg-blue-50",
-        border: "border-blue-200",
+        gradient: "from-blue-500 to-blue-600",
+        textColor: "text-white",
       },
       {
         title: "Vendas do Mês",
         value: formatCurrency(data.monthlySales ?? 0),
         icon: TrendingUp,
-        color: "text-green-600",
-        bg: "bg-green-50",
-        border: "border-green-200",
+        gradient: "from-emerald-500 to-emerald-600",
+        textColor: "text-white",
       },
       ...(user?.role === "admin"
         ? [
@@ -81,9 +79,8 @@ export default function Dashboard() {
               title: "Lucro Estimado",
               value: formatCurrency(data.estimatedProfit ?? 0),
               icon: BarChart3,
-              color: "text-emerald-600",
-              bg: "bg-emerald-50",
-              border: "border-emerald-200",
+              gradient: "from-teal-500 to-teal-600",
+              textColor: "text-white",
             },
           ]
         : []),
@@ -91,42 +88,37 @@ export default function Dashboard() {
         title: "Qtd Vendas",
         value: String(data.salesCount ?? 0),
         icon: ShoppingCart,
-        color: "text-purple-600",
-        bg: "bg-purple-50",
-        border: "border-purple-200",
+        gradient: "from-violet-500 to-violet-600",
+        textColor: "text-white",
       },
       {
         title: "Ticket Médio",
         value: formatCurrency(data.averageTicket ?? 0),
         icon: CreditCard,
-        color: "text-orange-600",
-        bg: "bg-orange-50",
-        border: "border-orange-200",
+        gradient: "from-orange-500 to-orange-600",
+        textColor: "text-white",
       },
       {
         title: "Estoque Baixo",
         value: String(data.lowStockCount ?? 0),
         icon: Package,
-        color: "text-red-600",
-        bg: "bg-red-50",
-        border: "border-red-200",
+        gradient: data.lowStockCount > 0 ? "from-red-500 to-red-600" : "from-slate-400 to-slate-500",
+        textColor: "text-white",
         badge: data.lowStockCount > 0,
       },
       {
-        title: "Contas a Pagar (7 dias)",
+        title: "Contas (7 dias)",
         value: formatCurrency(data.upcomingPayables ?? 0),
         icon: CalendarClock,
-        color: "text-amber-600",
-        bg: "bg-amber-50",
-        border: "border-amber-200",
+        gradient: "from-amber-500 to-amber-600",
+        textColor: "text-white",
       },
       {
         title: "Parcelas Atrasadas",
         value: String(data.overdueInstallments ?? 0),
         icon: AlertTriangle,
-        color: "text-red-600",
-        bg: "bg-red-50",
-        border: "border-red-200",
+        gradient: data.overdueInstallments > 0 ? "from-rose-500 to-rose-600" : "from-slate-400 to-slate-500",
+        textColor: "text-white",
         badge: data.overdueInstallments > 0,
       },
     ];
@@ -146,93 +138,97 @@ export default function Dashboard() {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        {/* Greeting */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="space-y-5">
+        {/* Greeting + Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               {greeting}, {user?.name?.split(" ")[0] || "Usuário"}!
             </h1>
-            <p className="text-gray-500 text-sm mt-1">
-              Aqui está o resumo da sua ótica hoje.
+            <p className="text-gray-500 text-sm mt-0.5">
+              Resumo da sua ótica hoje.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => navigate("/vendas/nova")} className="bg-green-600 hover:bg-green-700">
-              <Plus className="w-4 h-4 mr-2" /> Nova Venda
+            <Button
+              onClick={() => navigate("/vendas/nova")}
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-1" /> Nova Venda
             </Button>
-            <Button onClick={() => navigate("/clientes/novo")} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" /> Novo Cliente
+            <Button
+              onClick={() => navigate("/clientes/novo")}
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-1" /> Novo Cliente
             </Button>
-            <Button onClick={() => navigate("/produtos/novo")} className="bg-purple-600 hover:bg-purple-700">
-              <Plus className="w-4 h-4 mr-2" /> Novo Produto
+            <Button
+              onClick={() => navigate("/produtos/novo")}
+              size="sm"
+              className="bg-violet-600 hover:bg-violet-700 text-white"
+            >
+              <Plus className="w-4 h-4 mr-1" /> Novo Produto
             </Button>
           </div>
         </div>
 
-        {/* KPI Cards */}
+        {/* KPI Cards — 2 cols mobile, 4 cols desktop */}
         {loading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-4">
-                    <Skeleton className="w-10 h-10 rounded-lg" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-3 w-24" />
-                      <Skeleton className="h-6 w-20" />
-                    </div>
-                  </div>
+              <Card key={i} className="overflow-hidden">
+                <CardContent className="p-4">
+                  <Skeleton className="h-4 w-20 mb-3" />
+                  <Skeleton className="h-7 w-24" />
                 </CardContent>
               </Card>
             ))}
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {kpis.map((kpi) => (
-              <Card key={kpi.title} className={`border ${kpi.border}`}>
-                <CardContent className="p-5">
-                  <div className="flex items-center gap-4">
-                    <div className={`p-2.5 rounded-lg ${kpi.bg}`}>
-                      <kpi.icon className={`w-5 h-5 ${kpi.color}`} />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-gray-500 truncate">{kpi.title}</p>
-                      <div className="flex items-center gap-2">
-                        <p className="text-xl font-bold text-gray-900">{kpi.value}</p>
-                        {kpi.badge && (
-                          <Badge variant="destructive" className="text-xs px-1.5 py-0">
-                            !
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+              <div
+                key={kpi.title}
+                className={`rounded-xl bg-gradient-to-br ${kpi.gradient} p-4 shadow-md flex flex-col gap-2 relative overflow-hidden`}
+              >
+                {/* Icon background circle */}
+                <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-white/10" />
+                <div className="flex items-center justify-between">
+                  <p className="text-white/80 text-xs font-medium leading-tight">{kpi.title}</p>
+                  {kpi.badge && (
+                    <Badge className="bg-white/20 text-white border-0 text-[10px] px-1.5 py-0 h-4">!</Badge>
+                  )}
+                </div>
+                <div className="flex items-end gap-2">
+                  <p className="text-white text-lg sm:text-xl font-bold leading-none">{kpi.value}</p>
+                </div>
+                <kpi.icon className="absolute right-3 bottom-3 w-6 h-6 text-white/20" />
+              </div>
             ))}
           </div>
         )}
 
-        {/* Charts Row */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Charts — stacked on mobile/tablet, side-by-side on lg+ */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Sales Chart */}
           <Card className="lg:col-span-2">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Evolução de Vendas</CardTitle>
+            <CardHeader className="pb-2 px-4 pt-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <CardTitle className="text-base font-semibold">Evolução de Vendas</CardTitle>
                 <div className="flex gap-1">
                   {([
-                    { key: "7d", label: "7 dias" },
-                    { key: "30d", label: "30 dias" },
-                    { key: "12m", label: "12 meses" },
+                    { key: "7d", label: "7d" },
+                    { key: "30d", label: "30d" },
+                    { key: "12m", label: "12m" },
                   ] as const).map((p) => (
                     <Button
                       key={p.key}
                       variant={chartPeriod === p.key ? "default" : "outline"}
                       size="sm"
                       onClick={() => setChartPeriod(p.key)}
-                      className="text-xs h-7"
+                      className="text-xs h-7 px-2.5"
                     >
                       {p.label}
                     </Button>
@@ -240,30 +236,30 @@ export default function Dashboard() {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 pb-4">
               {loading ? (
-                <Skeleton className="w-full h-[280px]" />
+                <Skeleton className="w-full h-[220px]" />
               ) : chartData.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-[280px] text-gray-400">
+                <div className="flex flex-col items-center justify-center h-[220px] text-gray-400">
                   <BarChart3 className="w-10 h-10 mb-2" />
-                  <p className="text-sm">Nenhum dado de vendas para o período.</p>
+                  <p className="text-sm">Nenhum dado para o período.</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart data={chartData}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <LineChart data={chartData} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} stroke="#999" />
-                    <YAxis tick={{ fontSize: 12 }} stroke="#999" tickFormatter={(v) => `R$${v}`} />
+                    <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="#ccc" />
+                    <YAxis tick={{ fontSize: 11 }} stroke="#ccc" tickFormatter={(v) => `R$${v}`} width={60} />
                     <Tooltip
                       formatter={(value: number) => [formatCurrency(value), "Vendas"]}
-                      contentStyle={{ borderRadius: "8px", fontSize: "13px" }}
+                      contentStyle={{ borderRadius: "8px", fontSize: "12px" }}
                     />
                     <Line
                       type="monotone"
                       dataKey="total"
                       stroke="#3b82f6"
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
+                      strokeWidth={2.5}
+                      dot={{ r: 3, fill: "#3b82f6" }}
                       activeDot={{ r: 5 }}
                     />
                   </LineChart>
@@ -274,32 +270,32 @@ export default function Dashboard() {
 
           {/* Top Products */}
           <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Top 5 Produtos</CardTitle>
-              <CardDescription>Mais vendidos este mês</CardDescription>
+            <CardHeader className="pb-2 px-4 pt-4">
+              <CardTitle className="text-base font-semibold">Top 5 Produtos</CardTitle>
+              <CardDescription className="text-xs">Mais vendidos este mês</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-2 pb-4">
               {loading ? (
-                <Skeleton className="w-full h-[280px]" />
+                <Skeleton className="w-full h-[220px]" />
               ) : !data?.topProducts?.length ? (
-                <div className="flex flex-col items-center justify-center h-[280px] text-gray-400">
+                <div className="flex flex-col items-center justify-center h-[220px] text-gray-400">
                   <BoxIcon className="w-10 h-10 mb-2" />
-                  <p className="text-sm">Sem dados de produtos ainda.</p>
+                  <p className="text-sm">Sem dados ainda.</p>
                 </div>
               ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <BarChart data={data.topProducts} layout="vertical">
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={data.topProducts} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                    <XAxis type="number" tick={{ fontSize: 11 }} />
+                    <XAxis type="number" tick={{ fontSize: 10 }} stroke="#ccc" />
                     <YAxis
                       dataKey="name"
                       type="category"
-                      tick={{ fontSize: 11 }}
-                      width={100}
+                      tick={{ fontSize: 10 }}
+                      width={90}
                     />
                     <Tooltip
-                      formatter={(value: number) => [`${value} vendas`, "Quantidade"]}
-                      contentStyle={{ borderRadius: "8px", fontSize: "13px" }}
+                      formatter={(value: number) => [`${value} vendas`, "Qtd"]}
+                      contentStyle={{ borderRadius: "8px", fontSize: "12px" }}
                     />
                     <Bar dataKey="quantity" fill="#8b5cf6" radius={[0, 4, 4, 0]} />
                   </BarChart>
@@ -310,26 +306,26 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Sales + Reminders */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {/* Recent Sales */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 px-4 pt-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Vendas Recentes</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/vendas")} className="text-xs">
+                <CardTitle className="text-base font-semibold">Vendas Recentes</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/vendas")} className="text-xs h-7 px-2">
                   Ver todas <ArrowRight className="w-3 h-3 ml-1" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4">
               {loading ? (
                 <div className="space-y-3">
-                  {Array.from({ length: 5 }).map((_, i) => (
+                  {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <Skeleton className="w-8 h-8 rounded-full" />
+                      <Skeleton className="w-8 h-8 rounded-full flex-shrink-0" />
                       <div className="flex-1 space-y-1">
-                        <Skeleton className="h-3 w-32" />
-                        <Skeleton className="h-3 w-20" />
+                        <Skeleton className="h-3 w-28" />
+                        <Skeleton className="h-3 w-16" />
                       </div>
                       <Skeleton className="h-4 w-16" />
                     </div>
@@ -338,34 +334,29 @@ export default function Dashboard() {
               ) : !data?.recentSales?.length ? (
                 <div className="flex flex-col items-center justify-center py-8 text-gray-400">
                   <ShoppingBag className="w-8 h-8 mb-2" />
-                  <p className="text-sm">Nenhuma venda registrada ainda.</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-3"
-                    onClick={() => navigate("/vendas/nova")}
-                  >
-                    Registrar primeira venda
+                  <p className="text-sm">Nenhuma venda ainda.</p>
+                  <Button variant="outline" size="sm" className="mt-3" onClick={() => navigate("/vendas/nova")}>
+                    Registrar venda
                   </Button>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-1">
                   {data.recentSales.map((sale: any) => (
                     <div
                       key={sale.id}
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => navigate(`/sales/${sale.id}`)}
+                      onClick={() => navigate(`/vendas/${sale.id}`)}
                     >
-                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-semibold">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 text-xs font-bold flex-shrink-0">
                         {sale.customerName?.[0]?.toUpperCase() || "?"}
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {sale.customerName || "Cliente avulso"}
                         </p>
-                        <p className="text-xs text-gray-500">{sale.date}</p>
+                        <p className="text-xs text-gray-400">{sale.date}</p>
                       </div>
-                      <p className="text-sm font-semibold text-gray-900">
+                      <p className="text-sm font-bold text-gray-900 flex-shrink-0">
                         {formatCurrency(sale.total ?? 0)}
                       </p>
                     </div>
@@ -377,23 +368,23 @@ export default function Dashboard() {
 
           {/* Reminders */}
           <Card>
-            <CardHeader className="pb-3">
+            <CardHeader className="pb-2 px-4 pt-4">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-lg">Lembretes</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-xs">
+                <CardTitle className="text-base font-semibold">Lembretes</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")} className="text-xs h-7 px-2">
                   Ver todos <ArrowRight className="w-3 h-3 ml-1" />
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="px-4 pb-4">
               {loading ? (
                 <div className="space-y-3">
                   {Array.from({ length: 4 }).map((_, i) => (
                     <div key={i} className="flex items-center gap-3">
-                      <Skeleton className="w-8 h-8 rounded" />
+                      <Skeleton className="w-8 h-8 rounded flex-shrink-0" />
                       <div className="flex-1 space-y-1">
-                        <Skeleton className="h-3 w-40" />
-                        <Skeleton className="h-3 w-24" />
+                        <Skeleton className="h-3 w-36" />
+                        <Skeleton className="h-3 w-20" />
                       </div>
                     </div>
                   ))}
@@ -404,17 +395,19 @@ export default function Dashboard() {
                   <p className="text-sm">Nenhum lembrete pendente.</p>
                 </div>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-1">
                   {data.reminders.map((reminder: any) => (
                     <div
                       key={reminder.id}
                       className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors"
                     >
-                      <div className={`w-8 h-8 rounded flex items-center justify-center text-xs ${
-                        reminder.type === "overdue"
-                          ? "bg-red-100 text-red-600"
-                          : "bg-amber-100 text-amber-600"
-                      }`}>
+                      <div
+                        className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                          reminder.type === "overdue"
+                            ? "bg-red-100 text-red-600"
+                            : "bg-amber-100 text-amber-600"
+                        }`}
+                      >
                         {reminder.type === "overdue" ? (
                           <AlertTriangle className="w-4 h-4" />
                         ) : (
@@ -422,14 +415,10 @@ export default function Dashboard() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {reminder.title}
-                        </p>
-                        <p className="text-xs text-gray-500">{reminder.description}</p>
+                        <p className="text-sm font-medium text-gray-900 truncate">{reminder.title}</p>
+                        <p className="text-xs text-gray-400 truncate">{reminder.description}</p>
                       </div>
-                      <span className="text-xs text-gray-400 whitespace-nowrap">
-                        {reminder.date}
-                      </span>
+                      <span className="text-xs text-gray-400 whitespace-nowrap flex-shrink-0">{reminder.date}</span>
                     </div>
                   ))}
                 </div>
@@ -438,29 +427,29 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        {/* Quick Actions (Mobile) */}
+        {/* Mobile Quick Actions */}
         <div className="grid grid-cols-3 gap-3 sm:hidden">
-          <Button
+          <button
             onClick={() => navigate("/vendas/nova")}
-            className="h-20 flex-col gap-1 bg-green-600 hover:bg-green-700"
+            className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-md active:scale-95 transition-transform"
           >
             <ShoppingCart className="w-6 h-6" />
-            <span className="text-xs">Nova Venda</span>
-          </Button>
-          <Button
+            <span className="text-xs font-medium">Nova Venda</span>
+          </button>
+          <button
             onClick={() => navigate("/clientes/novo")}
-            className="h-20 flex-col gap-1 bg-blue-600 hover:bg-blue-700"
+            className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 text-white shadow-md active:scale-95 transition-transform"
           >
             <Users className="w-6 h-6" />
-            <span className="text-xs">Novo Cliente</span>
-          </Button>
-          <Button
+            <span className="text-xs font-medium">Novo Cliente</span>
+          </button>
+          <button
             onClick={() => navigate("/produtos/novo")}
-            className="h-20 flex-col gap-1 bg-purple-600 hover:bg-purple-700"
+            className="flex flex-col items-center justify-center gap-2 py-4 rounded-xl bg-gradient-to-br from-violet-500 to-violet-600 text-white shadow-md active:scale-95 transition-transform"
           >
             <BoxIcon className="w-6 h-6" />
-            <span className="text-xs">Novo Produto</span>
-          </Button>
+            <span className="text-xs font-medium">Novo Produto</span>
+          </button>
         </div>
       </div>
     </MainLayout>
