@@ -109,11 +109,18 @@ export default function ProductForm() {
     },
   });
 
-  const costPrice = useWatch({ control: form.control, name: "costPrice" });
-  const taxFreight = useWatch({ control: form.control, name: "taxFreight" });
-  const desiredMarkup = useWatch({ control: form.control, name: "desiredMarkup" });
-  const sellingPrice = useWatch({ control: form.control, name: "sellingPrice" });
-  const minimumPrice = useWatch({ control: form.control, name: "minimumPrice" });
+  const rawCostPrice = useWatch({ control: form.control, name: "costPrice" });
+  const rawTaxFreight = useWatch({ control: form.control, name: "taxFreight" });
+  const rawDesiredMarkup = useWatch({ control: form.control, name: "desiredMarkup" });
+  const rawSellingPrice = useWatch({ control: form.control, name: "sellingPrice" });
+  const rawMinimumPrice = useWatch({ control: form.control, name: "minimumPrice" });
+
+  // Ensure numeric values (HTML inputs return strings, causing "600"+"0"="6000")
+  const costPrice = Number(rawCostPrice) || 0;
+  const taxFreight = Number(rawTaxFreight) || 0;
+  const desiredMarkup = Number(rawDesiredMarkup) || 0;
+  const sellingPrice = Number(rawSellingPrice) || 0;
+  const minimumPrice = Number(rawMinimumPrice) || 0;
 
   // ── Cost calculations ──
   const totalCost = useMemo(() => (costPrice || 0) + (taxFreight || 0), [costPrice, taxFreight]);
