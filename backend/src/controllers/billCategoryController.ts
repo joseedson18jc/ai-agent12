@@ -6,6 +6,8 @@ const createSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
 });
 
+const updateSchema = createSchema.partial();
+
 export async function list(req: Request, res: Response, next: NextFunction) {
   try {
     const categories = await billCategoryService.list();
@@ -36,7 +38,7 @@ export async function create(req: Request, res: Response, next: NextFunction) {
 
 export async function update(req: Request, res: Response, next: NextFunction) {
   try {
-    const data = createSchema.parse(req.body);
+    const data = updateSchema.parse(req.body);
     const category = await billCategoryService.update(req.params.id, data, req.user!.userId, req.ip);
     res.json({ success: true, data: category });
   } catch (error) {

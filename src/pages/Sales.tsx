@@ -35,21 +35,20 @@ import { toast } from "sonner";
 type StatusTab = "ALL" | SalesOrderStatus;
 
 const STATUS_CONFIG: Record<SalesOrderStatus, { label: string; className: string }> = {
-  [SalesOrderStatus.QUOTE]:         { label: "Orçamento",           className: "bg-slate-100 text-slate-700 border-slate-200" },
-  [SalesOrderStatus.PENDING]:       { label: "Aguardando Lente",    className: "bg-blue-100 text-blue-700 border-blue-200" },
-  [SalesOrderStatus.IN_PRODUCTION]: { label: "Em Produção",         className: "bg-amber-100 text-amber-700 border-amber-200" },
-  [SalesOrderStatus.READY]:         { label: "Pronta p/ Retirada",  className: "bg-green-100 text-green-700 border-green-200" },
-  [SalesOrderStatus.DELIVERED]:     { label: "Entregue",            className: "bg-gray-100 text-gray-600 border-gray-200" },
-  [SalesOrderStatus.CANCELLED]:     { label: "Cancelada",           className: "bg-red-100 text-red-700 border-red-200" },
+  [SalesOrderStatus.AWAITING_LENS]:  { label: "Aguardando Lente",    className: "bg-blue-100 text-blue-700 border-blue-200" },
+  [SalesOrderStatus.IN_PRODUCTION]:  { label: "Em Produção",         className: "bg-amber-100 text-amber-700 border-amber-200" },
+  [SalesOrderStatus.READY_FOR_PICKUP]: { label: "Pronta p/ Retirada", className: "bg-green-100 text-green-700 border-green-200" },
+  [SalesOrderStatus.DELIVERED]:      { label: "Entregue",            className: "bg-gray-100 text-gray-600 border-gray-200" },
+  [SalesOrderStatus.CANCELLED]:      { label: "Cancelada",           className: "bg-red-100 text-red-700 border-red-200" },
 };
 
 const TAB_OPTIONS: { value: StatusTab; label: string }[] = [
-  { value: "ALL",                         label: "Todas" },
-  { value: SalesOrderStatus.PENDING,      label: "Aguard. Lente" },
-  { value: SalesOrderStatus.IN_PRODUCTION,label: "Em Produção" },
-  { value: SalesOrderStatus.READY,        label: "Retirada" },
-  { value: SalesOrderStatus.DELIVERED,    label: "Entregue" },
-  { value: SalesOrderStatus.CANCELLED,    label: "Cancelada" },
+  { value: "ALL",                              label: "Todas" },
+  { value: SalesOrderStatus.AWAITING_LENS,     label: "Aguard. Lente" },
+  { value: SalesOrderStatus.IN_PRODUCTION,     label: "Em Produção" },
+  { value: SalesOrderStatus.READY_FOR_PICKUP,  label: "Retirada" },
+  { value: SalesOrderStatus.DELIVERED,         label: "Entregue" },
+  { value: SalesOrderStatus.CANCELLED,         label: "Cancelada" },
 ];
 
 // Mock data
@@ -57,7 +56,7 @@ const MOCK_SALES: SalesOrder[] = [
   {
     id: "1", orderNumber: "OS-0001", customerId: "c1",
     customer: { id: "c1", name: "Maria Silva", cpf: "123.456.789-00", status: "ACTIVE" as any, storeId: "s1", createdAt: "", updatedAt: "" },
-    sellerId: "u1", status: SalesOrderStatus.PENDING,
+    sellerId: "u1", status: SalesOrderStatus.AWAITING_LENS,
     subtotal: 850, discount: 50, total: 800,
     items: [{ id: "i1", salesOrderId: "1", productId: "p1", quantity: 1, unitPrice: 500, discount: 0, total: 500, createdAt: "", updatedAt: "" }],
     storeId: "s1", createdAt: "2026-04-04T10:00:00Z", updatedAt: "2026-04-04T10:00:00Z",
@@ -73,7 +72,7 @@ const MOCK_SALES: SalesOrder[] = [
   {
     id: "3", orderNumber: "OS-0003", customerId: "c3",
     customer: { id: "c3", name: "Ana Oliveira", status: "ACTIVE" as any, storeId: "s1", createdAt: "", updatedAt: "" },
-    sellerId: "u1", status: SalesOrderStatus.READY,
+    sellerId: "u1", status: SalesOrderStatus.READY_FOR_PICKUP,
     subtotal: 650, discount: 100, total: 550,
     items: [{ id: "i4", salesOrderId: "3", productId: "p1", quantity: 1, unitPrice: 650, discount: 100, total: 550, createdAt: "", updatedAt: "" }],
     storeId: "s1", createdAt: "2026-04-02T09:15:00Z", updatedAt: "2026-04-02T09:15:00Z",

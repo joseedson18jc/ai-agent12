@@ -34,7 +34,7 @@ export async function create(data: { name: string }, userId: string, ipAddress?:
   return category;
 }
 
-export async function update(id: string, data: { name: string }, userId: string, ipAddress?: string) {
+export async function update(id: string, data: { name?: string }, userId: string, ipAddress?: string) {
   const existing = await prisma.billCategory.findFirst({ where: { id, isDeleted: false } });
   if (!existing) throw new AppError('Categoria de conta não encontrada', 404);
 

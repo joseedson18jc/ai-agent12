@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import productService from "@/services/product.service";
+import api from "@/services/api";
 import { formatCurrency } from "@/utils/formatters";
 import MainLayout from "@/components/layout/MainLayout";
 import { Button } from "@/components/ui/button";
@@ -24,15 +25,7 @@ import {
 
 const PAGE_SIZE = 12;
 
-const CATEGORIES = [
-  { value: "all", label: "Todas Categorias" },
-  { value: "frames", label: "Armações" },
-  { value: "lenses", label: "Lentes" },
-  { value: "sunglasses", label: "Óculos de Sol" },
-  { value: "contact_lenses", label: "Lentes de Contato" },
-  { value: "accessories", label: "Acessórios" },
-  { value: "cleaning", label: "Limpeza" },
-];
+// Categories loaded dynamically from API
 
 const STOCK_FILTERS = [
   { value: "all", label: "Todo Estoque" },
@@ -65,6 +58,7 @@ function StockBadge({ current, min }: { current: number; min: number }) {
 export default function Products() {
   const navigate = useNavigate();
   const [products, setProducts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
@@ -80,12 +74,13 @@ export default function Products() {
       const result = await productService.getAll({
         search,
         categoryId: category === "all" ? undefined : category,
-        lowStock: stockFilter === "low" ? true : undefined,
+        lowStock: stockFilter === "low_stock" ? true : undefined,
         page,
         limit: PAGE_SIZE,
       });
       setProducts(result.data || []);
-      setTotalPages(result.totalPages || 1);
+      const total = result.pagination?.total || result.total || 0;
+      setTotalPages(Math.max(1, Math.ceil(total / PAGE_SIZE)));
     } catch {
       setProducts([]);
     } finally {
@@ -96,6 +91,13 @@ export default function Products() {
   useEffect(() => {
     loadProducts();
   }, [loadProducts]);
+
+  useEffect(() => {
+    // Load categories from API
+    api.get<any>("/categories").then((res) => {
+      setCategories(res.data || []);
+    }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     setPage(1);
@@ -133,9 +135,10 @@ export default function Products() {
                   <SelectValue placeholder="Categoria" />
                 </SelectTrigger>
                 <SelectContent>
-                  {CATEGORIES.map((c) => (
-                    <SelectItem key={c.value} value={c.value}>
-                      {c.label}
+                  <SelectItem value="all">Todas Categorias</SelectItem>
+                  {categories.map((c: any) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
