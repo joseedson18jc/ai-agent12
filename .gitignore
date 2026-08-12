@@ -41,3 +41,6 @@ backend/public
 backend/uploads
 backend/.env
 backend/.env.*
+
+# graft's local graph cache — regenerable, not committed (run `graft build`).
+graft/
