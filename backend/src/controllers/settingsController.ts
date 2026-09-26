@@ -17,6 +17,10 @@ const updateSchema = z.object({
   prescriptionAlertDays: z.number().int().min(1).optional(),
   defaultMinStock: z.number().int().min(0).optional(),
   printerType: z.string().optional(),
+  whatsapp: z.string().max(20).optional(),
+  instagram: z.string().max(60).optional(),
+  openingHours: z.string().max(600).optional(),
+  siteHeadline: z.string().max(160).optional(),
 });
 
 export async function getSettings(req: Request, res: Response, next: NextFunction) {

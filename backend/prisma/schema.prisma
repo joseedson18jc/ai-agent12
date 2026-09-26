@@ -128,6 +128,11 @@ model Store {
   prescriptionAlertDays Int     @default(30)  // Dias de alerta para vencimento de receita
   defaultMinStock      Int      @default(2)   // Estoque mínimo padrão
   printerType          String   @default("A4") // Tipo de impressora: "58mm", "80mm", "A4"
+  // Site público (vitrine)
+  whatsapp      String? // Número de WhatsApp da loja (só dígitos, com DDD)
+  instagram     String? // @usuário do Instagram
+  openingHours  String? // Horário de funcionamento (texto livre, uma linha por dia/faixa)
+  siteHeadline  String? // Frase de destaque exibida na página inicial
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -299,6 +304,8 @@ model Product {
   supplierId  String?
   barcode     String? @unique // Código de barras / SKU
   photo       String? // URL da foto
+  description String? // Descrição exibida na vitrine online
+  showOnline  Boolean @default(true) // Exibir na vitrine do site
 
   // Estoque
   stock       Int     @default(0)
@@ -603,4 +610,46 @@ model AuditLog {
   @@index([entityId])
   @@index([timestamp])
   @@map("audit_logs")
+}
+
+
+// ============================================================
+// VITRINE ONLINE — solicitações vindas do site público
+// ============================================================
+
+enum WebLeadType {
+  RESERVATION  // Reserva de produto(s) para retirada na loja
+  APPOINTMENT  // Agendamento de exame de vista / ajuste / atendimento
+  CONTACT      // Mensagem de contato geral
+}
+
+enum WebLeadStatus {
+  NEW        // Nova, ainda não atendida
+  CONTACTED  // Cliente contatado
+  CONVERTED  // Virou venda / atendimento realizado
+  DISCARDED  // Descartada
+}
+
+model WebLead {
+  id            String        @id @default(uuid())
+  type          WebLeadType
+  status        WebLeadStatus @default(NEW)
+  name          String
+  phone         String
+  email         String?
+  message       String?
+  preferredDate DateTime?     // Data desejada (agendamentos)
+  preferredTime String?       // Faixa de horário desejada (ex: "manhã", "14:00")
+  service       String?       // Serviço desejado (agendamentos)
+  items         Json?         // [{ productId, name, quantity, unitPrice }] (reservas)
+  total         Float?        // Valor total estimado (reservas)
+  customerId    String?       // Cliente vinculado no CRM (quando identificado/convertido)
+  notes         String?       // Anotações internas da equipe
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("web_leads")
 }

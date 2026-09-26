@@ -14,6 +14,8 @@ const createSchema = z.object({
   supplierId: z.string().uuid('Fornecedor inválido').nullable().optional().or(z.literal('').transform(() => undefined)),
   barcode: z.string().trim().nullable().optional().transform((v) => (v === '' ? null : v)),
   photo: z.string().nullable().optional(),
+  description: z.string().max(2000).nullable().optional(),
+  showOnline: z.boolean().optional(),
   stock: z.number().int().min(0).optional(),
   minStock: z.number().int().min(0).optional(),
   costPrice: z.number().min(0, 'Preço de custo deve ser positivo'),

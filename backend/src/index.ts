@@ -29,8 +29,12 @@ import reportRoutes from './routes/reportRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
 import auditRoutes from './routes/auditRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
+import webLeadRoutes from './routes/webLeadRoutes.js';
 
 const app = express();
+// Render sits behind a proxy; needed for the real client IP (rate limiting).
+app.set('trust proxy', 1);
 const PORT = parseInt(process.env.PORT || '3001', 10);
 
 // Ensure uploads directory exists
@@ -74,6 +78,8 @@ app.use('/api/reports', reportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/audit', auditRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/web-leads', webLeadRoutes);
 
 // Serve frontend static files in production
 if (process.env.NODE_ENV === 'production') {
