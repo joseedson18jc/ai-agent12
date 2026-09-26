@@ -6,6 +6,8 @@ import { createAuditLog } from './auditService.js';
 export async function listCustomers(filters: {
   search?: string;
   status?: string;
+  city?: string;
+  createdFrom?: string;
   page?: number;
   limit?: number;
 }) {
@@ -14,12 +16,23 @@ export async function listCustomers(filters: {
 
   const where: any = { isDeleted: false };
   if (filters.status) where.status = filters.status;
+  if (filters.city) where.city = { contains: filters.city, mode: 'insensitive' };
+  if (filters.createdFrom) {
+    const from = new Date(filters.createdFrom);
+    if (!isNaN(from.getTime())) where.createdAt = { gte: from };
+  }
   if (filters.search) {
     where.OR = [
       { name: { contains: filters.search, mode: 'insensitive' } },
       { cpf: { contains: filters.search } },
       { phone: { contains: filters.search } },
+      { email: { contains: filters.search, mode: 'insensitive' } },
     ];
+    // Busca por CPF/telefone formatado (ex.: "529.982.247-25", "(11) 99988-7766")
+    const digits = filters.search.replace(/\D/g, '');
+    if (digits.length >= 3 && digits !== filters.search) {
+      where.OR.push({ cpf: { contains: digits } }, { phone: { contains: digits } });
+    }
   }
 
   const [customers, total] = await Promise.all([
@@ -28,6 +41,14 @@ export async function listCustomers(filters: {
       orderBy: { name: 'asc' },
       skip,
       take: limit,
+      include: {
+        salesOrders: {
+          where: { isDeleted: false, status: { not: 'CANCELLED' } },
+          orderBy: { date: 'desc' },
+          take: 1,
+          select: { id: true, date: true, total: true },
+        },
+      },
     }),
     prisma.customer.count({ where }),
   ]);
@@ -48,7 +69,7 @@ export async function getCustomerById(id: string) {
         orderBy: { date: 'desc' },
         include: {
           items: { include: { product: true } },
-          payments: true,
+          payments: { include: { installments: { orderBy: { number: 'asc' } } } },
         },
       },
     },

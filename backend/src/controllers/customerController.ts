@@ -2,32 +2,42 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import * as customerService from '../services/customerService.js';
 
+// Campos opcionais aceitam null para permitir limpar o valor na edição
+const optStr = () => z.string().nullable().optional();
+
 const createSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  cpf: z.string().optional(),
+  cpf: optStr(),
   phone: z.string().min(10, 'Telefone inválido'),
-  whatsapp: z.string().optional(),
-  email: z.string().email().optional().or(z.literal('')),
-  birthDate: z.string().optional().transform((val) => val ? new Date(val) : undefined),
-  zipCode: z.string().optional(),
-  street: z.string().optional(),
-  number: z.string().optional(),
-  complement: z.string().optional(),
-  neighborhood: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  photo: z.string().optional(),
-  notes: z.string().optional(),
+  whatsapp: optStr(),
+  email: z.string().email('E-mail inválido').nullable().optional().or(z.literal('')),
+  birthDate: z
+    .string()
+    .nullable()
+    .optional()
+    .transform((val) => (val ? new Date(val) : val === null ? null : undefined)),
+  zipCode: optStr(),
+  street: optStr(),
+  number: optStr(),
+  complement: optStr(),
+  neighborhood: optStr(),
+  city: optStr(),
+  state: optStr(),
+  photo: optStr(),
+  notes: optStr(),
+  status: z.enum(['ACTIVE', 'INACTIVE']).optional(),
 });
 
 const updateSchema = createSchema.partial();
 
 export async function list(req: Request, res: Response, next: NextFunction) {
   try {
-    const { search, status, page, limit } = req.query;
+    const { search, status, city, createdFrom, page, limit } = req.query;
     const result = await customerService.listCustomers({
       search: search as string,
       status: status as string,
+      city: city as string,
+      createdFrom: createdFrom as string,
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
     });

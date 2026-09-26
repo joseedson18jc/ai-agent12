@@ -12,12 +12,12 @@ export async function list(search?: string, expiring?: boolean, expired?: boolea
     ];
   }
 
+  // Filtra pela data de validade (não depende do job que marca isExpired)
+  const now = new Date();
   if (expired) {
-    where.isExpired = true;
+    where.validity = { lt: now };
   } else if (expiring) {
-    const now = new Date();
     const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-    where.isExpired = false;
     where.validity = { lte: thirtyDaysFromNow, gte: now };
   }
 
@@ -52,7 +52,9 @@ export async function create(data: any, userId: string, ipAddress?: string) {
   });
   if (!customer) throw new AppError('Cliente não encontrado', 404);
 
-  const prescription = await prisma.prescription.create({ data });
+  const prescription = await prisma.prescription.create({
+    data: { ...data, isExpired: data.validity instanceof Date ? data.validity < new Date() : false },
+  });
 
   await createAuditLog({
     userId,
@@ -72,7 +74,9 @@ export async function update(id: string, data: any, userId: string, ipAddress?: 
   });
   if (!existing) throw new AppError('Receita não encontrada', 404);
 
-  const prescription = await prisma.prescription.update({ where: { id }, data });
+  const updateData = { ...data };
+  if (data.validity instanceof Date) updateData.isExpired = data.validity < new Date();
+  const prescription = await prisma.prescription.update({ where: { id }, data: updateData });
 
   await createAuditLog({
     userId,
