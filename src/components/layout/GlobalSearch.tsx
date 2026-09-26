@@ -57,7 +57,7 @@ export default function GlobalSearch() {
       const [customersRes, productsRes, salesRes] = await Promise.allSettled([
         customerService.getAll(searchQuery, 1, 5),
         productService.getAll({ search: searchQuery, page: 1, limit: 5 }),
-        salesService.getAll({ page: 1, limit: 5 }),
+        salesService.getAll({ page: 1, limit: 50 }),
       ]);
 
       const searchResults: SearchResult[] = [];
@@ -79,9 +79,9 @@ export default function GlobalSearch() {
           searchResults.push({
             id: product.id,
             title: product.name,
-            subtitle: `${product.brand || ""} ${product.model || ""}`.trim() || product.sku || "",
+            subtitle: `${product.brand || ""} ${product.model || ""}`.trim() || product.barcode || "",
             type: "product",
-            path: `/produtos/${product.id}`,
+            path: `/produtos/${product.id}/editar`,
           });
         });
       }
@@ -90,9 +90,10 @@ export default function GlobalSearch() {
         salesRes.value.data
           .filter(
             (sale) =>
-              sale.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              sale.customer?.name.toLowerCase().includes(searchQuery.toLowerCase())
+              String(sale.orderNumber).toLowerCase().includes(searchQuery.toLowerCase()) ||
+              sale.customer?.name?.toLowerCase().includes(searchQuery.toLowerCase())
           )
+          .slice(0, 5)
           .forEach((sale) => {
             searchResults.push({
               id: sale.id,

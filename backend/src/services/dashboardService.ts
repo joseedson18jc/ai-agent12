@@ -8,6 +8,15 @@ export async function getKpis() {
   const monthStart = startOfMonth(now);
   const monthEnd = endOfMonth(now);
 
+  // Installments are never flipped to OVERDUE by a job, so a PENDING one past its
+  // due date is overdue too — count both.
+  const overdueWhere = {
+    OR: [
+      { status: 'OVERDUE' as const },
+      { status: 'PENDING' as const, dueDate: { lt: todayStart } },
+    ],
+  };
+
   const [todaySales, monthSales, lowStockProducts, upcomingBills, overdueInstallments] =
     await Promise.all([
       prisma.salesOrder.aggregate({
@@ -29,14 +38,16 @@ export async function getKpis() {
         _count: true,
       }),
       prisma.product.findMany({ where: { isDeleted: false } }),
-      prisma.billToPay.count({
+      prisma.billToPay.aggregate({
         where: {
           isDeleted: false,
-          status: 'PENDING',
+          status: { in: ['PENDING', 'OVERDUE'] },
           dueDate: { lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) },
         },
+        _sum: { amount: true },
+        _count: true,
       }),
-      prisma.installment.count({ where: { status: 'OVERDUE' } }),
+      prisma.installment.aggregate({ where: overdueWhere, _sum: { amount: true }, _count: true }),
     ]);
 
   const lowStockCount = lowStockProducts.filter((p) => p.stock <= p.minStock).length;
@@ -51,8 +62,10 @@ export async function getKpis() {
     monthProfit: monthSales._sum.estimatedProfit ?? 0,
     ticketAvg: Math.round(ticketAvg * 100) / 100,
     lowStockCount,
-    upcomingBills,
-    overdueInstallments,
+    upcomingBills: upcomingBills._count,
+    upcomingBillsAmount: Math.round((upcomingBills._sum.amount ?? 0) * 100) / 100,
+    overdueInstallments: overdueInstallments._count,
+    overdueInstallmentsAmount: Math.round((overdueInstallments._sum.amount ?? 0) * 100) / 100,
   };
 }
 
@@ -141,21 +154,27 @@ export async function getRecentSales() {
 
 export async function getUpcomingReminders() {
   const now = new Date();
+  const todayStart = startOfDay(now);
   const sevenDays = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
   const [upcomingBills, overdueInstallments] = await Promise.all([
     prisma.billToPay.findMany({
       where: {
         isDeleted: false,
-        status: 'PENDING',
-        dueDate: { gte: now, lte: sevenDays },
+        status: { in: ['PENDING', 'OVERDUE'] },
+        dueDate: { gte: todayStart, lte: sevenDays },
       },
       include: { category: true },
       orderBy: { dueDate: 'asc' },
       take: 10,
     }),
     prisma.installment.findMany({
-      where: { status: 'OVERDUE' },
+      where: {
+        OR: [
+          { status: 'OVERDUE' },
+          { status: 'PENDING', dueDate: { lt: todayStart } },
+        ],
+      },
       include: {
         payment: {
           include: {

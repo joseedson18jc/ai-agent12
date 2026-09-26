@@ -45,13 +45,18 @@ export function formatPhone(phone: string): string {
  * Formata data: dd/mm/aaaa
  */
 export function formatDate(date: string | Date): string {
+  if (!date) return "";
   const d = typeof date === "string" ? new Date(date) : date;
   if (isNaN(d.getTime())) return "";
+  // Calendar dates (birth dates, due dates, "yyyy-MM-dd" inputs) arrive as UTC
+  // midnight; shown in São Paulo time they would slip back to the previous day.
+  const isCalendarDate =
+    typeof date === "string" && /^\d{4}-\d{2}-\d{2}(T00:00:00(\.000)?Z)?$/.test(date);
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
-    timeZone: "America/Sao_Paulo",
+    timeZone: isCalendarDate ? "UTC" : "America/Sao_Paulo",
   }).format(d);
 }
 

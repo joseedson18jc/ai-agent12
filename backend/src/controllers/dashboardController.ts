@@ -3,7 +3,9 @@ import * as dashboardService from '../services/dashboardService.js';
 
 export async function getKpis(req: Request, res: Response, next: NextFunction) {
   try {
-    const kpis = await dashboardService.getKpis();
+    const kpis: Record<string, unknown> = await dashboardService.getKpis();
+    // Estimated profit is admin-only information.
+    if (req.user?.role !== 'ADMIN') delete kpis.monthProfit;
     res.json({ success: true, data: kpis });
   } catch (error) {
     next(error);

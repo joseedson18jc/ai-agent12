@@ -225,8 +225,14 @@ export async function customersReport(filters: { startDate: Date; endDate: Date 
     .slice(0, 20);
 
   // Debtors: customers with overdue installments
+  // PENDING installments past their due date are overdue as well (no job flips the status).
   const overdueInstallments = await prisma.installment.findMany({
-    where: { status: 'OVERDUE' },
+    where: {
+      OR: [
+        { status: 'OVERDUE' },
+        { status: 'PENDING', dueDate: { lt: startOfDay(new Date()) } },
+      ],
+    },
     include: {
       payment: {
         include: {
