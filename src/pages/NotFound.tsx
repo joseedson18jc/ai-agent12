@@ -1,55 +1,48 @@
 import { Link, useLocation } from "react-router-dom";
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Home, ArrowLeft, Glasses } from "lucide-react";
+import { ArrowLeft, Home } from "lucide-react";
+import { BrandMark } from "@/components/imperio";
 
 const NotFound = () => {
   const location = useLocation();
 
-  useEffect(() => {
-    console.error("404 Error: User attempted to access non-existent route:", location.pathname);
-  }, [location.pathname]);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 p-6">
-      <div className="text-center max-w-md">
-        {/* Icon */}
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-blue-600 text-white mb-6 shadow-xl">
-          <Glasses className="w-10 h-10" />
+    <div className="relative flex min-h-[100dvh] items-center justify-center overflow-hidden bg-background p-6">
+      {/* Eye-chart backdrop */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 font-display font-semibold text-foreground/[0.04] select-none"
+      >
+        <span className="text-[9rem] leading-none">E</span>
+        <span className="text-7xl tracking-[0.3em]">F P</span>
+        <span className="text-5xl tracking-[0.35em]">T O Z</span>
+        <span className="text-3xl tracking-[0.4em]">L P E D</span>
+      </div>
+
+      <div className="relative max-w-md text-center animate-rise">
+        <div className="mx-auto mb-8 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary ring-1 ring-gold/40 shadow-lg">
+          <BrandMark className="h-10 w-10 text-gold" />
         </div>
-
-        {/* 404 */}
-        <p className="text-8xl font-black text-blue-600 leading-none">404</p>
-
-        <h2 className="mt-4 text-2xl font-bold text-gray-900">
-          Página não encontrada
-        </h2>
-        <p className="mt-2 text-gray-500 text-sm leading-relaxed">
-          A página que você está procurando não existe ou foi movida.<br />
-          Verifique o endereço digitado ou volte ao início.
+        <p className="eyebrow">Erro 404</p>
+        <h1 className="mt-2 font-display text-4xl font-semibold leading-tight sm:text-5xl">
+          Esta página saiu <span className="italic text-gold">de foco.</span>
+        </h1>
+        <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+          O endereço que você procurou não existe ou foi movido.
         </p>
-
-        {/* Path hint */}
         {location.pathname !== "/" && (
-          <div className="mt-4 inline-block bg-gray-100 rounded-lg px-3 py-1.5">
-            <code className="text-xs text-gray-500 font-mono">{location.pathname}</code>
-          </div>
+          <code className="mt-4 inline-block rounded-md bg-muted px-2.5 py-1 font-mono text-xs text-muted-foreground">
+            {location.pathname}
+          </code>
         )}
-
-        <div className="flex flex-col sm:flex-row gap-3 justify-center mt-8">
-          <Button asChild className="bg-blue-600 hover:bg-blue-700 rounded-xl h-11 px-6">
+        <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
+          <Button asChild size="lg">
             <Link to="/dashboard">
-              <Home className="mr-2 h-4 w-4" />
-              Ir ao Dashboard
+              <Home className="h-4 w-4" /> Ir ao painel
             </Link>
           </Button>
-          <Button
-            variant="outline"
-            onClick={() => window.history.back()}
-            className="rounded-xl h-11 px-6"
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Voltar
+          <Button variant="outline" size="lg" onClick={() => window.history.back()}>
+            <ArrowLeft className="h-4 w-4" /> Voltar
           </Button>
         </div>
       </div>

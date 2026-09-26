@@ -198,7 +198,7 @@ export default function GlobalSearch() {
           onFocus={() => {
             if (results.length > 0) setIsOpen(true);
           }}
-          className="pl-10 pr-10 h-10 bg-gray-50 border-gray-200 focus:bg-white"
+          className="pl-10 pr-10 h-10 rounded-full bg-muted/60 border-transparent focus:bg-card focus-visible:border-gold"
         />
         {query && (
           <button
@@ -217,7 +217,7 @@ export default function GlobalSearch() {
 
       {/* Dropdown de resultados */}
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50 max-h-96 overflow-y-auto">
+        <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-lg overflow-hidden z-50 max-h-96 overflow-y-auto">
           {isSearching ? (
             <div className="px-4 py-6 text-center text-sm text-gray-500">
               Buscando...
@@ -229,7 +229,7 @@ export default function GlobalSearch() {
 
               return (
                 <div key={type}>
-                  <div className="px-4 py-2 bg-gray-50 border-b border-gray-100">
+                  <div className="px-4 py-2 bg-muted/50 border-b border-border">
                     <div className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       <Icon className="h-3.5 w-3.5" />
                       {config.label}

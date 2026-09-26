@@ -5,233 +5,233 @@ import {
   Users,
   Package,
   ShoppingCart,
-  DollarSign,
+  Wallet,
   Truck,
   FlaskConical,
   BarChart3,
   Settings,
   ChevronDown,
-  ChevronRight,
   LogOut,
-  Menu,
-  X,
-  Eye,
+  FileText,
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Landmark,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
+import { BrandMark, InitialsAvatar } from "@/components/imperio";
+
+interface NavChild {
+  label: string;
+  path: string;
+  icon: React.ElementType;
+}
 
 interface NavItem {
   label: string;
   icon: React.ElementType;
   path?: string;
-  children?: { label: string; path: string; icon: React.ElementType }[];
+  children?: NavChild[];
 }
 
-const navItems: NavItem[] = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Clientes", icon: Users, path: "/clientes" },
-  { label: "Produtos", icon: Package, path: "/produtos" },
-  { label: "Vendas / OS", icon: ShoppingCart, path: "/vendas" },
+const sections: { title: string; items: NavItem[] }[] = [
   {
-    label: "Financeiro",
-    icon: DollarSign,
-    children: [
-      { label: "Contas a Pagar", path: "/financeiro/contas-pagar", icon: DollarSign },
-      { label: "Contas a Receber", path: "/financeiro/contas-receber", icon: DollarSign },
-      { label: "Caixa", path: "/financeiro/caixa", icon: DollarSign },
+    title: "Operação",
+    items: [
+      { label: "Painel", icon: LayoutDashboard, path: "/dashboard" },
+      { label: "Vendas / OS", icon: ShoppingCart, path: "/vendas" },
+      { label: "Clientes", icon: Users, path: "/clientes" },
+      { label: "Receitas", icon: FileText, path: "/receitas" },
+      { label: "Produtos", icon: Package, path: "/produtos" },
     ],
   },
-  { label: "Fornecedores", icon: Truck, path: "/fornecedores" },
-  { label: "Laboratórios", icon: FlaskConical, path: "/laboratorios" },
-  { label: "Relatórios", icon: BarChart3, path: "/relatorios" },
-  { label: "Configurações", icon: Settings, path: "/configuracoes" },
+  {
+    title: "Gestão",
+    items: [
+      {
+        label: "Financeiro",
+        icon: Wallet,
+        children: [
+          { label: "Contas a Pagar", path: "/financeiro/contas-pagar", icon: ArrowUpCircle },
+          { label: "Contas a Receber", path: "/financeiro/contas-receber", icon: ArrowDownCircle },
+          { label: "Caixa", path: "/financeiro/caixa", icon: Landmark },
+        ],
+      },
+      { label: "Fornecedores", icon: Truck, path: "/fornecedores" },
+      { label: "Laboratórios", icon: FlaskConical, path: "/laboratorios" },
+      { label: "Relatórios", icon: BarChart3, path: "/relatorios" },
+    ],
+  },
+  {
+    title: "Sistema",
+    items: [{ label: "Configurações", icon: Settings, path: "/configuracoes" }],
+  },
 ];
 
 interface SidebarProps {
   isOpen: boolean;
-  onToggle: () => void;
+  onClose: () => void;
 }
 
-export default function Sidebar({ isOpen, onToggle }: SidebarProps) {
+const linkBase =
+  "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13.5px] font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring/60";
+
+function Indicator({ active }: { active: boolean }) {
+  return (
+    <span
+      className={cn(
+        "absolute -left-3 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-gold transition-all duration-300",
+        active ? "opacity-100" : "opacity-0 scale-y-50",
+      )}
+    />
+  );
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [openSubmenus, setOpenSubmenus] = useState<string[]>(["Financeiro"]);
+  const [openFinance, setOpenFinance] = useState(location.pathname.startsWith("/financeiro"));
 
-  const toggleSubmenu = (label: string) => {
-    setOpenSubmenus((prev) =>
-      prev.includes(label)
-        ? prev.filter((l) => l !== label)
-        : [...prev, label]
-    );
-  };
-
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  };
-
-  const isChildActive = (children: NavItem["children"]) => {
-    return children?.some((child) => location.pathname.startsWith(child.path));
+  const closeOnMobile = () => {
+    if (window.innerWidth < 1024) onClose();
   };
 
   return (
     <>
-      {/* Overlay para mobile */}
-      {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={onToggle}
-        />
-      )}
+      {/* Mobile overlay */}
+      <div
+        className={cn(
+          "fixed inset-0 z-40 bg-[hsl(224_52%_6%/0.55)] backdrop-blur-[2px] transition-opacity lg:hidden",
+          isOpen ? "opacity-100" : "pointer-events-none opacity-0",
+        )}
+        onClick={onClose}
+      />
 
-      {/* Botão hambúrguer para mobile */}
-      <Button
-        variant="ghost"
-        size="icon"
-        className="fixed top-4 left-4 z-50 lg:hidden"
-        onClick={onToggle}
-      >
-        {isOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </Button>
-
-      {/* Sidebar */}
       <aside
         className={cn(
-          "fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-300 ease-in-out",
-          "lg:translate-x-0 lg:static lg:z-auto",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "ink-texture fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col text-sidebar-foreground transition-transform duration-300 ease-out",
+          "lg:static lg:z-auto lg:translate-x-0",
+          isOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full",
         )}
       >
-        {/* Logo */}
-        <div className="flex items-center gap-2 px-6 py-5 border-b border-gray-100">
-          <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg">
-            <Eye className="h-5 w-5 text-white" />
+        {/* Brand */}
+        <div className="px-5 pt-6 pb-5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gold/10 ring-1 ring-gold/40">
+              <BrandMark className="h-7 w-7 text-gold" />
+            </div>
+            <div className="leading-none">
+              <p className="font-display text-[19px] font-semibold tracking-tight text-white">Óticas Império</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-gold/80">Gestão da ótica</p>
+            </div>
           </div>
-          <h1 className="text-lg font-bold text-gray-900">
-            Ótica <span className="text-blue-600">Império</span>
-          </h1>
+          <div className="gold-rule mt-5 opacity-60" />
         </div>
 
-        {/* Navegação */}
-        <ScrollArea className="flex-1 py-4">
-          <nav className="px-3 space-y-1">
-            {navItems.map((item) => {
-              if (item.children) {
-                const isSubmenuOpen = openSubmenus.includes(item.label);
-                const isActive = isChildActive(item.children);
+        <ScrollArea className="flex-1 px-3">
+          <nav className="space-y-6 pb-6 pl-3">
+            {sections.map((section) => (
+              <div key={section.title}>
+                <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.18em] text-sidebar-foreground/40">
+                  {section.title}
+                </p>
+                <div className="space-y-0.5">
+                  {section.items.map((item) => {
+                    if (item.children) {
+                      const childActive = item.children.some((c) => location.pathname.startsWith(c.path));
+                      return (
+                        <Collapsible key={item.label} open={openFinance} onOpenChange={setOpenFinance}>
+                          <CollapsibleTrigger asChild>
+                            <button
+                              className={cn(
+                                linkBase,
+                                "w-full",
+                                childActive ? "text-white" : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-white",
+                              )}
+                            >
+                              <Indicator active={childActive && !openFinance} />
+                              <item.icon className={cn("h-[18px] w-[18px]", childActive ? "text-gold" : "")} />
+                              <span className="flex-1 text-left">{item.label}</span>
+                              <ChevronDown
+                                className={cn("h-4 w-4 opacity-60 transition-transform", openFinance && "rotate-180")}
+                              />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="mt-0.5 space-y-0.5 overflow-hidden border-l border-white/10 ml-[21px] pl-2 data-[state=closed]:animate-accordion-up data-[state=open]:animate-accordion-down">
+                            {item.children.map((child) => (
+                              <NavLink
+                                key={child.path}
+                                to={child.path}
+                                onClick={closeOnMobile}
+                                className={({ isActive }) =>
+                                  cn(
+                                    "flex items-center gap-2.5 rounded-md px-3 py-1.5 text-[13px] transition-colors",
+                                    isActive
+                                      ? "bg-white/10 text-white"
+                                      : "text-sidebar-foreground/60 hover:bg-white/5 hover:text-white",
+                                  )
+                                }
+                              >
+                                {({ isActive }) => (
+                                  <>
+                                    <child.icon className={cn("h-3.5 w-3.5", isActive && "text-gold")} />
+                                    {child.label}
+                                  </>
+                                )}
+                              </NavLink>
+                            ))}
+                          </CollapsibleContent>
+                        </Collapsible>
+                      );
+                    }
 
-                return (
-                  <Collapsible
-                    key={item.label}
-                    open={isSubmenuOpen}
-                    onOpenChange={() => toggleSubmenu(item.label)}
-                  >
-                    <CollapsibleTrigger asChild>
-                      <button
-                        className={cn(
-                          "flex items-center w-full gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                          isActive
-                            ? "text-blue-600 bg-blue-50"
-                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                        )}
+                    return (
+                      <NavLink
+                        key={item.path}
+                        to={item.path!}
+                        onClick={closeOnMobile}
+                        className={({ isActive }) =>
+                          cn(
+                            linkBase,
+                            isActive
+                              ? "bg-white/[0.07] text-white"
+                              : "text-sidebar-foreground/70 hover:bg-white/5 hover:text-white",
+                          )
+                        }
                       >
-                        <item.icon className="h-5 w-5 flex-shrink-0" />
-                        <span className="flex-1 text-left">{item.label}</span>
-                        {isSubmenuOpen ? (
-                          <ChevronDown className="h-4 w-4" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4" />
+                        {({ isActive }) => (
+                          <>
+                            <Indicator active={isActive} />
+                            <item.icon className={cn("h-[18px] w-[18px]", isActive && "text-gold")} />
+                            <span>{item.label}</span>
+                          </>
                         )}
-                      </button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pl-8 mt-1 space-y-1">
-                      {item.children.map((child) => (
-                        <NavLink
-                          key={child.path}
-                          to={child.path}
-                          onClick={() => {
-                            if (window.innerWidth < 1024) onToggle();
-                          }}
-                          className={({ isActive }) =>
-                            cn(
-                              "flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors",
-                              isActive
-                                ? "text-blue-600 bg-blue-50 font-medium"
-                                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                            )
-                          }
-                        >
-                          <span>{child.label}</span>
-                        </NavLink>
-                      ))}
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              }
-
-              return (
-                <NavLink
-                  key={item.path}
-                  to={item.path!}
-                  onClick={() => {
-                    if (window.innerWidth < 1024) onToggle();
-                  }}
-                  className={({ isActive }) =>
-                    cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                      isActive
-                        ? "text-blue-600 bg-blue-50"
-                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    )
-                  }
-                >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  <span>{item.label}</span>
-                </NavLink>
-              );
-            })}
+                      </NavLink>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </ScrollArea>
 
-        {/* Informações do usuário */}
-        <div className="border-t border-gray-200 p-4">
-          <Separator className="mb-4" />
+        {/* User */}
+        <div className="m-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">
           <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
-                {user ? getInitials(user.name) : "??"}
-              </AvatarFallback>
-            </Avatar>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {user?.name || "Usuário"}
-              </p>
-              <p className="text-xs text-gray-500 truncate">
-                {user?.email || ""}
-              </p>
+            <InitialsAvatar name={user?.name} size="sm" className="bg-gold text-primary ring-0" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-white">{user?.name || "Usuário"}</p>
+              <p className="truncate text-[11px] text-sidebar-foreground/50">{user?.email || ""}</p>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-gray-400 hover:text-red-600"
+            <button
               onClick={logout}
               title="Sair"
+              className="rounded-md p-1.5 text-sidebar-foreground/50 transition-colors hover:bg-white/10 hover:text-white"
             >
               <LogOut className="h-4 w-4" />
-            </Button>
+            </button>
           </div>
         </div>
       </aside>

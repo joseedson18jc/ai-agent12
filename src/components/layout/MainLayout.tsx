@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Bell, LayoutDashboard, Users, Package, ShoppingCart, DollarSign } from "lucide-react";
+import { NavLink, Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Bell, LayoutDashboard, Users, Package, ShoppingCart, Wallet, Menu, Plus, Settings, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -9,124 +9,142 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { NavLink } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import GlobalSearch from "./GlobalSearch";
 import { useAuth } from "@/contexts/AuthContext";
+import { BrandMark, InitialsAvatar } from "@/components/imperio";
+import { cn } from "@/lib/utils";
 
 interface MainLayoutProps {
   children: React.ReactNode;
 }
 
 const mobileBottomNav = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
-  { label: "Clientes", icon: Users, path: "/clientes" },
+  { label: "Painel", icon: LayoutDashboard, path: "/dashboard" },
   { label: "Vendas", icon: ShoppingCart, path: "/vendas" },
+  { label: "Clientes", icon: Users, path: "/clientes" },
   { label: "Produtos", icon: Package, path: "/produtos" },
-  { label: "Financeiro", icon: DollarSign, path: "/financeiro/contas-pagar" },
+  { label: "Financeiro", icon: Wallet, path: "/financeiro/contas-pagar" },
 ];
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
 
-  const getInitials = (name: string) => {
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .slice(0, 2)
-      .join("")
-      .toUpperCase();
-  };
+  // Every page that uses the layout is private — send visitors to login.
+  if (!isLoading && !isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+  }
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar — hidden on mobile, always visible on lg+ */}
-      <Sidebar
-        isOpen={sidebarOpen}
-        onToggle={() => setSidebarOpen(!sidebarOpen)}
-      />
+    <div className="flex h-[100dvh] bg-background">
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex items-center justify-between gap-3 bg-white border-b border-gray-200 px-3 sm:px-4 lg:px-6 h-14 sm:h-16">
-          {/* Hamburger spacer on mobile */}
-          <div className="w-10 lg:hidden flex-shrink-0" />
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border/70 bg-background/85 px-3 backdrop-blur-md sm:px-5 lg:px-8">
+          <button
+            className="flex h-10 w-10 items-center justify-center rounded-lg text-foreground/80 hover:bg-muted lg:hidden"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Abrir menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
 
-          {/* Global search */}
-          <div className="flex-1 flex justify-center lg:justify-start max-w-md">
-            <GlobalSearch />
+          <div className="flex items-center gap-2 lg:hidden">
+            <BrandMark className="h-6 w-6 text-primary" />
           </div>
 
-          {/* Right actions */}
-          <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
-            {/* Notifications */}
-            <Button variant="ghost" size="icon" className="relative h-9 w-9">
-              <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500" />
-              <Badge
-                variant="destructive"
-                className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center text-[9px] sm:text-[10px]"
-              >
-                3
-              </Badge>
+          <div className="flex flex-1 justify-end sm:justify-start">
+            <div className="hidden w-full max-w-md sm:block">
+              <GlobalSearch />
+            </div>
+          </div>
+
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <Button size="sm" className="hidden md:inline-flex" onClick={() => navigate("/vendas/nova")}>
+              <Plus className="h-4 w-4" /> Nova venda
             </Button>
 
-            {/* User menu */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="relative h-10 w-10 rounded-full"
+              onClick={() => navigate("/dashboard")}
+              aria-label="Notificações"
+            >
+              <Bell className="h-[18px] w-[18px] text-foreground/70" />
+              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-gold ring-2 ring-background" />
+            </Button>
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-1.5 h-9 px-1.5 sm:px-2">
-                  <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
-                    <AvatarFallback className="bg-blue-100 text-blue-600 text-xs font-medium">
-                      {user ? getInitials(user.name) : "??"}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="hidden md:inline text-sm font-medium text-gray-700">
-                    {user?.name?.split(" ")[0] || "Usuário"}
-                  </span>
-                </Button>
+                <button className="flex items-center gap-2 rounded-full py-1 pl-1 pr-1 transition-colors hover:bg-muted md:pr-3">
+                  <InitialsAvatar name={user?.name} size="sm" />
+                  <span className="hidden text-sm font-semibold md:inline">{user?.name?.split(" ")[0] || "Usuário"}</span>
+                </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <div className="px-2 py-1.5">
-                  <p className="text-sm font-medium">{user?.name}</p>
-                  <p className="text-xs text-gray-500">{user?.email}</p>
+              <DropdownMenuContent align="end" className="w-56 rounded-xl">
+                <div className="px-3 py-2">
+                  <p className="text-sm font-semibold">{user?.name}</p>
+                  <p className="truncate text-xs text-muted-foreground">{user?.email}</p>
                 </div>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => window.location.href = "/configuracoes"}>
-                  Configurações
+                <DropdownMenuItem onClick={() => navigate("/configuracoes")}>
+                  <Settings className="mr-2 h-4 w-4" /> Configurações
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-red-600 focus:text-red-600" onClick={logout}>
-                  Sair
+                <DropdownMenuItem className="text-danger focus:text-danger" onClick={logout}>
+                  <LogOut className="mr-2 h-4 w-4" /> Sair
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </header>
 
-        {/* Page content — extra bottom padding on mobile for bottom nav */}
-        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 pb-20 lg:pb-6">
-          {children}
+        {/* Mobile search row */}
+        <div className="border-b border-border/70 bg-background px-3 py-2 sm:hidden">
+          <GlobalSearch />
+        </div>
+
+        <main className="flex-1 overflow-y-auto">
+          <div className="mx-auto w-full max-w-[1400px] px-3 pb-28 pt-5 sm:px-5 sm:pt-7 lg:px-8 lg:pb-10">
+            {children}
+          </div>
         </main>
       </div>
 
-      {/* Bottom navigation — mobile only (below lg) */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-gray-200 flex lg:hidden">
-        {mobileBottomNav.map((item) => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            className={({ isActive }) =>
-              `flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${
-                isActive ? "text-blue-600" : "text-gray-400"
-              }`
-            }
-          >
-            <item.icon className="w-5 h-5" />
-            <span className="text-[10px] font-medium">{item.label}</span>
-          </NavLink>
-        ))}
+      {/* Bottom navigation — below lg */}
+      <nav className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md lg:hidden">
+        <div className="flex">
+          {mobileBottomNav.map((item) => (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              className={({ isActive }) =>
+                cn(
+                  "relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2.5 text-[10px] font-semibold transition-colors",
+                  isActive ? "text-primary" : "text-muted-foreground",
+                )
+              }
+            >
+              {({ isActive }) => (
+                <>
+                  <span
+                    className={cn(
+                      "absolute top-0 h-[3px] w-8 rounded-b-full bg-gold transition-opacity",
+                      isActive ? "opacity-100" : "opacity-0",
+                    )}
+                  />
+                  <item.icon className="h-5 w-5" />
+                  {item.label}
+                </>
+              )}
+            </NavLink>
+          ))}
+        </div>
       </nav>
     </div>
   );

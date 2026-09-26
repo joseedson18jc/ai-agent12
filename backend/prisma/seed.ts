@@ -3,10 +3,41 @@ import bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
+async function ensureAdmin() {
+  const adminPassword = await bcrypt.hash('admin123', 12);
+  return prisma.user.upsert({
+    where: { email: 'priscila@oticaimperio.com.br' },
+    update: { role: 'ADMIN', isActive: true },
+    create: {
+      name: 'Priscila',
+      email: 'priscila@oticaimperio.com.br',
+      password: adminPassword,
+      role: 'ADMIN',
+      isActive: true,
+    },
+  });
+}
+
 async function main() {
   console.log('Iniciando seed do banco de dados...');
 
-  // Clean existing data (in reverse dependency order)
+  // start.sh runs this on every boot (Render restarts the service after idle).
+  // Demo data may only be loaded into an empty database — otherwise every
+  // restart would wipe the shop's real customers, products and sales.
+  const [storeCount, productCount, customerCount] = await Promise.all([
+    prisma.store.count(),
+    prisma.product.count(),
+    prisma.customer.count(),
+  ]);
+  const hasData = storeCount + productCount + customerCount > 0;
+  if (hasData && process.env.FORCE_SEED !== 'true') {
+    const admin = await ensureAdmin();
+    console.log(`Banco já possui dados — seed de demonstração ignorado. Admin garantido: ${admin.email}`);
+    return;
+  }
+
+  // Clean existing data (in reverse dependency order) — only reached on an
+  // empty database or when FORCE_SEED=true is set explicitly.
   await prisma.auditLog.deleteMany();
   await prisma.cashMovement.deleteMany();
   await prisma.cashRegister.deleteMany();

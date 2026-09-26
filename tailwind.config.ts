@@ -47,7 +47,16 @@ export default {
   				DEFAULT: 'hsl(var(--card))',
   				foreground: 'hsl(var(--card-foreground))'
   			},
-  			sidebar: {
+  			gold: {
+				DEFAULT: 'hsl(var(--gold))',
+				soft: 'hsl(var(--gold-soft))',
+				foreground: 'hsl(var(--gold-foreground))'
+			},
+			success: { DEFAULT: 'hsl(var(--success))', soft: 'hsl(var(--success-soft))' },
+			warning: { DEFAULT: 'hsl(var(--warning))', soft: 'hsl(var(--warning-soft))' },
+			danger: { DEFAULT: 'hsl(var(--danger))', soft: 'hsl(var(--danger-soft))' },
+			info: { DEFAULT: 'hsl(var(--info))', soft: 'hsl(var(--info-soft))' },
+			sidebar: {
   				DEFAULT: 'hsl(var(--sidebar-background))',
   				foreground: 'hsl(var(--sidebar-foreground))',
   				primary: 'hsl(var(--sidebar-primary))',
@@ -95,41 +104,12 @@ export default {
   			'2xl': 'var(--shadow-2xl)'
   		},
   		fontFamily: {
-  			sans: [
-  				'Source Sans Pro',
-  				'ui-sans-serif',
-  				'system-ui',
-  				'-apple-system',
-  				'BlinkMacSystemFont',
-  				'Segoe UI',
-  				'Roboto',
-  				'Helvetica Neue',
-  				'Arial',
-  				'Noto Sans',
-  				'sans-serif'
-  			],
-  			serif: [
-  				'Source Serif Pro',
-  				'ui-serif',
-  				'Georgia',
-  				'Cambria',
-  				'Times New Roman',
-  				'Times',
-  				'serif'
-  			],
-  			mono: [
-  				'Source Code Pro',
-  				'ui-monospace',
-  				'SFMono-Regular',
-  				'Menlo',
-  				'Monaco',
-  				'Consolas',
-  				'Liberation Mono',
-  				'Courier New',
-  				'monospace'
-  			]
-  		}
-  	}
+			sans: ['Figtree', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+			display: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+			serif: ['Fraunces', 'ui-serif', 'Georgia', 'serif'],
+			mono: ['IBM Plex Mono', 'ui-monospace', 'monospace']
+		}
+	}
   },
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;

@@ -1,36 +1,47 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Eye, EyeOff, Glasses, Loader2, ShieldCheck, TrendingUp, Users } from "lucide-react";
+import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
+import { BrandMark } from "@/components/imperio";
 
-const FEATURES = [
-  { icon: Users, text: "Gestão completa de clientes e receitas" },
-  { icon: TrendingUp, text: "Relatórios de vendas em tempo real" },
-  { icon: ShieldCheck, text: "Controle financeiro e de estoque" },
+const PILLARS = [
+  { n: "01", title: "Clientes & receitas", text: "Histórico óptico completo, com alerta de receitas vencendo." },
+  { n: "02", title: "Vendas & OS", text: "Da lente no laboratório à retirada, cada etapa acompanhada." },
+  { n: "03", title: "Preço inteligente", text: "Preço mínimo real calculado com todos os custos do negócio." },
 ];
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
-  const [email, setEmail] = useState("");
+  const location = useLocation();
+  const { login, isAuthenticated, isLoading } = useAuth();
+  const [email, setEmail] = useState(() => localStorage.getItem("lastEmail") || "");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const from = (location.state as { from?: string } | null)?.from || "/dashboard";
+
+  useEffect(() => {
+    document.title = "Entrar · Óticas Império";
+  }, []);
+
+  if (!isLoading && isAuthenticated) return <Navigate to={from} replace />;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email.trim()) { setError("Informe seu e-mail."); return; }
-    if (!password.trim()) { setError("Informe sua senha."); return; }
+    if (!email.trim()) return setError("Informe seu e-mail.");
+    if (!password) return setError("Informe sua senha.");
 
     setLoading(true);
     try {
-      await login(email, password);
-      navigate("/dashboard");
+      await login(email.trim().toLowerCase(), password);
+      localStorage.setItem("lastEmail", email.trim().toLowerCase());
+      navigate(from, { replace: true });
     } catch (err: any) {
       setError(err?.message || "E-mail ou senha inválidos. Tente novamente.");
     } finally {
@@ -39,133 +50,151 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left panel — branding (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-700 flex-col justify-between p-12 text-white relative overflow-hidden">
-        {/* Background circles */}
-        <div className="absolute -top-20 -left-20 w-72 h-72 rounded-full bg-white/5" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-white/5" />
-        <div className="absolute top-1/2 -right-16 w-48 h-48 rounded-full bg-white/10" />
+    <div className="flex min-h-[100dvh] bg-background">
+      {/* Brand panel */}
+      <aside className="ink-texture relative hidden w-[46%] flex-col justify-between overflow-hidden p-12 text-sidebar-foreground lg:flex xl:p-16">
+        {/* Decorative lenses */}
+        <svg
+          className="pointer-events-none absolute -right-40 top-1/2 h-[640px] w-[640px] -translate-y-1/2 text-gold/[0.09]"
+          viewBox="0 0 200 200"
+          fill="none"
+          aria-hidden="true"
+        >
+          {[90, 74, 58, 42].map((r) => (
+            <circle key={r} cx="100" cy="100" r={r} stroke="currentColor" strokeWidth="0.6" />
+          ))}
+          <circle cx="100" cy="100" r="26" stroke="currentColor" strokeWidth="1.2" />
+        </svg>
 
-        {/* Logo */}
-        <div className="flex items-center gap-3 relative z-10">
-          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-            <Glasses className="w-6 h-6" />
+        <div className="relative flex items-center gap-3 animate-rise">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gold/10 ring-1 ring-gold/40">
+            <BrandMark className="h-7 w-7 text-gold" />
           </div>
-          <span className="text-xl font-bold">Óticas Império</span>
+          <div className="leading-none">
+            <p className="font-display text-xl font-semibold text-white">Óticas Império</p>
+            <p className="mt-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-gold/80">Gestão da ótica</p>
+          </div>
         </div>
 
-        {/* Main text */}
-        <div className="relative z-10 space-y-6">
-          <div>
-            <h2 className="text-4xl font-bold leading-tight">
-              Sistema de Gestão<br />para Óticas
-            </h2>
-            <p className="text-blue-200 mt-3 text-lg">
-              Tudo que você precisa para gerenciar sua ótica com eficiência.
-            </p>
-          </div>
-          <ul className="space-y-4">
-            {FEATURES.map((f) => (
-              <li key={f.text} className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-                  <f.icon className="w-4 h-4" />
+        <div className="relative max-w-md">
+          <p className="eyebrow mb-5 !text-gold/80 animate-rise" style={{ animationDelay: "80ms" }}>
+            Desde a receita até a retirada
+          </p>
+          <h1
+            className="font-display text-[3.25rem] font-medium leading-[1.02] text-white animate-rise"
+            style={{ animationDelay: "140ms" }}
+          >
+            Cada olhar,
+            <br />
+            <span className="italic text-gold">bem cuidado.</span>
+          </h1>
+          <div className="mt-10 space-y-6">
+            {PILLARS.map((p, i) => (
+              <div
+                key={p.n}
+                className="flex gap-4 animate-rise"
+                style={{ animationDelay: `${240 + i * 80}ms` }}
+              >
+                <span className="num w-6 shrink-0 pt-0.5 font-display text-sm text-gold/70">{p.n}</span>
+                <div className="border-l border-white/10 pl-4">
+                  <p className="font-semibold text-white">{p.title}</p>
+                  <p className="mt-0.5 text-sm text-sidebar-foreground/60">{p.text}</p>
                 </div>
-                <span className="text-blue-100 text-sm">{f.text}</span>
-              </li>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
 
-        <p className="text-blue-300 text-xs relative z-10">
-          &copy; {new Date().getFullYear()} Óticas Império. Todos os direitos reservados.
-        </p>
-      </div>
+        <p className="relative text-xs text-sidebar-foreground/40">© {new Date().getFullYear()} Óticas Império</p>
+      </aside>
 
-      {/* Right panel — form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-gray-50">
-        <div className="w-full max-w-sm">
-          {/* Mobile logo */}
-          <div className="flex flex-col items-center mb-8 lg:hidden">
-            <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center text-white shadow-lg mb-3">
-              <Glasses className="w-7 h-7" />
-            </div>
-            <h1 className="text-2xl font-bold text-gray-900">Óticas Império</h1>
-            <p className="text-gray-500 text-sm mt-1">Sistema de Gestão</p>
+      {/* Form */}
+      <main className="flex flex-1 flex-col">
+        {/* Mobile brand band */}
+        <div className="ink-texture px-6 pb-10 pt-10 text-center lg:hidden">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gold/10 ring-1 ring-gold/40">
+            <BrandMark className="h-9 w-9 text-gold" />
           </div>
+          <p className="font-display text-2xl font-semibold text-white">Óticas Império</p>
+          <p className="mt-1 text-sm italic text-gold/80 font-display">Cada olhar, bem cuidado.</p>
+        </div>
 
-          {/* Form card */}
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Bem-vindo!</h2>
-              <p className="text-gray-500 text-sm mt-1">Entre com suas credenciais de acesso</p>
-            </div>
+        <div className="-mt-6 flex flex-1 items-start justify-center px-5 pb-10 lg:mt-0 lg:items-center">
+          <div className="w-full max-w-[400px] rounded-2xl bg-card p-6 shadow-lg ring-1 ring-border sm:p-8 lg:bg-transparent lg:p-0 lg:shadow-none lg:ring-0 animate-rise">
+            <p className="eyebrow">Área restrita</p>
+            <h2 className="mt-1 font-display text-3xl font-semibold">Bem-vinda de volta</h2>
+            <p className="mt-2 text-sm text-muted-foreground">Entre com seu e-mail e senha para acessar o sistema.</p>
+            <div className="gold-rule my-7" />
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {error && (
-                <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
-                  {error}
-                </div>
-              )}
-
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
               <div className="space-y-1.5">
-                <Label htmlFor="email" className="text-sm font-medium text-gray-700">E-mail</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  disabled={loading}
-                  className="h-11 rounded-xl border-gray-200 focus:border-blue-500 focus:ring-blue-500"
-                />
+                <Label htmlFor="email">E-mail</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    id="email"
+                    type="email"
+                    inputMode="email"
+                    autoComplete="email"
+                    placeholder="voce@oticaimperio.com.br"
+                    className="h-11 pl-10"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    disabled={loading}
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <Label htmlFor="password" className="text-sm font-medium text-gray-700">Senha</Label>
+                <Label htmlFor="password">Senha</Label>
                 <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
                     placeholder="••••••••"
+                    className="h-11 pl-10 pr-11"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
                     disabled={loading}
-                    className="h-11 rounded-xl border-gray-200 pr-10 focus:border-blue-500 focus:ring-blue-500"
                   />
                   <button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                    tabIndex={-1}
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-1.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
+                    aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
-              <Button
-                type="submit"
-                disabled={loading}
-                className="w-full h-11 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm mt-2"
-              >
+              {error && (
+                <div role="alert" className="rounded-lg border border-danger/20 bg-danger-soft px-3.5 py-2.5 text-sm font-medium text-danger">
+                  {error}
+                </div>
+              )}
+
+              <Button type="submit" size="lg" className="group h-12 w-full" disabled={loading}>
                 {loading ? (
-                  <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Entrando...</>
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" /> Entrando…
+                  </>
                 ) : (
-                  "Entrar no Sistema"
+                  <>
+                    Entrar <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+                  </>
                 )}
               </Button>
             </form>
-          </div>
 
-          <p className="text-center text-xs text-gray-400 mt-5 lg:hidden">
-            &copy; {new Date().getFullYear()} Óticas Império. Todos os direitos reservados.
-          </p>
+            <p className="mt-8 text-center text-xs text-muted-foreground">
+              Problemas para entrar? Fale com a administração da loja.
+            </p>
+          </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }
