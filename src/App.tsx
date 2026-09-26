@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 
 // Pages
@@ -26,6 +26,14 @@ import Settings from "./pages/Settings";
 import WebLeads from "./pages/WebLeads";
 import NotFound from "./pages/NotFound";
 
+// Public storefront
+import StoreLayout from "./storefront/StoreLayout";
+import StoreHome from "./storefront/pages/Home";
+import StoreCatalog from "./storefront/pages/Catalog";
+import StoreProduct from "./storefront/pages/ProductPage";
+import StoreSchedule from "./storefront/pages/Schedule";
+import StoreBag from "./storefront/pages/Bag";
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -38,7 +46,15 @@ const App = () => (
           <Routes>
             {/* Auth */}
             <Route path="/login" element={<Login />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+            {/* Site público (vitrine) */}
+            <Route element={<StoreLayout />}>
+              <Route path="/" element={<StoreHome />} />
+              <Route path="/loja" element={<StoreCatalog />} />
+              <Route path="/loja/:id" element={<StoreProduct />} />
+              <Route path="/agendar" element={<StoreSchedule />} />
+              <Route path="/sacola" element={<StoreBag />} />
+            </Route>
 
             {/* Dashboard */}
             <Route path="/dashboard" element={<Dashboard />} />
@@ -96,12 +112,12 @@ const App = () => (
             <Route path="/relatorios" element={<Reports />} />
             <Route path="/reports" element={<Reports />} />
 
+            {/* Pedidos do site (reservas, agendamentos, mensagens) */}
+            <Route path="/pedidos-site" element={<WebLeads />} />
+
             {/* Configurações (PT + EN) */}
             <Route path="/configuracoes" element={<Settings />} />
             <Route path="/settings" element={<Settings />} />
-
-            {/* Pedidos do site */}
-            <Route path="/pedidos-site" element={<WebLeads />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />
