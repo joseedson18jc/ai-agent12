@@ -19,6 +19,10 @@ export interface StoreSettings {
   prescriptionAlertDays: number;
   defaultMinStock: number;
   printerType: string;
+  whatsapp?: string | null;
+  instagram?: string | null;
+  openingHours?: string | null;
+  siteHeadline?: string | null;
   updatedAt?: string;
 }
 
@@ -38,6 +42,10 @@ export type StoreSettingsPayload = Partial<{
   prescriptionAlertDays: number;
   defaultMinStock: number;
   printerType: string;
+  whatsapp: string;
+  instagram: string;
+  openingHours: string;
+  siteHeadline: string;
 }>;
 
 export type UserRoleCode = "ADMIN" | "SELLER" | "VIEWER";

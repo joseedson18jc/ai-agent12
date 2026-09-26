@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -113,6 +113,7 @@ function resizeImage(file: File, max = 320): Promise<string> {
 export default function CustomerForm() {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const isEditing = !!id;
 
@@ -169,7 +170,13 @@ export default function CustomerForm() {
   useEffect(() => {
     if (isEditing) loadCustomer();
     else {
-      form.reset(EMPTY);
+      // Prefill from query (?nome&telefone&email), e.g. coming from "Pedidos do site".
+      form.reset({
+        ...EMPTY,
+        name: searchParams.get("nome") ?? "",
+        phone: maskPhone(searchParams.get("telefone") ?? ""),
+        email: searchParams.get("email") ?? "",
+      });
       setPhoto(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

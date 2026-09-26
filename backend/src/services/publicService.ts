@@ -36,19 +36,21 @@ const visibleWhere = { isDeleted: false, showOnline: true, sellingPrice: { gt: 0
 export async function getStore() {
   const store = await prisma.store.findFirst();
   if (!store) return null;
+  // Settings saves cleared fields as "", so treat blank text as "not set".
+  const v = (x: string | null) => (x && x.trim() ? x.trim() : null);
   return {
     name: store.name,
-    phone: store.phone,
-    whatsapp: store.whatsapp,
-    email: store.email,
-    instagram: store.instagram,
-    address: store.address,
-    city: store.city,
-    state: store.state,
-    zipCode: store.zipCode,
-    logo: store.logo,
-    openingHours: store.openingHours,
-    siteHeadline: store.siteHeadline,
+    phone: v(store.phone),
+    whatsapp: v(store.whatsapp),
+    email: v(store.email),
+    instagram: v(store.instagram),
+    address: v(store.address),
+    city: v(store.city),
+    state: v(store.state),
+    zipCode: v(store.zipCode),
+    logo: v(store.logo),
+    openingHours: v(store.openingHours),
+    siteHeadline: v(store.siteHeadline),
   };
 }
 

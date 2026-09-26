@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ElementType } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { formatDistanceToNowStrict } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import webLeadService, { WEB_LEAD_STATS_KEY, type WebLead } from "@/services/webLead.service";
 import { useAuth } from "@/contexts/AuthContext";
 import dashboardService, {
   type ChartPeriod,
@@ -35,6 +39,7 @@ import {
   CalendarDays,
   Crown,
   Glasses,
+  Inbox,
   Lightbulb,
   Package,
   PackageCheck,
@@ -192,6 +197,21 @@ export default function Dashboard() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Website requests (reservas, agendamentos, mensagens) — same poll as the sidebar badge.
+  const leadStatsQuery = useQuery({
+    queryKey: WEB_LEAD_STATS_KEY,
+    queryFn: () => webLeadService.stats().then((r) => r.data),
+    refetchInterval: 60_000,
+  });
+  const newLeadsQuery = useQuery({
+    queryKey: ["web-leads", "list", "dashboard-new"],
+    queryFn: () => webLeadService.list({ status: "NEW", limit: 50 }).then((r) => r.data ?? []),
+    refetchInterval: 60_000,
+    enabled: (leadStatsQuery.data?.newCount ?? 0) > 0,
+  });
+  const newLeadCount = leadStatsQuery.data?.newCount ?? 0;
+  const newLeads = newLeadCount > 0 ? newLeadsQuery.data ?? [] : [];
 
   const kpis = data?.kpis ?? null;
   const series = useMemo(() => buildSeries(data?.salesChart[chartPeriod] ?? [], chartPeriod), [data, chartPeriod]);
@@ -395,6 +415,11 @@ export default function Dashboard() {
               />
             </div>
           </div>
+        )}
+
+        {/* ── Pedidos do site ──────────────────────────────── */}
+        {newLeadCount > 0 && (
+          <WebLeadsReminder count={newLeadCount} leads={newLeads.slice(0, 3)} onNavigate={navigate} {...rise(8)} />
         )}
 
         {/* ── Chart + top products ─────────────────────────── */}
@@ -604,7 +629,7 @@ export default function Dashboard() {
 
         {/* ── Assistente Império ───────────────────────────── */}
         {!loading && data?.kpis && (
-          <AssistantPanel data={data} isAdmin={isAdmin} onNavigate={navigate} {...rise(12)} />
+          <AssistantPanel data={data} isAdmin={isAdmin} webLeads={newLeads} onNavigate={navigate} {...rise(12)} />
         )}
       </div>
     </MainLayout>
@@ -875,11 +900,35 @@ interface Insight {
   weight: number;
 }
 
-function generateInsights(data: DashboardData, isAdmin: boolean): Insight[] {
+function generateInsights(data: DashboardData, isAdmin: boolean, webLeads: WebLead[] = []): Insight[] {
   const k = data.kpis;
   if (!k) return [];
   const out: Insight[] = [];
   const now = new Date();
+
+  // 0. Website requests waiting for a first reply
+  const unanswered = webLeads.filter((l) => now.getTime() - new Date(l.createdAt).getTime() >= 2 * 3600_000);
+  if (unanswered.length) {
+    out.push({
+      key: "web-leads",
+      icon: Inbox,
+      tone: "danger",
+      title: `${plural(unanswered.length, "pedido do site", "pedidos do site")} sem resposta há mais de 2h`,
+      text: "Clientes que chegam pelo site esfriam rápido. Responda pelo WhatsApp ainda hoje — a mensagem já vai pronta.",
+      action: { label: "Responder agora", path: "/pedidos-site" },
+      weight: 0,
+    });
+  } else if (webLeads.length) {
+    out.push({
+      key: "web-leads-new",
+      icon: Inbox,
+      tone: "gold",
+      title: `${plural(webLeads.length, "pedido novo", "pedidos novos")} chegando pelo site`,
+      text: "Responder na primeira hora aumenta muito a chance de venda.",
+      action: { label: "Ver pedidos", path: "/pedidos-site" },
+      weight: 0.5,
+    });
+  }
   const dayOfMonth = now.getDate();
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const daysLeft = daysInMonth - dayOfMonth;
@@ -1105,17 +1154,19 @@ function generateInsights(data: DashboardData, isAdmin: boolean): Insight[] {
 function AssistantPanel({
   data,
   isAdmin,
+  webLeads,
   onNavigate,
   className,
   style,
 }: {
   data: DashboardData;
   isAdmin: boolean;
+  webLeads?: WebLead[];
   onNavigate: (p: string) => void;
   className?: string;
   style?: CSSProperties;
 }) {
-  const insights = useMemo(() => generateInsights(data, isAdmin), [data, isAdmin]);
+  const insights = useMemo(() => generateInsights(data, isAdmin, webLeads), [data, isAdmin, webLeads]);
   return (
     <Panel
       title="Assistente Império"
@@ -1153,5 +1204,72 @@ function AssistantPanel({
         </div>
       )}
     </Panel>
+  );
+}
+
+/* ─── Pedidos do site ──────────────────────────────────────── */
+
+const LEAD_TYPE: Record<WebLead["type"], { label: string; icon: ElementType; chip: string }> = {
+  RESERVATION: { label: "Reserva", icon: ShoppingBag, chip: "bg-gold-soft text-gold-foreground" },
+  APPOINTMENT: { label: "Agendamento", icon: CalendarClock, chip: "bg-info-soft text-info" },
+  CONTACT: { label: "Mensagem", icon: Inbox, chip: "bg-primary/10 text-primary" },
+};
+
+function WebLeadsReminder({
+  count,
+  leads,
+  onNavigate,
+  className,
+  style,
+}: {
+  count: number;
+  leads: WebLead[];
+  onNavigate: (p: string) => void;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  return (
+    <section className={cn("surface overflow-hidden", className)} style={style}>
+      <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
+        <button onClick={() => onNavigate("/pedidos-site")} className="flex items-center gap-3 text-left sm:w-60 sm:shrink-0">
+          <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary text-gold">
+            <Inbox className="h-5 w-5" />
+            <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-gold ring-2 ring-card" />
+          </div>
+          <div className="min-w-0">
+            <p className="eyebrow">Pedidos do site</p>
+            <p className="font-display text-lg font-semibold leading-tight">
+              <span className="num">{count}</span> {count === 1 ? "novo aguardando" : "novos aguardando"}
+            </p>
+          </div>
+        </button>
+        <ul className="grid min-w-0 flex-1 gap-2 sm:grid-cols-3">
+          {leads.map((l) => {
+            const t = LEAD_TYPE[l.type];
+            return (
+              <li key={l.id} className="min-w-0">
+                <button
+                  onClick={() => onNavigate("/pedidos-site")}
+                  className="flex w-full items-center gap-2.5 rounded-xl border border-border bg-card px-3 py-2 text-left transition-colors hover:border-gold/40"
+                >
+                  <span className={cn("flex h-7 w-7 shrink-0 items-center justify-center rounded-full", t.chip)}>
+                    <t.icon className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold">{l.name}</span>
+                    <span className="block truncate text-[11px] text-muted-foreground">
+                      {t.label} · {formatDistanceToNowStrict(new Date(l.createdAt), { locale: ptBR, addSuffix: true })}
+                    </span>
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+        <Button size="sm" variant="gold" className="shrink-0" onClick={() => onNavigate("/pedidos-site")}>
+          Responder <ArrowRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </section>
   );
 }

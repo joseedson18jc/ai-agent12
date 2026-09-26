@@ -16,7 +16,11 @@ import {
   ArrowDownCircle,
   ArrowUpCircle,
   Landmark,
+  Inbox,
+  ExternalLink,
 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import webLeadService, { WEB_LEAD_STATS_KEY } from "@/services/webLead.service";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useAuth } from "@/contexts/AuthContext";
@@ -34,6 +38,8 @@ interface NavItem {
   icon: React.ElementType;
   path?: string;
   children?: NavChild[];
+  /** Shows the count of new website requests. */
+  badge?: "webLeads";
 }
 
 const sections: { title: string; items: NavItem[] }[] = [
@@ -45,6 +51,7 @@ const sections: { title: string; items: NavItem[] }[] = [
       { label: "Clientes", icon: Users, path: "/clientes" },
       { label: "Receitas", icon: FileText, path: "/receitas" },
       { label: "Produtos", icon: Package, path: "/produtos" },
+      { label: "Pedidos do site", icon: Inbox, path: "/pedidos-site", badge: "webLeads" },
     ],
   },
   {
@@ -93,6 +100,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const [openFinance, setOpenFinance] = useState(location.pathname.startsWith("/financeiro"));
+  const { data: leadStats } = useQuery({
+    queryKey: WEB_LEAD_STATS_KEY,
+    queryFn: () => webLeadService.stats().then((r) => r.data),
+    refetchInterval: 60_000,
+    enabled: !!user,
+  });
+  const newLeads = leadStats?.newCount ?? 0;
 
   const closeOnMobile = () => {
     if (window.innerWidth < 1024) onClose();
@@ -205,7 +219,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                           <>
                             <Indicator active={isActive} />
                             <item.icon className={cn("h-[18px] w-[18px]", isActive && "text-gold")} />
-                            <span>{item.label}</span>
+                            <span className="flex-1">{item.label}</span>
+                            {item.badge === "webLeads" && newLeads > 0 && (
+                              <span
+                                className="num min-w-[20px] rounded-full bg-gold px-1.5 py-0.5 text-center text-[10.5px] font-bold leading-none text-primary"
+                                title={`${newLeads} ${newLeads === 1 ? "pedido novo" : "pedidos novos"}`}
+                              >
+                                {newLeads > 99 ? "99+" : newLeads}
+                              </span>
+                            )}
                           </>
                         )}
                       </NavLink>
@@ -216,6 +238,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             ))}
           </nav>
         </ScrollArea>
+
+        {/* Public website */}
+        <a
+          href="/"
+          target="_blank"
+          rel="noreferrer"
+          className="mx-3 mt-2 flex items-center gap-2 rounded-lg border border-gold/25 px-3 py-2 text-[12.5px] font-medium text-gold/90 transition-colors hover:bg-gold/10 hover:text-gold"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          <span className="flex-1">Ver site da loja</span>
+          <span className="text-[10px] uppercase tracking-[0.14em] text-sidebar-foreground/40">nova aba</span>
+        </a>
 
         {/* User */}
         <div className="m-3 rounded-xl border border-white/10 bg-white/[0.04] p-3">

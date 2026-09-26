@@ -31,10 +31,25 @@ import {
 import {
   Search, Plus, Pencil, LayoutGrid, List, Package, AlertTriangle, Trash2,
   Boxes, Coins, TrendingUp, Sparkles, RefreshCw, X, ChevronLeft, ChevronRight,
-  PackageX, Percent, Tag, Loader2,
+  PackageX, Percent, Tag, Loader2, EyeOff,
 } from "lucide-react";
 
 const PAGE_SIZE = 12;
+
+/** Products with showOnline === false are hidden from the public website. */
+const isHiddenOnline = (p: Product) => (p as Product & { showOnline?: boolean }).showOnline === false;
+
+function OfflinePill({ compact = false }: { compact?: boolean }) {
+  return (
+    <span
+      title="Oculto no site — não aparece na vitrine online"
+      className="inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground ring-1 ring-border"
+    >
+      <EyeOff className="h-3 w-3" />
+      {!compact && "Fora do site"}
+    </span>
+  );
+}
 const VIEW_KEY = "imperio.products.view";
 const SORT_KEY = "imperio.products.sort";
 
@@ -514,6 +529,7 @@ export default function Products() {
                     <div className="relative aspect-[4/3] bg-accent">
                       <ProductThumb product={p} className="h-full w-full" iconClass="h-10 w-10" />
                       <div className="absolute left-2 top-2"><StockBadge current={p.stock} min={p.minStock || 0} /></div>
+                      {isHiddenOnline(p) && <div className="absolute bottom-2 left-2"><OfflinePill /></div>}
                       <div className="absolute right-1.5 top-1.5 rounded-lg bg-card/90 opacity-100 shadow-sm backdrop-blur md:opacity-0 md:transition-opacity md:group-hover:opacity-100">
                         <RowActions product={p} />
                       </div>
@@ -547,6 +563,7 @@ export default function Products() {
                         <div className="mt-1.5 flex flex-wrap items-center gap-2">
                           <StockBadge current={p.stock} min={p.minStock || 0} />
                           <MarginIndicator margin={p.marginPercent ?? 0} />
+                          {isHiddenOnline(p) && <OfflinePill />}
                         </div>
                       </div>
                       <div className="flex shrink-0 flex-col items-end gap-1">
@@ -584,7 +601,10 @@ export default function Products() {
                               <div className="flex items-center gap-3">
                                 <ProductThumb product={p} className="h-11 w-11 shrink-0 rounded-lg" />
                                 <div className="min-w-0">
-                                  <p className="max-w-[260px] truncate font-semibold">{p.name}</p>
+                                  <div className="flex items-center gap-2">
+                                    <p className="max-w-[260px] truncate font-semibold">{p.name}</p>
+                                    {isHiddenOnline(p) && <OfflinePill compact />}
+                                  </div>
                                   <p className="max-w-[260px] truncate text-xs text-muted-foreground">
                                     {[p.brand, p.model, p.barcode && `Cód. ${p.barcode}`].filter(Boolean).join(" · ") || "—"}
                                   </p>

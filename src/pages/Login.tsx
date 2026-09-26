@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
+import { ArrowLeft, ArrowRight, Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { BrandMark } from "@/components/imperio";
 
 const PILLARS = [
@@ -121,6 +121,12 @@ export default function Login() {
 
         <div className="-mt-6 flex flex-1 items-start justify-center px-5 pb-10 lg:mt-0 lg:items-center">
           <div className="w-full max-w-[400px] rounded-2xl bg-card p-6 shadow-lg ring-1 ring-border sm:p-8 lg:bg-transparent lg:p-0 lg:shadow-none lg:ring-0 animate-rise">
+            <Link
+              to="/"
+              className="mb-6 inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Voltar ao site
+            </Link>
             <p className="eyebrow">Área restrita</p>
             <h2 className="mt-1 font-display text-3xl font-semibold">Bem-vinda de volta</h2>
             <p className="mt-2 text-sm text-muted-foreground">Entre com seu e-mail e senha para acessar o sistema.</p>

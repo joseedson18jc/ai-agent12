@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +19,7 @@ import { PageHeader, Panel, StatusPill, EmptyState, InitialsAvatar, rise } from 
 import {
   Settings as SettingsIcon, Store, Users, Save, Plus, Pencil, SlidersHorizontal, KeyRound, Loader2,
   CheckCircle2, AlertTriangle, RefreshCw, Printer, Lock, Copy, Wand2, ShieldCheck,
+  Globe, MessageCircle, Instagram, Clock, ExternalLink,
 } from "lucide-react";
 import settingsService, { userService, type StoreSettings, type SystemUser, type UserRoleCode } from "@/services/settings.service";
 
@@ -36,7 +38,22 @@ const emptyStore = {
   address: "", city: "", state: "", zipCode: "",
   defaultMarkup: "100", billAlertDays: "5",
   prescriptionAlertDays: "30", defaultMinStock: "2", printerType: "A4",
+  whatsapp: "", instagram: "", openingHours: "", siteHeadline: "",
 };
+const HEADLINE_MAX = 160;
+const HOURS_MAX = 600;
+
+/** "@oticaimperio", "instagram.com/oticaimperio/", "https://www.instagram.com/oticaimperio?igsh=…" → "oticaimperio" */
+function normalizeInstagram(v: string) {
+  return v
+    .trim()
+    .replace(/^https?:\/\//i, "")
+    .replace(/^(www\.)?instagram\.com\//i, "")
+    .replace(/[?#].*$/, "")
+    .replace(/\/+$/, "")
+    .replace(/^@+/, "")
+    .split("/")[0];
+}
 type StoreForm = typeof emptyStore;
 
 function toForm(s: StoreSettings): StoreForm {
@@ -54,6 +71,10 @@ function toForm(s: StoreSettings): StoreForm {
     prescriptionAlertDays: String(s.prescriptionAlertDays ?? 30),
     defaultMinStock: String(s.defaultMinStock ?? 2),
     printerType: s.printerType || "A4",
+    whatsapp: s.whatsapp ? maskPhone(s.whatsapp) : "",
+    instagram: s.instagram ? `@${s.instagram}` : "",
+    openingHours: s.openingHours || "",
+    siteHeadline: s.siteHeadline || "",
   };
 }
 
@@ -143,7 +164,7 @@ export default function Settings() {
   const handleStoreChange = (field: keyof StoreForm, value: string) => {
     let v = value;
     if (field === "cnpj") v = maskCNPJ(v);
-    else if (field === "phone") v = maskPhone(v);
+    else if (field === "phone" || field === "whatsapp") v = maskPhone(v);
     else if (field === "zipCode") v = maskCEP(v);
     else if (field === "state") v = v.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 2);
     setStore((prev) => ({ ...prev, [field]: v }));
@@ -188,10 +209,18 @@ export default function Settings() {
     if (!Number.isInteger(billDays) || billDays < 1) errs.billAlertDays = "Mínimo de 1 dia";
     if (!Number.isInteger(rxDays) || rxDays < 1) errs.prescriptionAlertDays = "Mínimo de 1 dia";
     if (!Number.isInteger(minStock) || minStock < 0) errs.defaultMinStock = "Informe um número inteiro";
+    const wa = digits(store.whatsapp);
+    if (wa && (wa.length < 10 || wa.length > 11)) errs.whatsapp = "Informe o número com DDD";
+    const ig = normalizeInstagram(store.instagram);
+    if (ig && !/^[A-Za-z0-9._]{1,30}$/.test(ig)) errs.instagram = "Use só o nome de usuário (letras, números, ponto e _)";
+    if (store.siteHeadline.trim().length > HEADLINE_MAX) errs.siteHeadline = `Máximo de ${HEADLINE_MAX} caracteres`;
+    if (store.openingHours.trim().length > HOURS_MAX) errs.openingHours = `Máximo de ${HOURS_MAX} caracteres`;
     setErrors(errs);
     if (Object.keys(errs).length) {
       const sysFields: (keyof StoreForm)[] = ["defaultMarkup", "billAlertDays", "prescriptionAlertDays", "defaultMinStock"];
+      const siteFields: (keyof StoreForm)[] = ["whatsapp", "instagram", "siteHeadline", "openingHours"];
       if (Object.keys(errs).some((k) => sysFields.includes(k as keyof StoreForm))) setTab("sistema");
+      else if (Object.keys(errs).some((k) => siteFields.includes(k as keyof StoreForm))) setTab("site");
       else setTab("loja");
       toast({ title: "Revise os campos destacados", variant: "destructive" });
       return;
@@ -214,6 +243,10 @@ export default function Settings() {
         prescriptionAlertDays: rxDays,
         defaultMinStock: minStock,
         printerType: store.printerType,
+        whatsapp: wa,
+        instagram: ig,
+        openingHours: store.openingHours.split("\n").map((l) => l.trim()).filter(Boolean).join("\n"),
+        siteHeadline: store.siteHeadline.trim(),
       });
       const f = toForm(res.data);
       setStore(f);
@@ -355,10 +388,11 @@ export default function Settings() {
         )}
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList className={cn("grid h-auto w-full sm:inline-grid sm:w-auto", isAdmin ? "grid-cols-3" : "grid-cols-2")}>
-            <TabsTrigger value="loja" className="gap-1.5 py-2"><Store className="h-4 w-4" /> Loja</TabsTrigger>
-            <TabsTrigger value="sistema" className="gap-1.5 py-2"><SlidersHorizontal className="h-4 w-4" /> Sistema</TabsTrigger>
-            {isAdmin && <TabsTrigger value="usuarios" className="gap-1.5 py-2"><Users className="h-4 w-4" /> Usuários</TabsTrigger>}
+          <TabsList className={cn("grid h-auto w-full sm:inline-grid sm:w-auto", isAdmin ? "grid-cols-4" : "grid-cols-3")}>
+            <TabsTrigger value="loja" className="gap-1.5 px-2 py-2 sm:px-3"><Store className="hidden h-4 w-4 sm:block" /> Loja</TabsTrigger>
+            <TabsTrigger value="sistema" className="gap-1.5 px-2 py-2 sm:px-3"><SlidersHorizontal className="hidden h-4 w-4 sm:block" /> Sistema</TabsTrigger>
+            <TabsTrigger value="site" className="gap-1.5 px-2 py-2 sm:px-3"><Globe className="hidden h-4 w-4 sm:block" /> Site</TabsTrigger>
+            {isAdmin && <TabsTrigger value="usuarios" className="gap-1.5 px-2 py-2 sm:px-3"><Users className="hidden h-4 w-4 sm:block" /> Usuários</TabsTrigger>}
           </TabsList>
 
           {/* ═════════ LOJA ═════════ */}
@@ -449,6 +483,98 @@ export default function Settings() {
                     </Field>
                   </fieldset>
                 </Panel>
+                {saveBar}
+              </>
+            )}
+          </TabsContent>
+
+          {/* ═════════ SITE / VITRINE ═════════ */}
+          <TabsContent value="site" className="mt-6 space-y-4">
+            {loading ? (
+              <Skeleton className="h-[420px] rounded-2xl" />
+            ) : loadError ? (
+              <Panel>
+                <EmptyState icon={AlertTriangle} title="Não foi possível carregar" description="Verifique sua conexão e tente novamente."
+                  action={<Button variant="outline" onClick={fetchSettings}><RefreshCw /> Tentar novamente</Button>} />
+              </Panel>
+            ) : (
+              <>
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+                  <Panel {...rise(2)} title="Site / Vitrine" description="Contato e textos exibidos no site público da loja." icon={Globe}
+                    actions={
+                      <Button variant="outline" size="sm" asChild>
+                        <a href="/" target="_blank" rel="noreferrer"><ExternalLink className="h-4 w-4" /> Ver site</a>
+                      </Button>
+                    }>
+                    <fieldset disabled={readOnly} className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                      <Field id="site-wa" label="WhatsApp da loja" error={errors.whatsapp}
+                        hint="Botão “Chamar no WhatsApp” do site. Clientes falam direto com a loja.">
+                        <div className="relative">
+                          <MessageCircle className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input id="site-wa" inputMode="tel" className="num pl-9" value={store.whatsapp}
+                            onChange={(e) => handleStoreChange("whatsapp", e.target.value)} placeholder="(11) 99999-9999" />
+                        </div>
+                      </Field>
+                      <Field id="site-ig" label="Instagram" error={errors.instagram}
+                        hint="Pode colar o link do perfil — guardamos só o @usuario.">
+                        <div className="relative">
+                          <Instagram className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                          <Input id="site-ig" className="pl-9" value={store.instagram}
+                            onChange={(e) => handleStoreChange("instagram", e.target.value)}
+                            onBlur={() => { const ig = normalizeInstagram(store.instagram); setStore((p) => ({ ...p, instagram: ig ? `@${ig}` : "" })); }}
+                            placeholder="@oticaimperio" />
+                        </div>
+                      </Field>
+                      <Field id="site-headline" label="Frase de destaque do site" error={errors.siteHeadline} className="md:col-span-2"
+                        hint={<span className="flex justify-between gap-2"><span>Aparece no topo da página inicial.</span>
+                          <span className={cn("num shrink-0", store.siteHeadline.length > HEADLINE_MAX - 20 && "text-warning", store.siteHeadline.length > HEADLINE_MAX && "text-danger")}>
+                            {store.siteHeadline.length}/{HEADLINE_MAX}
+                          </span></span>}>
+                        <Input id="site-headline" maxLength={HEADLINE_MAX} value={store.siteHeadline}
+                          onChange={(e) => handleStoreChange("siteHeadline", e.target.value)}
+                          placeholder="Óculos de grau, solares e lentes com atendimento de quem cuida do seu olhar." />
+                      </Field>
+                      <Field id="site-hours" label="Horário de funcionamento" error={errors.openingHours} className="md:col-span-2"
+                        hint="Uma linha por faixa de dias. Deixe em branco para não exibir.">
+                        <Textarea id="site-hours" rows={4} maxLength={HOURS_MAX} value={store.openingHours}
+                          onChange={(e) => handleStoreChange("openingHours", e.target.value)}
+                          placeholder={"Seg a Sex: 9h às 18h\nSáb: 9h às 13h\nDom e feriados: fechado"} />
+                      </Field>
+                    </fieldset>
+                  </Panel>
+
+                  {/* Live preview */}
+                  <section {...rise(3)} className={cn(rise(3).className, "surface overflow-hidden self-start")}>
+                    <div className="ink-texture px-5 py-5 text-primary-foreground">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-gold">Prévia no site</p>
+                      <p className="mt-2 font-display text-lg font-semibold leading-snug text-white">
+                        {store.siteHeadline.trim() || <span className="opacity-50">Sua frase de destaque aparece aqui</span>}
+                      </p>
+                    </div>
+                    <div className="space-y-3 p-5 text-sm">
+                      <p className="flex items-center gap-2">
+                        <MessageCircle className="h-4 w-4 text-success" />
+                        {digits(store.whatsapp).length >= 10
+                          ? <span className="num">{store.whatsapp}</span>
+                          : <span className="text-muted-foreground">WhatsApp não informado</span>}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Instagram className="h-4 w-4 text-gold-foreground" />
+                        {normalizeInstagram(store.instagram)
+                          ? <span>@{normalizeInstagram(store.instagram)}</span>
+                          : <span className="text-muted-foreground">Instagram não informado</span>}
+                      </p>
+                      <div className="flex items-start gap-2">
+                        <Clock className="mt-0.5 h-4 w-4 text-primary" />
+                        {store.openingHours.trim() ? (
+                          <ul className="space-y-0.5">
+                            {store.openingHours.split("\n").map((l) => l.trim()).filter(Boolean).map((l, i) => <li key={i}>{l}</li>)}
+                          </ul>
+                        ) : <span className="text-muted-foreground">Horário não informado</span>}
+                      </div>
+                    </div>
+                  </section>
+                </div>
                 {saveBar}
               </>
             )}

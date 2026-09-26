@@ -23,6 +23,7 @@ import Laboratories from "./pages/Laboratories";
 import Prescriptions from "./pages/Prescriptions";
 import Reports from "./pages/Reports";
 import Settings from "./pages/Settings";
+import WebLeads from "./pages/WebLeads";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -98,6 +99,9 @@ const App = () => (
             {/* Configurações (PT + EN) */}
             <Route path="/configuracoes" element={<Settings />} />
             <Route path="/settings" element={<Settings />} />
+
+            {/* Pedidos do site */}
+            <Route path="/pedidos-site" element={<WebLeads />} />
 
             {/* 404 */}
             <Route path="*" element={<NotFound />} />

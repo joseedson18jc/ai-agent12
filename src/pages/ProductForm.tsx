@@ -16,6 +16,8 @@ import { PageHeader, Panel, InsightCard, StatusPill } from "@/components/imperio
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription,
 } from "@/components/ui/form";
@@ -29,7 +31,7 @@ import {
 import {
   ArrowLeft, Loader2, X, Calculator, AlertTriangle, Package, ChevronDown,
   Sparkles, Building2, CreditCard, Receipt, Users, Percent, Scale, ImagePlus,
-  Save, Wand2, CheckCircle2, Tag, RotateCcw, Boxes, Barcode, Plus,
+  Save, Wand2, CheckCircle2, Tag, RotateCcw, Boxes, Barcode, Plus, Globe, EyeOff,
 } from "lucide-react";
 
 // ── AI-estimated defaults for a small Brazilian optical shop (Simples Nacional) ──
@@ -125,6 +127,8 @@ const productSchema = z.object({
   minimumPrice: moneyField("o preço mínimo"),
   stock: intField,
   minStock: intField,
+  showOnline: z.boolean(),
+  description: z.string().max(2000, "Use no máximo 2000 caracteres"),
 });
 
 type ProductFormData = z.infer<typeof productSchema>;
@@ -134,6 +138,7 @@ const DEFAULT_VALUES: ProductFormData = {
   supplierId: "none", barcode: "",
   costPrice: "", taxFreight: "", desiredMarkup: "100", sellingPrice: "", minimumPrice: "",
   stock: "0", minStock: "2",
+  showOnline: true, description: "",
 };
 
 /** Resize + re-encode a photo client-side so it fits comfortably in the `photo` column. */
@@ -245,6 +250,7 @@ export default function ProductForm() {
   const rawMinimumPrice = useWatch({ control: form.control, name: "minimumPrice" });
   const categoryId = useWatch({ control: form.control, name: "categoryId" });
   const watchedName = useWatch({ control: form.control, name: "name" });
+  const watchedShowOnline = useWatch({ control: form.control, name: "showOnline" });
   const rawStock = useWatch({ control: form.control, name: "stock" });
   const rawMinStock = useWatch({ control: form.control, name: "minStock" });
 
@@ -358,6 +364,8 @@ export default function ProductForm() {
         minimumPrice: product.minimumPrice ? fmtMoney(product.minimumPrice) : "",
         stock: String(product.stock ?? 0),
         minStock: String(product.minStock ?? 0),
+        showOnline: (product as { showOnline?: boolean }).showOnline ?? true,
+        description: (product as { description?: string | null }).description ?? "",
       });
       setPhotoPreview(product.photo || null);
       setPhotoChanged(false);
@@ -444,6 +452,8 @@ export default function ProductForm() {
         minimumPrice: round2(effectiveMinimum),
         stock: parseInt(data.stock || "0", 10) || 0,
         minStock: parseInt(data.minStock || "0", 10) || 0,
+        showOnline: data.showOnline,
+        description: data.description.trim() || (isEditing ? null : undefined),
       };
       if (photoChanged) payload.photo = photoPreview ?? null;
 
@@ -1014,6 +1024,58 @@ export default function ProductForm() {
                         </p>
                       )}
                     </div>
+                  </div>
+                </Panel>
+
+                {/* Online storefront */}
+                <Panel title="Vitrine online" description="Como o produto aparece no site da loja" icon={Globe}>
+                  <div className="space-y-4">
+                    <FormField control={form.control} name="showOnline" render={({ field }) => (
+                      <FormItem className="flex items-start justify-between gap-4 rounded-xl border border-border bg-muted/30 p-3.5 space-y-0">
+                        <div className="min-w-0">
+                          <FormLabel className="text-sm font-semibold">Exibir no site</FormLabel>
+                          <FormDescription className="mt-0.5 text-xs">
+                            {field.value
+                              ? "Clientes podem ver e reservar este produto na vitrine (quando houver preço de venda)."
+                              : "Oculto do site — continua disponível normalmente nas vendas da loja."}
+                          </FormDescription>
+                        </div>
+                        <FormControl>
+                          <Switch checked={field.value} onCheckedChange={field.onChange} aria-label="Exibir no site" />
+                        </FormControl>
+                      </FormItem>
+                    )} />
+                    <FormField control={form.control} name="description" render={({ field }) => (
+                      <FormItem>
+                        <div className="flex items-center justify-between">
+                          <FormLabel>Descrição para o site</FormLabel>
+                          <span className="num text-[11px] text-muted-foreground">{field.value.length}/2000</span>
+                        </div>
+                        <FormControl>
+                          <Textarea
+                            rows={4}
+                            maxLength={2000}
+                            placeholder="Ex.: Armação leve em acetato, ponte confortável e hastes com ajuste fino. Aceita lentes de grau."
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                          Texto curto e atraente: material, estilo, para quem é indicado. Deixe em branco para não exibir.
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )} />
+                    {watchedShowOnline && !photoPreview && (
+                      <p className="flex items-start gap-2 rounded-lg bg-gold-soft px-3 py-2 text-xs text-gold-foreground">
+                        <ImagePlus className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                        Produtos com foto chamam muito mais atenção na vitrine — adicione uma imagem acima.
+                      </p>
+                    )}
+                    {!watchedShowOnline && (
+                      <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <EyeOff className="h-3.5 w-3.5" /> Não aparece no site
+                      </p>
+                    )}
                   </div>
                 </Panel>
               </div>

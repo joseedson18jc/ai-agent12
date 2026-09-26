@@ -14,6 +14,8 @@ import GlobalSearch from "./GlobalSearch";
 import { useAuth } from "@/contexts/AuthContext";
 import { BrandMark, InitialsAvatar } from "@/components/imperio";
 import { cn } from "@/lib/utils";
+import { useQuery } from "@tanstack/react-query";
+import webLeadService, { WEB_LEAD_STATS_KEY } from "@/services/webLead.service";
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -32,6 +34,13 @@ export default function MainLayout({ children }: MainLayoutProps) {
   const { user, logout, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const { data: leadStats } = useQuery({
+    queryKey: WEB_LEAD_STATS_KEY,
+    queryFn: () => webLeadService.stats().then((r) => r.data),
+    refetchInterval: 60_000,
+    enabled: isAuthenticated,
+  });
+  const newLeads = leadStats?.newCount ?? 0;
 
   // Every page that uses the layout is private — send visitors to login.
   if (!isLoading && !isAuthenticated) {
@@ -72,11 +81,14 @@ export default function MainLayout({ children }: MainLayoutProps) {
               variant="ghost"
               size="icon"
               className="relative h-10 w-10 rounded-full"
-              onClick={() => navigate("/dashboard")}
-              aria-label="Notificações"
+              onClick={() => navigate("/pedidos-site")}
+              aria-label={newLeads > 0 ? `${newLeads} pedidos novos do site` : "Pedidos do site"}
+              title={newLeads > 0 ? `${newLeads} ${newLeads === 1 ? "pedido novo" : "pedidos novos"} do site` : "Pedidos do site"}
             >
               <Bell className="h-[18px] w-[18px] text-foreground/70" />
-              <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-gold ring-2 ring-background" />
+              {newLeads > 0 && (
+                <span className="absolute right-2.5 top-2.5 h-2 w-2 rounded-full bg-gold ring-2 ring-background" />
+              )}
             </Button>
 
             <DropdownMenu>

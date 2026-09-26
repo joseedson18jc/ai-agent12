@@ -60,6 +60,10 @@ export interface ProductPayload {
   supplierId?: string | null;
   barcode?: string | null;
   photo?: string | null;
+  /** Texto exibido na vitrine do site (null limpa). */
+  description?: string | null;
+  /** Exibir o produto no site público. */
+  showOnline?: boolean;
   stock?: number;
   minStock?: number;
   costPrice: number;
