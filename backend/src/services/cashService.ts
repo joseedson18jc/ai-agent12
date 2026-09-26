@@ -1,21 +1,17 @@
 import prisma from '../utils/prisma.js';
 import { AppError } from '../middlewares/errorHandler.js';
 import { createAuditLog } from './auditService.js';
-import { startOfDay, endOfDay } from 'date-fns';
 
 export async function openRegister(
   data: { openingBalance: number; notes?: string },
   userId: string,
   ipAddress?: string
 ) {
-  const today = new Date();
+  // Any register left open (even from a previous day) must be closed first
   const existingOpen = await prisma.cashRegister.findFirst({
-    where: {
-      date: { gte: startOfDay(today), lte: endOfDay(today) },
-      isClosed: false,
-    },
+    where: { isClosed: false },
   });
-  if (existingOpen) throw new AppError('Já existe um caixa aberto hoje', 400);
+  if (existingOpen) throw new AppError('Já existe um caixa aberto. Feche-o antes de abrir outro.', 400);
 
   const register = await prisma.cashRegister.create({
     data: {
@@ -124,13 +120,15 @@ export async function addMovement(
 }
 
 export async function getCurrent() {
-  const today = new Date();
+  // Return the open register regardless of the day it was opened, so a register
+  // left open overnight can still be seen and closed.
   const register = await prisma.cashRegister.findFirst({
-    where: {
-      date: { gte: startOfDay(today), lte: endOfDay(today) },
-      isClosed: false,
+    where: { isClosed: false },
+    include: {
+      movements: { orderBy: { createdAt: 'asc' } },
+      user: { select: { id: true, name: true } },
     },
-    include: { movements: true, user: { select: { id: true, name: true } } },
+    orderBy: { date: 'desc' },
   });
   return register;
 }

@@ -533,7 +533,7 @@ export default function Sales() {
           </div>
         </Panel>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_340px]">
           {/* List */}
           <div className="min-w-0 space-y-4" {...rise(7)}>
             {listQuery.isLoading ? (

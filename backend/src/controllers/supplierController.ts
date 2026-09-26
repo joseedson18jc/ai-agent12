@@ -4,7 +4,7 @@ import * as supplierService from '../services/supplierService.js';
 
 const createSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres'),
-  cnpj: z.string().optional(),
+  cnpj: z.string().nullable().optional(), // null clears the CNPJ (unique column: never store '')
   contactName: z.string().optional(),
   contactRole: z.string().optional(),
   phone: z.string().optional(),
