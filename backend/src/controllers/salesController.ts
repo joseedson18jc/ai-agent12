@@ -38,13 +38,14 @@ const cancelSchema = z.object({
 
 export async function list(req: Request, res: Response, next: NextFunction) {
   try {
-    const { status, customerId, sellerId, startDate, endDate, page, limit } = req.query;
+    const { status, customerId, sellerId, startDate, endDate, search, page, limit } = req.query;
     const result = await salesService.list({
       status: status as string,
       customerId: customerId as string,
       sellerId: sellerId as string,
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
+      search: search as string,
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
     });

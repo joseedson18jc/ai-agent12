@@ -8,6 +8,7 @@ export async function list(filters: {
   sellerId?: string;
   startDate?: Date;
   endDate?: Date;
+  search?: string;
   page?: number;
   limit?: number;
 }) {
@@ -22,6 +23,17 @@ export async function list(filters: {
     where.date = {};
     if (filters.startDate) where.date.gte = filters.startDate;
     if (filters.endDate) where.date.lte = filters.endDate;
+  }
+  const search = filters.search?.trim();
+  if (search) {
+    const numeric = search.replace(/^#|^os\s*/i, '');
+    where.OR = [
+      { customer: { name: { contains: search, mode: 'insensitive' } } },
+      { customer: { phone: { contains: search } } },
+    ];
+    if (/^\d+$/.test(numeric) && Number(numeric) <= 2147483647) {
+      where.OR.push({ orderNumber: Number(numeric) });
+    }
   }
 
   const [orders, total] = await Promise.all([
@@ -117,11 +129,15 @@ export async function create(
         throw new AppError(`Estoque insuficiente para ${product.name}. Disponível: ${product.stock}`, 400);
       }
 
-      // Block if below minimum price (unless admin with justification)
-      if (item.unitPrice < product.minimumPrice) {
+      // Block if below minimum price (unless admin with justification).
+      // Compare the effective unit price (after the item discount) so a discount
+      // cannot be used to sell below the minimum.
+      const lineDiscount = item.discountAmount ?? (item.discountPercent ? (item.unitPrice * item.quantity * item.discountPercent) / 100 : 0);
+      const effectiveUnitPrice = item.unitPrice - lineDiscount / item.quantity;
+      if (effectiveUnitPrice < product.minimumPrice - 0.005) {
         if (userRole !== 'ADMIN') {
           throw new AppError(
-            `Preço de ${product.name} (R$ ${item.unitPrice.toFixed(2)}) está abaixo do mínimo permitido (R$ ${product.minimumPrice.toFixed(2)}). Apenas administradores podem autorizar.`,
+            `Preço de ${product.name} (R$ ${effectiveUnitPrice.toFixed(2)}) está abaixo do mínimo permitido (R$ ${product.minimumPrice.toFixed(2)}). Apenas administradores podem autorizar.`,
             403
           );
         }
@@ -133,7 +149,7 @@ export async function create(
           details: {
             productName: product.name,
             minimumPrice: product.minimumPrice,
-            soldPrice: item.unitPrice,
+            soldPrice: effectiveUnitPrice,
           },
           ipAddress,
         });
@@ -162,6 +178,8 @@ export async function create(
 
   const orderDiscountAmount = data.discountAmount ?? (data.discountPercent ? (subtotal * data.discountPercent) / 100 : 0);
   const total = subtotal - orderDiscountAmount;
+  // The order-level discount comes straight out of the margin.
+  estimatedProfit -= orderDiscountAmount;
 
   // Validate payments total
   const paymentsTotal = data.payments.reduce((sum, p) => sum + p.amount, 0);
@@ -256,6 +274,10 @@ export async function updateStatus(
 ) {
   const order = await prisma.salesOrder.findFirst({ where: { id, isDeleted: false } });
   if (!order) throw new AppError('Venda não encontrada', 404);
+  // Cancelling must go through cancelOrder (reason + stock restore), and a cancelled
+  // order cannot be reactivated because its stock has already been returned.
+  if (status === 'CANCELLED') throw new AppError('Use o cancelamento da venda informando o motivo', 400);
+  if (order.status === 'CANCELLED') throw new AppError('Venda cancelada não pode mudar de status', 400);
 
   const updated = await prisma.salesOrder.update({
     where: { id },
