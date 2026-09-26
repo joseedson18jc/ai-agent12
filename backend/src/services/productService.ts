@@ -14,10 +14,12 @@ function calculatePricing(data: {
   const totalCost = costPrice + taxFreight;
   const desiredMarkup = data.desiredMarkup ?? 100;
   const suggestedPrice = totalCost * (1 + desiredMarkup / 100);
-  const sellingPrice = data.sellingPrice ?? suggestedPrice;
+  // A selling price of 0 means "not informed" — fall back to the suggested price.
+  const sellingPrice = data.sellingPrice && data.sellingPrice > 0 ? data.sellingPrice : suggestedPrice;
   const minimumPrice = data.minimumPrice ?? totalCost * 1.1;
   const profitAmount = sellingPrice - totalCost;
-  const marginPercent = totalCost > 0 ? ((sellingPrice - totalCost) / sellingPrice) * 100 : 0;
+  // Guard against division by zero: -Infinity/NaN makes Prisma reject the whole write.
+  const marginPercent = sellingPrice > 0 ? ((sellingPrice - totalCost) / sellingPrice) * 100 : 0;
 
   return {
     totalCost: Math.round(totalCost * 100) / 100,
@@ -29,14 +31,20 @@ function calculatePricing(data: {
   };
 }
 
+export type StockFilter = 'in_stock' | 'low' | 'out';
+export type ProductSort = 'name' | 'recent' | 'stock' | 'margin' | 'price';
+
 export async function list(filters: {
   search?: string;
   categoryId?: string;
   brand?: string;
+  stock?: StockFilter;
+  sort?: ProductSort;
   page?: number;
   limit?: number;
 }) {
-  const { page = 1, limit = 20 } = filters;
+  const page = Math.max(1, filters.page || 1);
+  const limit = Math.min(200, Math.max(1, filters.limit || 20));
   const skip = (page - 1) * limit;
 
   const where: any = { isDeleted: false };
@@ -50,19 +58,71 @@ export async function list(filters: {
       { barcode: { contains: filters.search } },
     ];
   }
+  if (filters.stock === 'out') where.stock = { lte: 0 };
+  if (filters.stock === 'in_stock') where.stock = { gt: 0 };
+  if (filters.stock === 'low') {
+    where.AND = [{ stock: { gt: 0 } }, { stock: { lte: prisma.product.fields.minStock } }];
+  }
 
-  const [products, total] = await Promise.all([
+  const orderBy: any =
+    filters.sort === 'recent' ? [{ createdAt: 'desc' }]
+    : filters.sort === 'stock' ? [{ stock: 'asc' }, { name: 'asc' }]
+    : filters.sort === 'margin' ? [{ marginPercent: 'desc' }, { name: 'asc' }]
+    : filters.sort === 'price' ? [{ sellingPrice: 'desc' }, { name: 'asc' }]
+    : [{ name: 'asc' }];
+
+  const [products, total, all] = await Promise.all([
     prisma.product.findMany({
       where,
       include: { category: true, supplier: { select: { id: true, name: true } } },
-      orderBy: { name: 'asc' },
+      orderBy,
       skip,
       take: limit,
     }),
     prisma.product.count({ where }),
+    // Lightweight catalogue-wide figures for the KPI tiles and brand filter
+    prisma.product.findMany({
+      where: { isDeleted: false },
+      select: { stock: true, minStock: true, totalCost: true, sellingPrice: true, minimumPrice: true, marginPercent: true, brand: true },
+    }),
   ]);
 
-  return { products, total, page, limit };
+  const summary = {
+    products: all.length,
+    units: 0,
+    costValue: 0,
+    saleValue: 0,
+    lowStock: 0,
+    outOfStock: 0,
+    avgMargin: 0,
+    belowMinimum: 0,
+    lowMargin: 0,
+    brands: [] as string[],
+  };
+  const brands = new Set<string>();
+  let marginSum = 0;
+  let priced = 0;
+  for (const p of all) {
+    const units = Math.max(0, p.stock);
+    summary.units += units;
+    summary.costValue += units * p.totalCost;
+    summary.saleValue += units * p.sellingPrice;
+    if (p.stock <= 0) summary.outOfStock++;
+    else if (p.stock <= p.minStock) summary.lowStock++;
+    if (p.sellingPrice > 0 && Number.isFinite(p.marginPercent)) {
+      marginSum += p.marginPercent;
+      priced++;
+      if (p.marginPercent < 20) summary.lowMargin++;
+    }
+    if (p.sellingPrice > 0 && p.minimumPrice > 0 && p.sellingPrice < p.minimumPrice) summary.belowMinimum++;
+    if (p.brand?.trim()) brands.add(p.brand.trim());
+  }
+  summary.costValue = Math.round(summary.costValue * 100) / 100;
+  summary.saleValue = Math.round(summary.saleValue * 100) / 100;
+  summary.avgMargin = priced ? Math.round((marginSum / priced) * 10) / 10 : 0;
+  summary.brands = [...brands].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+  return { products, total, page, limit, summary };
 }
 
 export async function getById(id: string) {
@@ -74,8 +134,24 @@ export async function getById(id: string) {
   return product;
 }
 
+/**
+ * barcode is @unique in the DB, including soft-deleted rows. Release the code from
+ * deleted products and return a friendly 409 instead of a Prisma P2002 (HTTP 500).
+ */
+async function ensureBarcodeAvailable(barcode: string | null | undefined, exceptId?: string) {
+  if (!barcode) return;
+  const owner = await prisma.product.findFirst({ where: { barcode } });
+  if (!owner || owner.id === exceptId) return;
+  if (owner.isDeleted) {
+    await prisma.product.update({ where: { id: owner.id }, data: { barcode: null } });
+    return;
+  }
+  throw new AppError(`Código de barras/SKU já usado pelo produto "${owner.name}"`, 409);
+}
+
 export async function create(data: any, userId: string, ipAddress?: string) {
   const pricing = calculatePricing(data);
+  await ensureBarcodeAvailable(data.barcode);
 
   const product = await prisma.product.create({
     data: {
@@ -96,6 +172,7 @@ export async function create(data: any, userId: string, ipAddress?: string) {
 export async function update(id: string, data: any, userId: string, ipAddress?: string) {
   const existing = await prisma.product.findFirst({ where: { id, isDeleted: false } });
   if (!existing) throw new AppError('Produto não encontrado', 404);
+  await ensureBarcodeAvailable(data.barcode, id);
 
   const mergedPricing = {
     costPrice: data.costPrice ?? existing.costPrice,

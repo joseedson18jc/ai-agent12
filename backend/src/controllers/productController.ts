@@ -10,9 +10,10 @@ const createSchema = z.object({
   color: z.string().optional(),
   size: z.string().optional(),
   material: z.string().optional(),
-  supplierId: z.string().uuid().optional().or(z.literal('').transform(() => undefined)),
-  barcode: z.string().optional(),
-  photo: z.string().optional(),
+  // null clears the relation/field on update; '' is treated as "not informed"
+  supplierId: z.string().uuid('Fornecedor inválido').nullable().optional().or(z.literal('').transform(() => undefined)),
+  barcode: z.string().trim().nullable().optional().transform((v) => (v === '' ? null : v)),
+  photo: z.string().nullable().optional(),
   stock: z.number().int().min(0).optional(),
   minStock: z.number().int().min(0).optional(),
   costPrice: z.number().min(0, 'Preço de custo deve ser positivo'),
@@ -31,11 +32,17 @@ const validatePriceSchema = z.object({
 
 export async function list(req: Request, res: Response, next: NextFunction) {
   try {
-    const { search, categoryId, brand, page, limit } = req.query;
+    const { search, categoryId, brand, stock, sort, page, limit } = req.query;
+    const stockFilter = ['in_stock', 'low', 'out'].includes(stock as string)
+      ? (stock as productService.StockFilter) : undefined;
+    const sortKey = ['name', 'recent', 'stock', 'margin', 'price'].includes(sort as string)
+      ? (sort as productService.ProductSort) : undefined;
     const result = await productService.list({
       search: search as string,
       categoryId: categoryId as string,
       brand: brand as string,
+      stock: stockFilter,
+      sort: sortKey,
       page: page ? parseInt(page as string) : undefined,
       limit: limit ? parseInt(limit as string) : undefined,
     });
@@ -43,6 +50,7 @@ export async function list(req: Request, res: Response, next: NextFunction) {
       success: true,
       data: result.products,
       pagination: { page: result.page, limit: result.limit, total: result.total },
+      summary: result.summary,
     });
   } catch (error) {
     next(error);
