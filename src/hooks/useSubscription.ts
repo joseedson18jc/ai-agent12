@@ -3,16 +3,17 @@ import { supabase } from "@/integrations/supabase/client";
 
 export interface Subscription {
   id: string;
-  user_id: string;
+  customer_id: string;
   stripe_subscription_id: string;
-  stripe_customer_id: string;
+  stripe_price_id: string | null;
   status: string;
-  price_id: string;
   current_period_start: string;
   current_period_end: string;
   cancel_at_period_end: boolean;
   canceled_at: string | null;
   metadata: Record<string, unknown>;
+  created_at: string;
+  updated_at: string;
 }
 
 export function useSubscription() {
@@ -25,7 +26,6 @@ export function useSubscription() {
       const { data, error } = await supabase
         .from("subscriptions")
         .select("*")
-        .eq("user_id", user.id)
         .in("status", ["active", "trialing", "past_due"])
         .order("created_at", { ascending: false })
         .limit(1)

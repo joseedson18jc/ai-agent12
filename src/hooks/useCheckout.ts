@@ -16,11 +16,7 @@ export function useCheckout() {
       }
 
       const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: {
-          priceId,
-          successUrl: `${window.location.origin}/billing?session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${window.location.origin}/pricing`,
-        },
+        body: { priceId },
       });
 
       if (error) throw error;

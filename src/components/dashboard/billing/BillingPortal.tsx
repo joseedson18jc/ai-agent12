@@ -24,7 +24,7 @@ export function BillingPortal() {
     setPortalLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("customer-portal", {
-        body: { returnUrl: window.location.href },
+        body: {},
       });
 
       if (error) throw error;

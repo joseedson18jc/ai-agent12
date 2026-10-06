@@ -7,6 +7,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const MAX_AMOUNT_CENTS = 10_000_000;
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -36,7 +38,7 @@ serve(async (req) => {
     }
 
     const { description, amount, currency } = await req.json();
-    if (!amount || amount <= 0) {
+    if (!amount || !Number.isInteger(amount) || amount <= 0 || amount > MAX_AMOUNT_CENTS) {
       return new Response(JSON.stringify({ error: "Valor inválido" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -54,7 +56,7 @@ serve(async (req) => {
 
     const { data: customerData } = await supabaseAdmin
       .from("customers")
-      .select("stripe_customer_id")
+      .select("id, stripe_customer_id")
       .eq("user_id", user.id)
       .maybeSingle();
 
@@ -84,15 +86,14 @@ serve(async (req) => {
     const finalizedInvoice = await stripe.invoices.finalizeInvoice(invoice.id);
 
     await supabaseAdmin.from("invoices").upsert({
-      user_id: user.id,
+      customer_id: customerData.id,
       stripe_invoice_id: finalizedInvoice.id,
-      stripe_customer_id: customerData.stripe_customer_id,
       status: finalizedInvoice.status ?? "open",
       amount_due: finalizedInvoice.amount_due,
       amount_paid: finalizedInvoice.amount_paid ?? 0,
       currency: finalizedInvoice.currency,
-      invoice_url: finalizedInvoice.hosted_invoice_url ?? null,
-      invoice_pdf: finalizedInvoice.invoice_pdf ?? null,
+      hosted_invoice_url: finalizedInvoice.hosted_invoice_url ?? null,
+      invoice_url: finalizedInvoice.invoice_pdf ?? null,
       metadata: finalizedInvoice.metadata ?? {},
     }, { onConflict: "stripe_invoice_id" });
 
@@ -105,7 +106,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("Invoice creation error:", err.message);
+    return new Response(JSON.stringify({ error: "Não foi possível criar a fatura" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

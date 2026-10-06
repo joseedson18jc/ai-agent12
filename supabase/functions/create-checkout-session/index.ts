@@ -7,6 +7,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const ALLOWED_PRICE_IDS = new Set([
+  "price_basic",
+  "price_pro",
+  "price_enterprise",
+]);
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -35,9 +41,16 @@ serve(async (req) => {
       });
     }
 
-    const { priceId, successUrl, cancelUrl } = await req.json();
+    const { priceId } = await req.json();
     if (!priceId) {
       return new Response(JSON.stringify({ error: "priceId é obrigatório" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!ALLOWED_PRICE_IDS.has(priceId)) {
+      return new Response(JSON.stringify({ error: "Plano inválido" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -74,12 +87,13 @@ serve(async (req) => {
       }, { onConflict: "user_id" });
     }
 
+    const origin = req.headers.get("origin") || Deno.env.get("APP_URL") || "";
     const session = await stripe.checkout.sessions.create({
       customer: stripeCustomerId,
       line_items: [{ price: priceId, quantity: 1 }],
       mode: "subscription",
-      success_url: successUrl || `${req.headers.get("origin")}/billing?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: cancelUrl || `${req.headers.get("origin")}/pricing`,
+      success_url: `${origin}/billing?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/pricing`,
       metadata: { supabase_user_id: user.id },
     });
 
@@ -87,7 +101,8 @@ serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("Checkout session error:", err.message);
+    return new Response(JSON.stringify({ error: "Não foi possível criar a sessão de pagamento" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

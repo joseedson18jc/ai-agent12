@@ -35,8 +35,6 @@ serve(async (req) => {
       });
     }
 
-    const { returnUrl } = await req.json();
-
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
@@ -59,16 +57,18 @@ serve(async (req) => {
       apiVersion: "2023-10-16",
     });
 
+    const origin = req.headers.get("origin") || Deno.env.get("APP_URL") || "";
     const portalSession = await stripe.billingPortal.sessions.create({
       customer: customerData.stripe_customer_id,
-      return_url: returnUrl || `${req.headers.get("origin")}/billing`,
+      return_url: `${origin}/billing`,
     });
 
     return new Response(JSON.stringify({ url: portalSession.url }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {
-    return new Response(JSON.stringify({ error: err.message }), {
+    console.error("Customer portal error:", err.message);
+    return new Response(JSON.stringify({ error: "Não foi possível abrir o portal" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

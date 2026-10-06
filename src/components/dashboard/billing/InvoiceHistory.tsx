@@ -76,16 +76,16 @@ export function InvoiceHistory() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right space-x-2">
-                    {invoice.invoice_url && (
+                    {invoice.hosted_invoice_url && (
                       <Button variant="ghost" size="sm" asChild>
-                        <a href={invoice.invoice_url} target="_blank" rel="noopener noreferrer">
+                        <a href={invoice.hosted_invoice_url} target="_blank" rel="noopener noreferrer">
                           <ExternalLink className="h-4 w-4" />
                         </a>
                       </Button>
                     )}
-                    {invoice.invoice_pdf && (
+                    {invoice.invoice_url && (
                       <Button variant="ghost" size="sm" asChild>
-                        <a href={invoice.invoice_pdf} target="_blank" rel="noopener noreferrer">
+                        <a href={invoice.invoice_url} target="_blank" rel="noopener noreferrer">
                           <Download className="h-4 w-4" />
                         </a>
                       </Button>

@@ -18,21 +18,33 @@ export type Database = {
         Row: {
           id: string
           user_id: string
-          stripe_customer_id: string
+          stripe_customer_id: string | null
+          email: string | null
+          name: string | null
+          currency: string
+          metadata: Json
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           user_id: string
-          stripe_customer_id: string
+          stripe_customer_id?: string | null
+          email?: string | null
+          name?: string | null
+          currency?: string
+          metadata?: Json
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           user_id?: string
-          stripe_customer_id?: string
+          stripe_customer_id?: string | null
+          email?: string | null
+          name?: string | null
+          currency?: string
+          metadata?: Json
           created_at?: string
           updated_at?: string
         }
@@ -41,37 +53,43 @@ export type Database = {
       subscriptions: {
         Row: {
           id: string
-          user_id: string
+          customer_id: string
           stripe_subscription_id: string
+          stripe_price_id: string | null
           status: string
-          price_id: string | null
-          current_period_start: string
-          current_period_end: string
+          current_period_start: string | null
+          current_period_end: string | null
           cancel_at_period_end: boolean
+          canceled_at: string | null
+          metadata: Json
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
-          user_id: string
+          customer_id: string
           stripe_subscription_id: string
+          stripe_price_id?: string | null
           status: string
-          price_id?: string | null
-          current_period_start: string
-          current_period_end: string
+          current_period_start?: string | null
+          current_period_end?: string | null
           cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          metadata?: Json
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
-          user_id?: string
+          customer_id?: string
           stripe_subscription_id?: string
+          stripe_price_id?: string | null
           status?: string
-          price_id?: string | null
-          current_period_start?: string
-          current_period_end?: string
+          current_period_start?: string | null
+          current_period_end?: string | null
           cancel_at_period_end?: boolean
+          canceled_at?: string | null
+          metadata?: Json
           created_at?: string
           updated_at?: string
         }
@@ -80,36 +98,48 @@ export type Database = {
       invoices: {
         Row: {
           id: string
-          user_id: string
+          customer_id: string
           stripe_invoice_id: string
+          stripe_subscription_id: string | null
           amount_due: number
+          amount_paid: number
           currency: string
-          status: string
+          status: string | null
           invoice_url: string | null
-          invoice_pdf: string | null
+          hosted_invoice_url: string | null
+          metadata: Json
           created_at: string
+          updated_at: string
         }
         Insert: {
           id?: string
-          user_id: string
+          customer_id: string
           stripe_invoice_id: string
-          amount_due: number
+          stripe_subscription_id?: string | null
+          amount_due?: number
+          amount_paid?: number
           currency?: string
-          status: string
+          status?: string | null
           invoice_url?: string | null
-          invoice_pdf?: string | null
+          hosted_invoice_url?: string | null
+          metadata?: Json
           created_at?: string
+          updated_at?: string
         }
         Update: {
           id?: string
-          user_id?: string
+          customer_id?: string
           stripe_invoice_id?: string
+          stripe_subscription_id?: string | null
           amount_due?: number
+          amount_paid?: number
           currency?: string
-          status?: string
+          status?: string | null
           invoice_url?: string | null
-          invoice_pdf?: string | null
+          hosted_invoice_url?: string | null
+          metadata?: Json
           created_at?: string
+          updated_at?: string
         }
         Relationships: []
       }
