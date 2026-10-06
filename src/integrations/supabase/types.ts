@@ -14,6 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
+      customers: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_customer_id: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          stripe_customer_id: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_customer_id?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_subscription_id: string
+          status: string
+          price_id: string | null
+          current_period_start: string
+          current_period_end: string
+          cancel_at_period_end: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          stripe_subscription_id: string
+          status: string
+          price_id?: string | null
+          current_period_start: string
+          current_period_end: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_subscription_id?: string
+          status?: string
+          price_id?: string | null
+          current_period_start?: string
+          current_period_end?: string
+          cancel_at_period_end?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      invoices: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_invoice_id: string
+          amount_due: number
+          currency: string
+          status: string
+          invoice_url: string | null
+          invoice_pdf: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          stripe_invoice_id: string
+          amount_due: number
+          currency?: string
+          status: string
+          invoice_url?: string | null
+          invoice_pdf?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_invoice_id?: string
+          amount_due?: number
+          currency?: string
+          status?: string
+          invoice_url?: string | null
+          invoice_pdf?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       claude_skills: {
         Row: {
           id: number

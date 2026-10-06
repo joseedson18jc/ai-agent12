@@ -8,6 +8,8 @@ import Onboarding from "./pages/Onboarding";
 import ClaudeSkills from "./pages/ClaudeSkills";
 import ClaudeAgents from "./pages/ClaudeAgents";
 import ClaudeCommands from "./pages/ClaudeCommands";
+import Pricing from "./pages/Pricing";
+import Billing from "./pages/Billing";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
           <Route path="/claude-skills" element={<ClaudeSkills />} />
           <Route path="/claude-agents" element={<ClaudeAgents />} />
           <Route path="/claude-commands" element={<ClaudeCommands />} />
+          <Route path="/pricing" element={<Pricing />} />
+          <Route path="/billing" element={<Billing />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
