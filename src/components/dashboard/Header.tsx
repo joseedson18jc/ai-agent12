@@ -1,4 +1,4 @@
-import { Zap, Upload, Settings2, LayoutDashboard, TrendingUp, Crown, HelpCircle, Sparkles } from 'lucide-react';
+import { Zap, Upload, Settings2, LayoutDashboard, TrendingUp, Crown, HelpCircle, Sparkles, Bot, Terminal, BarChart3 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from './ThemeToggle';
@@ -107,6 +107,22 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
               <Button
                 variant="ghost"
                 size="icon"
+                onClick={() => navigate('/ytd-dashboard')}
+                className="rounded-xl text-muted-foreground hover:text-primary"
+              >
+                <BarChart3 size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Dashboard YTD</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={() => navigate('/claude-skills')}
                 className="rounded-xl text-muted-foreground hover:text-primary"
               >
@@ -115,6 +131,38 @@ export const Header = ({ tab, setTab, hasEntries, hasMappings }: HeaderProps) =>
             </TooltipTrigger>
             <TooltipContent>
               <p>Claude Skills</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/claude-agents')}
+                className="rounded-xl text-muted-foreground hover:text-primary"
+              >
+                <Bot size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Claude Agents</p>
+            </TooltipContent>
+          </Tooltip>
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => navigate('/claude-commands')}
+                className="rounded-xl text-muted-foreground hover:text-primary"
+              >
+                <Terminal size={18} />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              <p>Slash Commands</p>
             </TooltipContent>
           </Tooltip>
 

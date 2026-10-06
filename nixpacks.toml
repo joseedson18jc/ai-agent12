@@ -1,0 +1,18 @@
+[phases.setup]
+nixPkgs = ["nodejs_20", "openssl"]
+
+[phases.install]
+cmds = [
+  "npm ci --include=dev",
+  "cd backend && npm ci --include=dev"
+]
+
+[phases.build]
+cmds = [
+  "npm run build",
+  "cd backend && npx prisma generate && npm run build",
+  "mkdir -p backend/public && cp -r dist/* backend/public/"
+]
+
+[start]
+cmd = "cd backend && sh start.sh"

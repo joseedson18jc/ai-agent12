@@ -1,0 +1,126 @@
+name: Weekly Skill Ecosystem Update
+
+on:
+  schedule:
+    # Every Monday at 9:00 AM UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+    inputs:
+      scan_only:
+        description: 'Scan only (no changes)'
+        required: false
+        default: 'false'
+        type: boolean
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  analyze:
+    name: Analyze Skill Ecosystem
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run weekly analysis
+        run: bash scripts/weekly-skill-analysis.sh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check for quality issues
+        id: quality
+        run: |
+          MISSING=0
+          for f in .claude/skills/*.md; do
+            if ! grep -q "## Instructions" "$f" 2>/dev/null; then
+              MISSING=$((MISSING + 1))
+              echo "MISSING INSTRUCTIONS: $(basename $f)"
+            fi
+          done
+          echo "missing_count=$MISSING" >> "$GITHUB_OUTPUT"
+
+          SKILLS=$(find .claude/skills -name "*.md" | wc -l | tr -d ' ')
+          AGENTS=$(find .claude/agents -name "*.md" | wc -l | tr -d ' ')
+          COMMANDS=$(find .claude/commands -name "*.md" | wc -l | tr -d ' ')
+          echo "skills=$SKILLS" >> "$GITHUB_OUTPUT"
+          echo "agents=$AGENTS" >> "$GITHUB_OUTPUT"
+          echo "commands=$COMMANDS" >> "$GITHUB_OUTPUT"
+
+      - name: Scan source repos for new skills
+        id: scan
+        run: |
+          echo "Scanning anthropics/skills..."
+          ANTHROPIC=$(gh api repos/anthropics/skills/git/trees/main?recursive=1 2>/dev/null | grep -c '"path":"skills/' || echo "0")
+          echo "anthropic_skills=$ANTHROPIC" >> "$GITHUB_OUTPUT"
+
+          echo "Scanning affaan-m/everything-claude-code..."
+          ECC=$(gh api repos/affaan-m/everything-claude-code/git/trees/main?recursive=1 2>/dev/null | grep -c '".claude/skills/' || echo "0")
+          echo "ecc_skills=$ECC" >> "$GITHUB_OUTPUT"
+
+          echo "Scanning GitHub trending..."
+          TRENDING=$(gh search repos "claude-code skills" --sort updated --limit 10 --json name,updatedAt 2>/dev/null | grep -c '"name"' || echo "0")
+          echo "trending=$TRENDING" >> "$GITHUB_OUTPUT"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Build check
+        run: npx vite build
+
+      - name: Upload analysis report
+        uses: actions/upload-artifact@v4
+        with:
+          name: weekly-analysis-${{ github.run_number }}
+          path: reports/weekly-analysis-*.md
+          retention-days: 90
+
+      - name: Create summary
+        run: |
+          cat >> "$GITHUB_STEP_SUMMARY" << EOF
+          ## Weekly Skill Ecosystem Report
+
+          | Metric | Count |
+          |--------|-------|
+          | Skills | ${{ steps.quality.outputs.skills }} |
+          | Agents | ${{ steps.quality.outputs.agents }} |
+          | Commands | ${{ steps.quality.outputs.commands }} |
+          | Quality Issues | ${{ steps.quality.outputs.missing_count }} |
+
+          ### Source Repos Scanned
+          | Source | Skills Found |
+          |--------|-------------|
+          | anthropics/skills | ${{ steps.scan.outputs.anthropic_skills }} |
+          | affaan-m/everything-claude-code | ${{ steps.scan.outputs.ecc_skills }} |
+          | GitHub trending repos | ${{ steps.scan.outputs.trending }} |
+
+          ### Next Steps
+          - Review the analysis report artifact for detailed findings
+          - Run \`/auto-update\` in Claude Code to integrate new discoveries
+          - Run \`bash scripts/install-claude-skills-global.sh\` to sync globally
+          EOF
+
+      - name: Commit report if changes exist
+        if: inputs.scan_only != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -n "$(git status --porcelain reports/)" ]; then
+            git add reports/
+            git commit -m "weekly-update: skill ecosystem analysis $(date +%Y-%m-%d)"
+            git push
+          else
+            echo "No report changes to commit"
+          fi
